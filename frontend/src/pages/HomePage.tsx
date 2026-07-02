@@ -1,5 +1,3 @@
-import React from 'react'
-
 /**
  * HomePage — greeting + showcase placeholder
  * Spec reference: §2.2
