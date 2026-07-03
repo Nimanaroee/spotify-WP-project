@@ -55,10 +55,26 @@ Do not use path aliases (e.g. `@/components`) until the team adds them to `tscon
 
 ## Styling
 
-- Tailwind for layout, spacing, typography, colors.
-- Dark theme baseline: use neutral/gray backgrounds consistent with a music app (Spotify-like).
+- Material UI theme tokens are the source of truth for colors and component defaults.
+- Dark mode must stay black/purple; light mode must stay pink/white.
+- Theme-aware surfaces should use `background.default`, `background.paper`, `text.primary`, and `text.secondary`.
 - Every interactive element needs visible focus/hover states.
 - Mobile-first: base styles for mobile, then `md:` / `lg:` overrides.
+
+### Theme usage
+
+- Define palette changes only in `src/theme/appTheme.ts`.
+- Read and toggle theme mode via `useThemeMode` from `src/theme/ThemeModeContext.tsx`.
+- Use `ThemeToggleButton` instead of creating one-off toggle controls.
+- Keep new pages visually consistent by starting their root wrapper with:
+
+```tsx
+<Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
+  ...
+</Box>
+```
+
+- If a decorative gradient is needed, derive it from `theme.palette.mode` inside `sx`.
 
 ## Accessibility
 
