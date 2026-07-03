@@ -46,7 +46,10 @@ export default function LoginPage() {
   }
 
   return (
-    <Box className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
+    <Box
+      className="flex min-h-screen items-center justify-center p-4"
+      sx={{ bgcolor: 'background.default' }}
+    >
       <Card className="w-full max-w-md">
         <CardContent>
           <Stack spacing={3}>

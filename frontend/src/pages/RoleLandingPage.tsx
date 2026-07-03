@@ -14,7 +14,7 @@ export default function RoleLandingPage({ title }: RoleLandingPageProps) {
   const user = useAuthStore((state) => state.user)
 
   return (
-    <Box className="min-h-screen bg-slate-950 p-6">
+    <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
       <Paper className="mx-auto max-w-3xl p-6">
         <Stack spacing={2}>
           <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>

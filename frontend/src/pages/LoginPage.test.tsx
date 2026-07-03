@@ -8,17 +8,20 @@ import HomePage from './HomePage'
 import { ROLES } from '../lib/constants/roles'
 import { storage } from '../lib/mock/storage'
 import { useAuthStore } from '../store/authStore'
+import { ThemeModeContext } from '../theme/ThemeModeContext'
 
 function renderLoginPage() {
   return render(
-    <ThemeProvider theme={createTheme()}>
-      <MemoryRouter initialEntries={['/login']}>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-        </Routes>
-      </MemoryRouter>
-    </ThemeProvider>,
+    <ThemeModeContext.Provider value={{ mode: 'dark', toggleThemeMode: () => undefined }}>
+      <ThemeProvider theme={createTheme()}>
+        <MemoryRouter initialEntries={['/login']}>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+    </ThemeModeContext.Provider>,
   )
 }
 

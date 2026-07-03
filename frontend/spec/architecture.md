@@ -11,7 +11,7 @@
 | State | Zustand |
 | HTTP (Phase 2) | Axios via `src/lib/api/client.ts` |
 | Forms | React Hook Form + Zod |
-| Styling | Tailwind CSS |
+| Styling | Material UI theme + Tailwind CSS utilities |
 | Icons | Lucide React |
 | Charts (admin) | Recharts |
 | Tests | Vitest + Testing Library |
@@ -27,6 +27,7 @@ frontend/
     ├── main.tsx             # App entry
     ├── App.tsx              # Root providers + router
     ├── index.css            # Tailwind directives + global styles
+    ├── theme/               # Material UI palette, theme mode context
     ├── components/          # Reusable UI
     │   ├── common/          # EmptyState, Button, Modal, ...
     │   ├── layout/          # Sidebar, Navbar, PlayerBar, ...
@@ -121,6 +122,21 @@ Use Tailwind defaults unless we agree otherwise:
 - **Desktop**: full sidebar + bottom player bar.
 - **Tablet**: collapsible sidebar.
 - **Mobile**: bottom nav + mini player (expandable to full screen).
+
+## Theme system
+
+The app uses Material UI as the source of truth for color, radius, and component defaults. Tailwind is still allowed for layout, spacing, and responsive utility classes, but do not hardcode page-level colors with Tailwind color classes.
+
+| Mode | Primary palette | Background |
+|------|-----------------|------------|
+| Dark | black surfaces with purple accents | `#050008`, `#12001f` |
+| Light | white/pink surfaces with pink accents | `#fff7fb`, `#ffffff` |
+
+- Theme creation lives in `src/theme/appTheme.ts`.
+- Theme mode state and persistence live in `src/theme/ThemeModeContext.tsx`.
+- Use MUI semantic tokens such as `bgcolor: 'background.default'`, `bgcolor: 'background.paper'`, `color: 'text.primary'`, and `color: 'text.secondary'`.
+- Use `ThemeToggleButton` from `src/components/common/ThemeToggleButton.tsx` when a page needs to expose theme switching.
+- Persist the selected mode with `spotify-wp-theme-mode` in `localStorage`; do not introduce another theme storage key.
 
 ## Phase boundaries
 
