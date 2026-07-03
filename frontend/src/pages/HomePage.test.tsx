@@ -33,6 +33,7 @@ describe('HomePage', () => {
         email: 'listener@example.com',
         display_name: 'Listener',
         role: ROLES.LISTENER,
+        subscription_tier: 'basic',
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
       },
@@ -48,5 +49,13 @@ describe('HomePage', () => {
     expect(storage.get<number>('auth_user_id')).toBeNull()
     expect(useAuthStore.getState().user).toBeNull()
     expect(await screen.findByRole('heading', { name: /welcome/i })).toBeInTheDocument()
+  })
+
+  it('shows listener profile management entry point', () => {
+    renderHomePage()
+
+    expect(
+      screen.getByRole('button', { name: /manage listener profile/i }),
+    ).toBeInTheDocument()
   })
 })

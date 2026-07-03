@@ -66,6 +66,7 @@ Document new keys here when you add them.
 | `artist_profiles` | `ArtistProfile[]` | §2.4, §2.10 | Artist metadata |
 | `verification_requests` | `ArtistVerificationRequest[]` | §2.11.1 | Pending artist approvals |
 | `daily_streams` | `Record<number, number>` | §2.3 | User id → count today |
+| `follows` | `Follow[]` | §2.3 | Mock follow relationships between users |
 
 Reset demo data during development: clear localStorage and reload.
 

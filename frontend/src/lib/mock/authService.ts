@@ -25,6 +25,7 @@ export interface ArtistRegistrationResult {
 
 const USERS_KEY = 'users'
 const AUTH_USER_ID_KEY = 'auth_user_id'
+const CURRENT_USER_KEY = 'current_user'
 const VERIFICATION_REQUESTS_KEY = 'verification_requests'
 const PASSWORD_RECOVERY_REQUESTS_KEY = 'password_recovery_requests'
 
@@ -38,6 +39,17 @@ function readUsers(): StoredUser[] {
 
 function writeUsers(users: StoredUser[]): void {
   storage.set(USERS_KEY, users)
+}
+
+function writeCurrentUser(user: User | null): void {
+  if (user) {
+    storage.set(CURRENT_USER_KEY, user)
+    storage.set(AUTH_USER_ID_KEY, user.id)
+    return
+  }
+
+  storage.remove(CURRENT_USER_KEY)
+  storage.remove(AUTH_USER_ID_KEY)
 }
 
 function withoutPassword(user: StoredUser): User {
@@ -77,6 +89,11 @@ export function getRoleHomePath(user: User): string {
 }
 
 export function getCurrentUser(): User | null {
+  const currentUser = storage.get<User>(CURRENT_USER_KEY)
+  if (currentUser) {
+    return currentUser
+  }
+
   const userId = storage.get<number>(AUTH_USER_ID_KEY)
   if (!userId) {
     return null
@@ -98,8 +115,8 @@ export function login(email: string, password: string): LoginResult {
     throw new Error('Invalid email or password.')
   }
 
-  storage.set(AUTH_USER_ID_KEY, user.id)
   const publicUser = withoutPassword(user)
+  writeCurrentUser(publicUser)
   return { user: publicUser, redirectPath: getRoleHomePath(publicUser) }
 }
 
@@ -130,7 +147,7 @@ export function registerListener(payload: RegisterListenerPayload): User {
   }
 
   writeUsers([...users, user])
-  storage.set(AUTH_USER_ID_KEY, user.id)
+  writeCurrentUser(withoutPassword(user))
   return withoutPassword(user)
 }
 
@@ -192,5 +209,9 @@ export function requestPasswordRecovery(payload: ForgotPasswordPayload): void {
 }
 
 export function logout(): void {
-  storage.remove(AUTH_USER_ID_KEY)
+  writeCurrentUser(null)
+}
+
+export function setCurrentUser(user: User | null): void {
+  writeCurrentUser(user)
 }

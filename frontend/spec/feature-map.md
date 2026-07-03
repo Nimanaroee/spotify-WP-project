@@ -10,7 +10,7 @@ Maps course project sections to frontend locations. Update the **Status** column
 |------|---------|---------------|--------|
 | §2.1 | Login & registration | `pages/LoginPage`, `pages/RegisterPage`, `store/authStore` | TODO |
 | §2.2 | Home page | `pages/HomePage`, `layouts/MainLayout` | WIP |
-| §2.3 | User profile | `pages/UserProfilePage` | TODO |
+| §2.3 | User profile | `pages/UserProfilePage`, `pages/ListenerManagementPage` | WIP |
 | §2.4 | Artist profile | `pages/ArtistProfilePage`, `types/artist.ts` | TODO |
 | §2.5 | App settings | `pages/SettingsPage`, `types/settings.ts` | TODO |
 | §2.6 | Notifications | `pages/NotificationsPage`, `types/notification.ts` | TODO |

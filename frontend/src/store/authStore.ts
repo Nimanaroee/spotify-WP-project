@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { User } from '../types/user'
+import { getCurrentUser, setCurrentUser } from '../lib/mock/authService'
 
 interface AuthState {
   user: User | null
@@ -7,6 +8,9 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  setUser: (user) => set({ user }),
+  user: getCurrentUser(),
+  setUser: (user) => {
+    set({ user })
+    setCurrentUser(user)
+  },
 }))
