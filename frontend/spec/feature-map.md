@@ -31,6 +31,7 @@ Maps course project sections to frontend locations. Update the **Status** column
 | Subscription limits | `lib/constants/subscriptionLimits.ts` | Table 1 |
 | Responsive layouts | all pages, Tailwind breakpoints | §2 intro |
 | Empty states | `components/common/EmptyState.tsx` | §2.6, §2.7 |
+| Theme mode toggle | `components/common/ThemeToggleButton.tsx`, `theme/*` | Cross-cutting |
 | Verified artist badge | `components/common/VerifiedBadge.tsx` (create) | §2.4 |
 | Follow/unfollow | `lib/mock/followService.ts` (create), profile pages | §2.3, §2.4 |
 | Gold-only stats | conditional UI using `SUBSCRIPTION_LIMITS` | §2.4, §2.9 |
