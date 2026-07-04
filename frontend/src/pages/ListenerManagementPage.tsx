@@ -98,7 +98,7 @@ export default function ListenerManagementPage() {
 
   if (!profile) {
     return (
-      <Box className="min-h-screen bg-slate-950 p-6">
+      <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
         <Alert severity="error">Profile not found.</Alert>
       </Box>
     )
@@ -188,7 +188,7 @@ export default function ListenerManagementPage() {
     activeFollowList === 'followers' ? profile.followers : profile.following
 
   return (
-    <Box className="min-h-screen bg-slate-950 p-4 md:p-8">
+    <Box className="min-h-screen p-4 md:p-8" sx={{ bgcolor: 'background.default' }}>
       <Stack className="mx-auto max-w-5xl" spacing={3}>
         <Paper className="p-5 md:p-8">
           <Stack spacing={3}>

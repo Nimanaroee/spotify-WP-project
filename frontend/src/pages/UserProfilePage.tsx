@@ -76,7 +76,7 @@ export default function UserProfilePage() {
 
   if (error) {
     return (
-      <Box className="min-h-screen bg-slate-950 p-6">
+      <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
         <Alert severity="error">{error}</Alert>
       </Box>
     )
@@ -117,7 +117,7 @@ export default function UserProfilePage() {
   const subscriptionTier = profile.user.subscription_tier ?? 'basic'
 
   return (
-    <Box className="min-h-screen bg-slate-950 p-4 md:p-8">
+    <Box className="min-h-screen p-4 md:p-8" sx={{ bgcolor: 'background.default' }}>
       <Paper className="mx-auto max-w-4xl p-5 md:p-8">
         <Stack spacing={3}>
           <Stack
