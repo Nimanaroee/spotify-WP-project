@@ -57,6 +57,7 @@ describe('authService', () => {
     expect(result.user.email).toBe('listener@example.com')
     expect(result.redirectPath).toBe('/')
     expect(storage.get<number>('auth_user_id')).toBe(1)
+    expect(storage.get<User>('current_user')?.email).toBe('listener@example.com')
     expect(getCurrentUser()?.display_name).toBe('Listener')
   })
 
@@ -92,6 +93,7 @@ describe('authService', () => {
     expect(user.role).toBe(ROLES.LISTENER)
     expect(user.email).toBe('new.listener@example.com')
     expect(storage.get<number>('auth_user_id')).toBe(user.id)
+    expect(storage.get<User>('current_user')?.email).toBe('new.listener@example.com')
   })
 
   it('stores artist registrations as pending verification requests', () => {
@@ -124,5 +126,6 @@ describe('authService', () => {
     logout()
 
     expect(storage.get<number>('auth_user_id')).toBeNull()
+    expect(storage.get<User>('current_user')).toBeNull()
   })
 })

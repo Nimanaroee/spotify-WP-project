@@ -1,0 +1,450 @@
+/**
+ * ListenerManagementPage — listener profile management and stats
+ * Spec reference: §2.3
+ *
+ * Responsibilities:
+ *  - [x] show listener personal and subscription details
+ *  - [x] support local profile edits through the mock service
+ *  - [x] disable profile picture changes for Basic subscribers
+ */
+import { useState, type ChangeEvent } from 'react';
+import {
+  Alert,
+  Box,
+  Button,
+  Divider,
+  MenuItem,
+  Paper,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+  useMediaQuery,
+} from '@mui/material';
+import { Navigate } from 'react-router-dom';
+
+import FollowListPanel from '../components/profile/FollowListPanel';
+import ProfileStatsGrid from '../components/profile/ProfileStatsGrid';
+import ProfileSummaryHeader from '../components/profile/ProfileSummaryHeader';
+import { ROLES } from '../lib/constants/roles';
+import { ROUTES, userProfilePath } from '../lib/constants/routes';
+import { SUBSCRIPTION_LIMITS } from '../lib/constants/subscriptionLimits';
+import {
+  getListenerManagementProfile,
+  removeFollower,
+  unfollowAccount,
+  updateListenerProfile,
+} from '../lib/mock/userProfileService';
+import { useAuthStore } from '../store/authStore';
+import type {
+  Gender,
+  ListenerManagementProfile,
+  UpdateUserProfilePayload,
+  UserSummary,
+} from '../types';
+
+type EditableProfile = Required<
+  Pick<
+    UpdateUserProfilePayload,
+    'display_name' | 'birth_date' | 'gender' | 'profile_picture'
+  >
+>;
+
+type FollowListType = 'followers' | 'following';
+
+function createEditableProfile(
+  profile: ListenerManagementProfile
+): EditableProfile {
+  return {
+    display_name: profile.user.display_name,
+    birth_date: profile.user.birth_date ?? '',
+    gender: profile.user.gender ?? 'prefer_not_to_say',
+    profile_picture: profile.user.profile_picture ?? '',
+  };
+}
+
+export default function ListenerManagementPage() {
+  const authUser = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+  const [isEditing, setIsEditing] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [activeFollowList, setActiveFollowList] =
+    useState<FollowListType>('followers');
+  const [profile, setProfile] = useState<ListenerManagementProfile | null>(() =>
+    authUser ? getListenerManagementProfile(authUser.id) : null
+  );
+  const isMobile = useMediaQuery('(max-width:767px)');
+  const [editableProfile, setEditableProfile] = useState<EditableProfile>(() =>
+    profile
+      ? createEditableProfile(profile)
+      : {
+          display_name: '',
+          birth_date: '',
+          gender: 'prefer_not_to_say',
+          profile_picture: '',
+        }
+  );
+
+  if (!authUser) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  if (authUser.role !== ROLES.LISTENER) {
+    return <Navigate to={ROUTES.HOME} replace />;
+  }
+
+  if (!profile) {
+    return (
+      <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
+        <Alert severity="error">Profile not found.</Alert>
+      </Box>
+    );
+  }
+
+  const subscriptionTier = profile.user.subscription_tier ?? 'basic';
+  const canEditProfilePicture =
+    SUBSCRIPTION_LIMITS[subscriptionTier].profilePicture;
+  const currentProfile = profile;
+  const isCompactMobile = isMobile;
+  const statsGridColumns = isCompactMobile
+    ? 'repeat(3, minmax(0, 1fr))'
+    : 'repeat(3, 1fr)';
+  const statsCardPadding = isCompactMobile ? 1.25 : 2;
+  const statsLabelSize = isCompactMobile ? '0.68rem' : '0.875rem';
+  const statsValueSize = isCompactMobile ? '1rem' : '1.5rem';
+  const listHeight = isCompactMobile ? 260 : 320;
+  const listPadding = isCompactMobile ? 1 : 2;
+  const listSpacing = isCompactMobile ? 0.75 : 1;
+  const listGap = isCompactMobile ? 1 : 1.5;
+  const listAvatarSize = isCompactMobile ? 30 : 40;
+  const listTitleSize = isCompactMobile ? '0.82rem' : '1rem';
+  const listSubtitleSize = isCompactMobile ? '0.68rem' : '0.875rem';
+
+  function handleEditableChange(
+    field: keyof EditableProfile,
+    value: string
+  ): void {
+    setEditableProfile((current) => ({ ...current, [field]: value }));
+  }
+
+  function handleRemoveFollowAccount(account: UserSummary): void {
+    const nextProfile =
+      activeFollowList === 'followers'
+        ? removeFollower(currentProfile.user.id, account.id)
+        : unfollowAccount(currentProfile.user.id, account.id);
+    setProfile(nextProfile);
+    setMessage(
+      activeFollowList === 'followers'
+        ? `${account.display_name} was removed from followers.`
+        : `You unfollowed ${account.display_name}.`
+    );
+  }
+
+  function handleStartEdit(): void {
+    setEditableProfile(createEditableProfile(currentProfile));
+    setIsEditing(true);
+    setMessage(null);
+  }
+
+  function handleCancelEdit(): void {
+    setEditableProfile(createEditableProfile(currentProfile));
+    setIsEditing(false);
+  }
+
+  function handleSaveProfile(): void {
+    const payload: UpdateUserProfilePayload = {
+      display_name: editableProfile.display_name,
+      birth_date: editableProfile.birth_date || undefined,
+      gender: editableProfile.gender as Gender,
+      profile_picture: editableProfile.profile_picture || null,
+    };
+    const updatedUser = updateListenerProfile(currentProfile.user.id, payload);
+    const nextProfile = getListenerManagementProfile(currentProfile.user.id);
+    setUser(updatedUser);
+    setProfile(nextProfile);
+    setEditableProfile(createEditableProfile(nextProfile));
+    setIsEditing(false);
+    setMessage('Profile updated.');
+  }
+
+  function handleProfilePhotoUpload(
+    event: ChangeEvent<HTMLInputElement>
+  ): void {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setEditableProfile((current) => ({
+          ...current,
+          profile_picture: reader.result as string,
+        }));
+        setMessage('Profile photo ready to save.');
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  const activeAccounts =
+    activeFollowList === 'followers' ? profile.followers : profile.following;
+
+  return (
+    <Box
+      className="min-h-screen p-4 md:p-8"
+      sx={{ bgcolor: 'background.default' }}
+    >
+      <Stack className="mx-auto max-w-5xl" spacing={3}>
+        <Paper className="p-5 md:p-8">
+          <Stack spacing={3}>
+            <ProfileSummaryHeader
+              avatarSize={88}
+              gap={2.5}
+              titleSize={{ xs: '2.125rem', md: '2.125rem' }}
+              user={profile.user}
+              action={
+                !isMobile && !isEditing ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'flex-end',
+                      width: '100%',
+                    }}
+                  >
+                    <Button
+                      onClick={handleStartEdit}
+                      size="large"
+                      variant="outlined"
+                    >
+                      Edit
+                    </Button>
+                  </Box>
+                ) : (
+                  <Box sx={{ width: '100%' }} />
+                )
+              }
+            />
+
+            {message ? <Alert severity="success">{message}</Alert> : null}
+
+            <ProfileStatsGrid
+              columns={statsGridColumns}
+              labelSize={statsLabelSize}
+              padding={statsCardPadding}
+              stats={[
+                {
+                  label: 'Followers',
+                  value: profile.user.followers_count ?? 0,
+                },
+                {
+                  label: 'Following',
+                  value: profile.user.following_count ?? 0,
+                },
+                { label: 'Streamed today', value: profile.daily_streams_count },
+              ]}
+              valueSize={statsValueSize}
+            />
+
+            <Divider />
+
+            <Box>
+              <Typography
+                component="h2"
+                variant="h6"
+                sx={{ fontWeight: 700, mb: 1 }}
+              >
+                Followers and following
+              </Typography>
+              <Paper variant="outlined">
+                <Tabs
+                  onChange={(_event, value: FollowListType) => {
+                    setActiveFollowList(value);
+                    setMessage(null);
+                  }}
+                  value={activeFollowList}
+                  variant="fullWidth"
+                >
+                  <Tab
+                    label={`Followers (${profile.followers.length})`}
+                    value="followers"
+                  />
+                  <Tab
+                    label={`Following (${profile.following.length})`}
+                    value="following"
+                  />
+                </Tabs>
+                <Divider />
+                <FollowListPanel
+                  accounts={activeAccounts}
+                  avatarSize={listAvatarSize}
+                  emptyMessage="No accounts to show."
+                  gap={listGap}
+                  getAccountAction={(account) =>
+                    activeFollowList === 'following' ? (
+                      <Button
+                        aria-label={`Unfollow ${account.display_name}`}
+                        color="inherit"
+                        onClick={() => handleRemoveFollowAccount(account)}
+                        size="small"
+                        variant="text"
+                      >
+                        Unfollow
+                      </Button>
+                    ) : null
+                  }
+                  getAccountHref={(account) =>
+                    userProfilePath(account.username ?? String(account.id))
+                  }
+                  height={listHeight}
+                  isCompact={isCompactMobile}
+                  padding={listPadding}
+                  spacing={listSpacing}
+                  surface={false}
+                  subtitleSize={listSubtitleSize}
+                  titleSize={listTitleSize}
+                />
+              </Paper>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography
+                component="h2"
+                variant="h6"
+                sx={{ fontWeight: 700, mb: 2 }}
+              >
+                Personal information
+              </Typography>
+              {isMobile && !isEditing ? (
+                <Box
+                  sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}
+                >
+                  <Button onClick={handleStartEdit} variant="outlined">
+                    Edit
+                  </Button>
+                </Box>
+              ) : null}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 2,
+                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                }}
+              >
+                <Box>
+                  <TextField
+                    fullWidth
+                    label="Display name"
+                    onChange={(event) =>
+                      handleEditableChange('display_name', event.target.value)
+                    }
+                    value={
+                      isEditing
+                        ? editableProfile.display_name
+                        : profile.user.display_name
+                    }
+                    disabled={!isEditing}
+                  />
+                </Box>
+                <Box>
+                  <TextField
+                    fullWidth
+                    label="System username"
+                    value={profile.user.username}
+                    disabled
+                  />
+                </Box>
+                <Box>
+                  <TextField
+                    fullWidth
+                    label="Birth date"
+                    onChange={(event) =>
+                      handleEditableChange('birth_date', event.target.value)
+                    }
+                    type="date"
+                    value={
+                      isEditing
+                        ? editableProfile.birth_date
+                        : profile.user.birth_date ?? ''
+                    }
+                    disabled={!isEditing}
+                    slotProps={{ inputLabel: { shrink: true } }}
+                  />
+                </Box>
+                <Box>
+                  <TextField
+                    fullWidth
+                    label="Gender"
+                    onChange={(event) =>
+                      handleEditableChange('gender', event.target.value)
+                    }
+                    select
+                    value={
+                      isEditing
+                        ? editableProfile.gender
+                        : profile.user.gender ?? ''
+                    }
+                    disabled={!isEditing}
+                  >
+                    <MenuItem value="male">Male</MenuItem>
+                    <MenuItem value="female">Female</MenuItem>
+                    <MenuItem value="other">Other</MenuItem>
+                    <MenuItem value="prefer_not_to_say">
+                      Prefer not to say
+                    </MenuItem>
+                  </TextField>
+                </Box>
+                {isEditing && canEditProfilePicture ? (
+                  <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
+                    <Button component="label" variant="outlined">
+                      Change profile photo
+                      <input
+                        aria-label="Profile photo upload"
+                        accept="image/*"
+                        hidden
+                        onChange={handleProfilePhotoUpload}
+                        type="file"
+                      />
+                    </Button>
+                    <Typography
+                      color="text.secondary"
+                      sx={{ mt: 1 }}
+                      variant="body2"
+                    >
+                      Uploaded photos are stored locally for the Phase 1 demo.
+                    </Typography>
+                  </Box>
+                ) : null}
+              </Box>
+
+              {isEditing ? (
+                <Box
+                  sx={{
+                    alignItems: 'center',
+                    display: 'flex',
+                    flexDirection: 'row',
+                    gap: 1.5,
+                    justifyContent: 'flex-start',
+                    mt: 3,
+                  }}
+                >
+                  <Button onClick={handleSaveProfile} variant="contained">
+                    Save changes
+                  </Button>
+                  <Button onClick={handleCancelEdit} variant="outlined">
+                    Cancel
+                  </Button>
+                </Box>
+              ) : null}
+            </Box>
+          </Stack>
+        </Paper>
+      </Stack>
+    </Box>
+  );
+}

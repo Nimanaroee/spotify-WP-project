@@ -67,3 +67,18 @@ export interface UpdateUserProfilePayload {
   gender?: Gender
   profile_picture?: string | null
 }
+
+export interface ListenerManagementProfile {
+  user: User
+  daily_streams_count: number
+  followers: UserSummary[]
+  following: UserSummary[]
+}
+
+export interface UserProfileView {
+  user: User
+  daily_streams_count: number
+  is_following: boolean
+  followers: UserSummary[]
+  following: UserSummary[]
+}
