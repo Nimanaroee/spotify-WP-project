@@ -4,6 +4,8 @@ import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage'
 import RoleLandingPage from '../pages/RoleLandingPage'
+import ListenerManagementPage from '../pages/ListenerManagementPage'
+import UserProfilePage from '../pages/UserProfilePage'
 import AdminLayout from '../layouts/AdminLayout'
 import RoleGuard from './RoleGuard'
 import { ROLES } from '../lib/constants/roles'
@@ -21,7 +23,9 @@ export default function Router() {
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
       <Route path={ROUTES.HOME} element={<HomePage />} />
-      <Route path="/artist/studio" element={<RoleLandingPage title="Artist Studio" />} />
+      <Route path={ROUTES.MANAGE} element={<ListenerManagementPage />} />
+      <Route path={ROUTES.USER_PROFILE} element={<UserProfilePage />} />
+      <Route path={ROUTES.ARTIST_STUDIO} element={<RoleLandingPage title="Artist Studio" />} />
 
       <Route
         element={

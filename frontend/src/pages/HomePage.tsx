@@ -4,7 +4,8 @@
  */
 import { Box, Button, Paper, Stack, Typography } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
-import ThemeToggleButton from '../components/common/ThemeToggleButton'
+import { ROLES } from '../lib/constants/roles'
+import { ROUTES } from '../lib/constants/routes'
 import { logout } from '../lib/mock/authService'
 import { useAuthStore } from '../store/authStore'
 
@@ -16,26 +17,24 @@ export default function HomePage() {
   function handleLogout(): void {
     logout()
     setUser(null)
-    navigate('/login')
+    navigate(ROUTES.LOGIN)
   }
 
   return (
     <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
       <Paper className="mx-auto max-w-3xl p-6">
         <Stack spacing={2}>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            sx={{
-              alignItems: { xs: 'flex-start', sm: 'center' },
-              justifyContent: 'space-between',
-            }}
-          >
-            <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-              Welcome {user?.display_name ?? 'Guest'}
-            </Typography>
-            <ThemeToggleButton />
-          </Stack>
+          <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
+            Welcome {user?.display_name ?? 'Guest'}
+          </Typography>
+          {user?.role === ROLES.LISTENER ? (
+            <Button
+              variant="contained"
+              onClick={() => navigate(ROUTES.MANAGE)}
+            >
+              Manage listener profile
+            </Button>
+          ) : null}
           <Button variant="outlined" onClick={handleLogout}>
             Logout
           </Button>

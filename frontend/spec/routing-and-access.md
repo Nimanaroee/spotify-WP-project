@@ -16,6 +16,7 @@ Update this table as routes are implemented. Mark done with ✅.
 | `/register` | RegisterPage | AuthLayout | public | §2.1 |
 | `/forgot-password` | ForgotPasswordPage | AuthLayout | public | §2.1 |
 | `/` | HomePage | MainLayout | listener, artist | §2.2 |
+| `/listener/manage` | ListenerManagementPage | MainLayout | listener | §2.3 ✅ |
 | `/profile/:userId?` | UserProfilePage | MainLayout | all authenticated | §2.3 |
 | `/artists/:artistId` | ArtistProfilePage | MainLayout | all authenticated | §2.4 |
 | `/settings` | SettingsPage | MainLayout | all authenticated | §2.5 |

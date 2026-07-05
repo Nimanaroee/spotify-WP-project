@@ -4,12 +4,14 @@ export type {
   Follow,
   ForgotPasswordPayload,
   Gender,
+  ListenerManagementProfile,
   LoginPayload,
   RegisterArtistPayload,
   RegisterListenerPayload,
   UpdateUserProfilePayload,
   User,
   UserSummary,
+  UserProfileView,
 } from './user'
 
 export type {
