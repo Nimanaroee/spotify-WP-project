@@ -2,17 +2,21 @@ import type { ReactNode } from 'react';
 import { Box, Paper, Stack, Typography } from '@mui/material';
 
 import type { UserSummary } from '../../types';
+import type { AppLanguage } from '../../types/settings';
+import { getManagePageText } from '../../lib/constants/managePageText';
 import FollowAccountRow from './FollowAccountRow';
 
 interface FollowListPanelProps {
   accounts: UserSummary[];
   avatarSize: number;
-  emptyMessage: string;
+  emptyMessage?: string;
+  emptyStateKey?: 'accounts';
   gap: number;
   getAccountAction?: (account: UserSummary) => ReactNode;
   getAccountHref?: (account: UserSummary) => string;
   height: number;
   isCompact: boolean;
+  language?: AppLanguage;
   padding: number;
   spacing: number;
   surface?: boolean;
@@ -25,11 +29,13 @@ export default function FollowListPanel({
   accounts,
   avatarSize,
   emptyMessage,
+  emptyStateKey,
   gap,
   getAccountAction,
   getAccountHref,
   height,
   isCompact,
+  language,
   padding,
   spacing,
   surface = true,
@@ -37,6 +43,9 @@ export default function FollowListPanel({
   title,
   titleSize,
 }: FollowListPanelProps) {
+  const copy = getManagePageText(language ?? 'en');
+  const fallbackEmptyMessage =
+    emptyMessage ?? copy.emptyState[emptyStateKey ?? 'accounts'];
   const list = (
     <Box
       role="list"
@@ -65,7 +74,7 @@ export default function FollowListPanel({
         </Stack>
       ) : (
         <Typography color="text.secondary" sx={{ py: 3, textAlign: 'center' }}>
-          {emptyMessage}
+          {fallbackEmptyMessage}
         </Typography>
       )}
     </Box>

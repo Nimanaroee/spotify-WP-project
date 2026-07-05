@@ -2,12 +2,16 @@ import type { ReactNode } from 'react';
 import { Avatar, Box, Chip, Stack, Typography } from '@mui/material';
 
 import type { User } from '../../types';
+import type { AppLanguage } from '../../types/settings';
+import { getAppText } from '../../lib/constants/appText';
 import { getProfileInitials } from './profileUtils';
 
 interface ProfileSummaryHeaderProps {
   action?: ReactNode;
   avatarSize?: { xs: number; md: number } | number;
   gap?: { xs: number; md: number } | number;
+  language?: AppLanguage;
+  showSubscriptionLabel?: boolean;
   titleSize?: { xs: string; md: string };
   user: User;
 }
@@ -16,9 +20,12 @@ export default function ProfileSummaryHeader({
   action,
   avatarSize = { xs: 72, md: 88 },
   gap = { xs: 1.5, md: 2.5 },
+  language = 'en',
+  showSubscriptionLabel = true,
   titleSize = { xs: '1.5rem', md: '2.125rem' },
   user,
 }: ProfileSummaryHeaderProps) {
+  const copy = getAppText(language);
   const subscriptionTier = user.subscription_tier ?? 'basic';
 
   return (
@@ -60,7 +67,13 @@ export default function ProfileSummaryHeader({
           <Chip
             sx={{ mt: 1 }}
             color={subscriptionTier === 'gold' ? 'warning' : 'primary'}
-            label={`${subscriptionTier.toUpperCase()} subscription`}
+            label={
+              showSubscriptionLabel
+                ? `${subscriptionTier.toUpperCase()} ${
+                    copy.profile.subscription
+                  }`
+                : subscriptionTier.toUpperCase()
+            }
             variant={subscriptionTier === 'basic' ? 'outlined' : 'filled'}
           />
         </Box>

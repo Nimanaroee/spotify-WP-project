@@ -1,23 +1,36 @@
 import { Box, Paper, Typography } from '@mui/material';
 
+import type { AppLanguage } from '../../types/settings';
+import { getManagePageText } from '../../lib/constants/managePageText';
+
 interface ProfileStatsGridProps {
   columns: string;
+  language?: AppLanguage;
   labelSize: string;
   padding: number;
-  stats: Array<{
-    label: string;
-    value: number;
-  }>;
+  stats: Array<
+    | {
+        key: 'followers' | 'following' | 'streamedToday';
+        value: number;
+      }
+    | {
+        label: string;
+        value: number;
+      }
+  >;
   valueSize: string;
 }
 
 export default function ProfileStatsGrid({
   columns,
+  language = 'en',
   labelSize,
   padding,
   stats,
   valueSize,
 }: ProfileStatsGridProps) {
+  const copy = getManagePageText(language);
+
   return (
     <Box
       sx={{
@@ -27,13 +40,17 @@ export default function ProfileStatsGrid({
       }}
     >
       {stats.map((stat) => (
-        <Paper key={stat.label} variant="outlined" sx={{ p: padding }}>
+        <Paper
+          key={'key' in stat ? stat.key : stat.label}
+          variant="outlined"
+          sx={{ p: padding }}
+        >
           <Typography
             color="text.secondary"
             variant="body2"
             sx={{ fontSize: labelSize }}
           >
-            {stat.label}
+            {'key' in stat ? copy.stats[stat.key] : stat.label}
           </Typography>
           <Typography
             variant="h5"

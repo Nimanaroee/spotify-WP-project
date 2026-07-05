@@ -53,6 +53,14 @@ Do not use path aliases (e.g. `@/components`) until the team adds them to `tscon
 - React Hook Form + Zod resolver for login, register, settings, admin forms.
 - Zod schemas can live next to the page: `LoginPage.schema.ts`.
 
+### Language / locale
+
+- Use a shared app-language context for the active locale; do not manage language separately inside individual pages.
+- Persist the selected language in `localStorage` with a single app-wide key.
+- Store translated UI copy in shared locale objects (for example, `src/lib/constants/appText.ts`); avoid scattering hardcoded English/Persian strings across pages.
+- When a component needs translated copy, accept the active language or read it from the shared language context, then map to locale data.
+- Keep direction-sensitive rendering tied to the active language so Persian pages render correctly right-to-left.
+
 ## Styling
 
 - Material UI theme tokens are the source of truth for colors and component defaults.

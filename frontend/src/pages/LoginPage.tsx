@@ -2,7 +2,7 @@
  * LoginPage — unified login for every role
  * Spec reference: §2.1
  */
-import { zodResolver } from '@hookform/resolvers/zod'
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Alert,
   Box,
@@ -13,18 +13,22 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { login } from '../lib/mock/authService'
-import { useAuthStore } from '../store/authStore'
-import { loginSchema, type LoginFormValues } from './authSchemas'
+} from '@mui/material';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { getAppText } from '../lib/constants/appText';
+import { login } from '../lib/mock/authService';
+import { useAuthStore } from '../store/authStore';
+import { useAppLanguage } from '../theme/LanguageContext';
+import { loginSchema, type LoginFormValues } from './authSchemas';
 
 export default function LoginPage() {
-  const navigate = useNavigate()
-  const setUser = useAuthStore((state) => state.setUser)
-  const [formError, setFormError] = useState('')
+  const navigate = useNavigate();
+  const setUser = useAuthStore((state) => state.setUser);
+  const [formError, setFormError] = useState('');
+  const { language } = useAppLanguage();
+  const copy = getAppText(language);
   const {
     register,
     handleSubmit,
@@ -32,16 +36,16 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
-  })
+  });
 
   function onSubmit(values: LoginFormValues): void {
-    setFormError('')
+    setFormError('');
     try {
-      const result = login(values.email, values.password)
-      setUser(result.user)
-      navigate(result.redirectPath)
+      const result = login(values.email, values.password);
+      setUser(result.user);
+      navigate(result.redirectPath);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : 'Login failed.')
+      setFormError(error instanceof Error ? error.message : 'Login failed.');
     }
   }
 
@@ -55,18 +59,22 @@ export default function LoginPage() {
           <Stack spacing={3}>
             <Box>
               <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-                Welcome
+                {copy.auth.welcome}
               </Typography>
               <Typography color="text.secondary">
-                Login to enjoy our world of music.
+                {copy.auth.loginSubtitle}
               </Typography>
             </Box>
 
             {formError ? <Alert severity="error">{formError}</Alert> : null}
 
-            <Stack component="form" spacing={2} onSubmit={handleSubmit(onSubmit)}>
+            <Stack
+              component="form"
+              spacing={2}
+              onSubmit={handleSubmit(onSubmit)}
+            >
               <TextField
-                label="Email"
+                label={copy.auth.email}
                 type="email"
                 autoComplete="email"
                 error={Boolean(errors.email)}
@@ -74,7 +82,7 @@ export default function LoginPage() {
                 {...register('email')}
               />
               <TextField
-                label="Password"
+                label={copy.auth.password}
                 type="password"
                 autoComplete="current-password"
                 error={Boolean(errors.password)}
@@ -82,21 +90,21 @@ export default function LoginPage() {
                 {...register('password')}
               />
               <Button type="submit" variant="contained" disabled={isSubmitting}>
-                Log in
+                {copy.auth.logIn}
               </Button>
             </Stack>
 
             <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
               <Link component={RouterLink} to="/forgot-password">
-                Forgot Password?
+                {copy.auth.forgotPassword}
               </Link>
               <Link component={RouterLink} to="/register">
-                Create account
+                {copy.auth.createAccount}
               </Link>
             </Stack>
           </Stack>
         </CardContent>
       </Card>
     </Box>
-  )
+  );
 }

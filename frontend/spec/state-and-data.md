@@ -6,6 +6,7 @@
 |-------|-------|---------|
 | Auth session | `authStore` | logged-in `User` |
 | Player | `playerStore` (create) | queue, repeat, shuffle, volume |
+| App language | app-wide context | active locale for English/Persian copy |
 | Page-local UI | `useState` in page | modal open, tab index |
 | Server/mock data | store or page hook | playlists list, notifications |
 | Form draft | React Hook Form | login, register, settings |
@@ -55,6 +56,7 @@ Document new keys here when you add them.
 | `seeded` | `boolean` | mock/seed | First-load flag |
 | `users` | `User[]` | auth | Mock user registry |
 | `auth_user_id` | `number` | auth | Current session user id |
+| `spotify-wp-app-language` | `AppLanguage` | i18n | Current app language (`en` / `fa`) |
 | `playlists` | `Playlist[]` | §2.7 | User playlists with tracks |
 | `tracks` | `Track[]` | §2.8 | Catalog |
 | `albums` | `Album[]` | §2.8 | Catalog |
@@ -80,6 +82,12 @@ Rules:
 - Provide enough data to demo every major page (at least 1–2 items per list).
 - Use realistic names; include all four roles for manual testing.
 - Align seeded objects with types in `src/types/`.
+
+## Language persistence
+
+- Read the active language from the app-language key during app bootstrap.
+- Update the stored value whenever the language changes.
+- Keep locale-dependent copy outside page components so switching language updates the full app without duplicating translation logic.
 
 ## Mock services (recommended pattern)
 

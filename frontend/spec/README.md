@@ -38,6 +38,7 @@ This folder is the **single source of truth** for how we build the Phase 1 front
 - **Reuse types from `src/types/`** — do not duplicate interfaces in components.
 - **Responsive UI** — every page must work on desktop, tablet, and mobile.
 - **Role-aware layouts** — listener, artist, support, and admin see different navigation.
+- **Bilingual UI** — English and Persian copy must come from shared locale files and persist per user in `localStorage`.
 
 ## Commands
 

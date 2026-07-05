@@ -6,6 +6,7 @@
  *  - [x] show listener personal and subscription details
  *  - [x] support local profile edits through the mock service
  *  - [x] disable profile picture changes for Basic subscribers
+ *  - [x] support English/Persian language switching in the manage view
  */
 import { useState, type ChangeEvent } from 'react';
 import {
@@ -27,6 +28,7 @@ import { Navigate } from 'react-router-dom';
 import FollowListPanel from '../components/profile/FollowListPanel';
 import ProfileStatsGrid from '../components/profile/ProfileStatsGrid';
 import ProfileSummaryHeader from '../components/profile/ProfileSummaryHeader';
+import { getManagePageText } from '../lib/constants/managePageText';
 import { ROLES } from '../lib/constants/roles';
 import { ROUTES, userProfilePath } from '../lib/constants/routes';
 import { SUBSCRIPTION_LIMITS } from '../lib/constants/subscriptionLimits';
@@ -37,6 +39,7 @@ import {
   updateListenerProfile,
 } from '../lib/mock/userProfileService';
 import { useAuthStore } from '../store/authStore';
+import { useAppLanguage } from '../theme/LanguageContext';
 import type {
   Gender,
   ListenerManagementProfile,
@@ -67,6 +70,7 @@ function createEditableProfile(
 export default function ListenerManagementPage() {
   const authUser = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const { language, toggleLanguage } = useAppLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [activeFollowList, setActiveFollowList] =
@@ -85,6 +89,7 @@ export default function ListenerManagementPage() {
           profile_picture: '',
         }
   );
+  const copy = getManagePageText(language);
 
   if (!authUser) {
     return <Navigate to={ROUTES.LOGIN} replace />;
@@ -96,8 +101,12 @@ export default function ListenerManagementPage() {
 
   if (!profile) {
     return (
-      <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
-        <Alert severity="error">Profile not found.</Alert>
+      <Box
+        className="min-h-screen p-6"
+        dir={language === 'fa' ? 'rtl' : 'ltr'}
+        sx={{ bgcolor: 'background.default' }}
+      >
+        <Alert severity="error">{copy.messages.profileNotFound}</Alert>
       </Box>
     );
   }
@@ -136,8 +145,8 @@ export default function ListenerManagementPage() {
     setProfile(nextProfile);
     setMessage(
       activeFollowList === 'followers'
-        ? `${account.display_name} was removed from followers.`
-        : `You unfollowed ${account.display_name}.`
+        ? copy.messages.removedFollower(account.display_name)
+        : copy.messages.unfollowed(account.display_name)
     );
   }
 
@@ -165,7 +174,7 @@ export default function ListenerManagementPage() {
     setProfile(nextProfile);
     setEditableProfile(createEditableProfile(nextProfile));
     setIsEditing(false);
-    setMessage('Profile updated.');
+    setMessage(copy.messages.profileUpdated);
   }
 
   function handleProfilePhotoUpload(
@@ -184,7 +193,7 @@ export default function ListenerManagementPage() {
           ...current,
           profile_picture: reader.result as string,
         }));
-        setMessage('Profile photo ready to save.');
+        setMessage(copy.messages.photoReady);
       }
     };
     reader.readAsDataURL(file);
@@ -196,14 +205,30 @@ export default function ListenerManagementPage() {
   return (
     <Box
       className="min-h-screen p-4 md:p-8"
+      dir={language === 'fa' ? 'rtl' : 'ltr'}
       sx={{ bgcolor: 'background.default' }}
     >
       <Stack className="mx-auto max-w-5xl" spacing={3}>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button
+            onClick={() => {
+              toggleLanguage();
+              setMessage(null);
+            }}
+            variant="outlined"
+          >
+            {language === 'en'
+              ? copy.actions.switchToPersian
+              : copy.actions.switchToEnglish}
+          </Button>
+        </Box>
+
         <Paper className="p-5 md:p-8">
           <Stack spacing={3}>
             <ProfileSummaryHeader
               avatarSize={88}
               gap={2.5}
+              language={language}
               titleSize={{ xs: '2.125rem', md: '2.125rem' }}
               user={profile.user}
               action={
@@ -220,7 +245,7 @@ export default function ListenerManagementPage() {
                       size="large"
                       variant="outlined"
                     >
-                      Edit
+                      {copy.actions.edit}
                     </Button>
                   </Box>
                 ) : (
@@ -233,18 +258,22 @@ export default function ListenerManagementPage() {
 
             <ProfileStatsGrid
               columns={statsGridColumns}
+              language={language}
               labelSize={statsLabelSize}
               padding={statsCardPadding}
               stats={[
                 {
-                  label: 'Followers',
+                  key: 'followers',
                   value: profile.user.followers_count ?? 0,
                 },
                 {
-                  label: 'Following',
+                  key: 'following',
                   value: profile.user.following_count ?? 0,
                 },
-                { label: 'Streamed today', value: profile.daily_streams_count },
+                {
+                  key: 'streamedToday',
+                  value: profile.daily_streams_count,
+                },
               ]}
               valueSize={statsValueSize}
             />
@@ -257,7 +286,7 @@ export default function ListenerManagementPage() {
                 variant="h6"
                 sx={{ fontWeight: 700, mb: 1 }}
               >
-                Followers and following
+                {copy.sections.followersAndFollowing}
               </Typography>
               <Paper variant="outlined">
                 <Tabs
@@ -269,11 +298,11 @@ export default function ListenerManagementPage() {
                   variant="fullWidth"
                 >
                   <Tab
-                    label={`Followers (${profile.followers.length})`}
+                    label={`${copy.tabs.followers} (${profile.followers.length})`}
                     value="followers"
                   />
                   <Tab
-                    label={`Following (${profile.following.length})`}
+                    label={`${copy.tabs.following} (${profile.following.length})`}
                     value="following"
                   />
                 </Tabs>
@@ -281,7 +310,7 @@ export default function ListenerManagementPage() {
                 <FollowListPanel
                   accounts={activeAccounts}
                   avatarSize={listAvatarSize}
-                  emptyMessage="No accounts to show."
+                  emptyStateKey="accounts"
                   gap={listGap}
                   getAccountAction={(account) =>
                     activeFollowList === 'following' ? (
@@ -292,7 +321,7 @@ export default function ListenerManagementPage() {
                         size="small"
                         variant="text"
                       >
-                        Unfollow
+                        {copy.actions.unfollow}
                       </Button>
                     ) : null
                   }
@@ -301,6 +330,7 @@ export default function ListenerManagementPage() {
                   }
                   height={listHeight}
                   isCompact={isCompactMobile}
+                  language={language}
                   padding={listPadding}
                   spacing={listSpacing}
                   surface={false}
@@ -318,14 +348,14 @@ export default function ListenerManagementPage() {
                 variant="h6"
                 sx={{ fontWeight: 700, mb: 2 }}
               >
-                Personal information
+                {copy.sections.personalInformation}
               </Typography>
               {isMobile && !isEditing ? (
                 <Box
                   sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}
                 >
                   <Button onClick={handleStartEdit} variant="outlined">
-                    Edit
+                    {copy.actions.edit}
                   </Button>
                 </Box>
               ) : null}
@@ -339,7 +369,7 @@ export default function ListenerManagementPage() {
                 <Box>
                   <TextField
                     fullWidth
-                    label="Display name"
+                    label={copy.form.displayName}
                     onChange={(event) =>
                       handleEditableChange('display_name', event.target.value)
                     }
@@ -354,7 +384,7 @@ export default function ListenerManagementPage() {
                 <Box>
                   <TextField
                     fullWidth
-                    label="System username"
+                    label={copy.form.systemUsername}
                     value={profile.user.username}
                     disabled
                   />
@@ -362,7 +392,7 @@ export default function ListenerManagementPage() {
                 <Box>
                   <TextField
                     fullWidth
-                    label="Birth date"
+                    label={copy.form.birthDate}
                     onChange={(event) =>
                       handleEditableChange('birth_date', event.target.value)
                     }
@@ -379,7 +409,7 @@ export default function ListenerManagementPage() {
                 <Box>
                   <TextField
                     fullWidth
-                    label="Gender"
+                    label={copy.form.gender}
                     onChange={(event) =>
                       handleEditableChange('gender', event.target.value)
                     }
@@ -391,18 +421,24 @@ export default function ListenerManagementPage() {
                     }
                     disabled={!isEditing}
                   >
-                    <MenuItem value="male">Male</MenuItem>
-                    <MenuItem value="female">Female</MenuItem>
-                    <MenuItem value="other">Other</MenuItem>
+                    <MenuItem value="male">
+                      {copy.form.genderOptions.male}
+                    </MenuItem>
+                    <MenuItem value="female">
+                      {copy.form.genderOptions.female}
+                    </MenuItem>
+                    <MenuItem value="other">
+                      {copy.form.genderOptions.other}
+                    </MenuItem>
                     <MenuItem value="prefer_not_to_say">
-                      Prefer not to say
+                      {copy.form.genderOptions.preferNotToSay}
                     </MenuItem>
                   </TextField>
                 </Box>
                 {isEditing && canEditProfilePicture ? (
                   <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
                     <Button component="label" variant="outlined">
-                      Change profile photo
+                      {copy.form.changePhoto}
                       <input
                         aria-label="Profile photo upload"
                         accept="image/*"
@@ -416,7 +452,7 @@ export default function ListenerManagementPage() {
                       sx={{ mt: 1 }}
                       variant="body2"
                     >
-                      Uploaded photos are stored locally for the Phase 1 demo.
+                      {copy.form.profilePhotoNote}
                     </Typography>
                   </Box>
                 ) : null}
@@ -434,10 +470,10 @@ export default function ListenerManagementPage() {
                   }}
                 >
                   <Button onClick={handleSaveProfile} variant="contained">
-                    Save changes
+                    {copy.actions.save}
                   </Button>
                   <Button onClick={handleCancelEdit} variant="outlined">
-                    Cancel
+                    {copy.actions.cancel}
                   </Button>
                 </Box>
               ) : null}

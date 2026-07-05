@@ -44,6 +44,8 @@ frontend/
     └── setupTests.ts
 ```
 
+Add app-wide language context alongside theme concerns in `src/theme/` so pages can read the active locale without prop drilling.
+
 ## Layer rules
 
 ### Pages (`src/pages/`)
@@ -66,6 +68,13 @@ Do not import page components from other pages. Share via `components/` or `lib/
 - **MainLayout** — listener/artist: sidebar + navbar + bottom player.
 - **AdminLayout** — support/admin dashboard with its own sidebar.
 - Layouts read auth role and render the correct navigation set.
+
+### Internationalization
+
+- Keep all user-facing text in shared locale modules under `src/lib/constants/`.
+- The active language is app-wide state and must persist via `localStorage`.
+- Components should read copy from the shared locale module, not inline strings, when the text is user-facing or reused across pages.
+- Prefer a single source of truth for translated labels so switching language updates the whole app consistently.
 
 ### Store (`src/store/`)
 
