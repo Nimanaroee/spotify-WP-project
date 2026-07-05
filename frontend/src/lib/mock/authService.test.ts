@@ -70,7 +70,7 @@ describe('authService', () => {
   it('maps staff roles to the admin destination', () => {
     const manager = storage.get<User[]>('users')?.[1]
 
-    expect(manager ? getRoleHomePath(manager) : '').toBe('/')
+    expect(manager ? getRoleHomePath(manager) : '').toBe('/admin/tickets')
   })
 
   it('shows a pending approval error for unapproved artists', () => {
