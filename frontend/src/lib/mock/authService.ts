@@ -1,4 +1,5 @@
 import { ROLES } from '../constants/roles'
+import { ROUTES } from '../constants/routes'
 import { storage } from './storage'
 import type {
   ForgotPasswordPayload,
@@ -72,8 +73,10 @@ function createUsername(source: string, users: StoredUser[]): string {
 }
 
 export function getRoleHomePath(user: User): string {
-  void user
-  return '/'
+  if (user.role === ROLES.SUPPORT || user.role === ROLES.ADMIN) {
+    return ROUTES.ADMIN_TICKETS
+  }
+  return ROUTES.HOME
 }
 
 export function getCurrentUser(): User | null {

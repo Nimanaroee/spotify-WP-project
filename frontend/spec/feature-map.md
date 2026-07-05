@@ -18,10 +18,10 @@ Maps course project sections to frontend locations. Update the **Status** column
 | §2.8 | Albums & singles | `pages/AlbumsPage`, `pages/AlbumDetailPage`, `types/music.ts` | TODO |
 | §2.9 | Music player | `components/layout/PlayerBar`, `store/playerStore`, `types/player.ts` | TODO |
 | §2.10 | Artwork management | `pages/ArtworkManagementPage` | TODO |
-| §2.11 | Admin dashboard | `layouts/AdminLayout`, `pages/admin/*` | TODO |
-| §2.11.1 | Tickets & verification | `pages/admin/TicketsPage`, `pages/admin/VerificationPage` | TODO |
-| §2.11.2 | Auditing | `pages/admin/AuditingPage`, `types/admin.ts` | TODO |
-| §2.11.3 | Subscription admin | `pages/admin/SubscriptionAdminPage`, `types/subscription.ts` | TODO |
+| §2.11 | Admin dashboard | `layouts/AdminLayout`, `pages/admin/*` | DONE |
+| §2.11.1 | Tickets & verification | `pages/admin/TicketsPage`, `pages/admin/VerificationDetailPage` | DONE |
+| §2.11.2 | Auditing | `pages/admin/AuditingPage`, `types/admin.ts` | DONE |
+| §2.11.3 | Subscription admin | `pages/admin/SubscriptionAdminPage`, `types/subscription.ts` | DONE |
 
 ## Cross-cutting concerns
 
