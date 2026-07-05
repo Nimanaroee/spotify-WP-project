@@ -29,7 +29,9 @@ import {
   getUserProfileView,
   unfollowAccount,
 } from '../lib/mock/userProfileService';
+import { getAppText } from '../lib/constants/appText';
 import { useAuthStore } from '../store/authStore';
+import { useAppLanguage } from '../theme/LanguageContext';
 import type { UserProfileView } from '../types';
 
 export default function UserProfilePage() {
@@ -37,6 +39,8 @@ export default function UserProfilePage() {
   const navigate = useNavigate();
   const authUser = useAuthStore((state) => state.user);
   const isCompactMobile = useMediaQuery('(max-width:767px)');
+  const { language } = useAppLanguage();
+  const copy = getAppText(language);
   const [profile, setProfile] = useState<UserProfileView | null>(null);
   const [error, setError] = useState('');
 
@@ -55,10 +59,10 @@ export default function UserProfilePage() {
       setError('');
     } catch (exception) {
       setError(
-        exception instanceof Error ? exception.message : 'Profile not found.'
+        exception instanceof Error ? exception.message : copy.common.notFound
       );
     }
-  }, [authUser, navigate, username]);
+  }, [authUser, copy.common.notFound, navigate, username]);
 
   if (!authUser) {
     return <Navigate to={ROUTES.LOGIN} replace />;
@@ -135,7 +139,9 @@ export default function UserProfilePage() {
                   size="small"
                   variant={profile.is_following ? 'outlined' : 'contained'}
                 >
-                  {profile.is_following ? 'Unfollow' : 'Follow'}
+                  {profile.is_following
+                    ? copy.profile.unfollow
+                    : copy.profile.follow}
                 </Button>
               </Box>
             }
@@ -146,9 +152,18 @@ export default function UserProfilePage() {
             labelSize={statsLabelSize}
             padding={statsCardPadding}
             stats={[
-              { label: 'Followers', value: profile.user.followers_count ?? 0 },
-              { label: 'Following', value: profile.user.following_count ?? 0 },
-              { label: 'Streamed today', value: profile.daily_streams_count },
+              {
+                label: copy.profile.followers,
+                value: profile.user.followers_count ?? 0,
+              },
+              {
+                label: copy.profile.following,
+                value: profile.user.following_count ?? 0,
+              },
+              {
+                label: copy.profile.streamedToday,
+                value: profile.daily_streams_count,
+              },
             ]}
             valueSize={statsValueSize}
           />
@@ -162,18 +177,22 @@ export default function UserProfilePage() {
           >
             <Paper variant="outlined" className="p-4">
               <Typography color="text.secondary" variant="body2">
-                Birth date
+                {copy.profile.birthDate}
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {profile.user.birth_date ?? 'Not set'}
+                {profile.user.birth_date ?? copy.profile.notSet}
               </Typography>
             </Paper>
             <Paper variant="outlined" className="p-4">
               <Typography color="text.secondary" variant="body2">
-                Gender
+                {copy.profile.gender}
               </Typography>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                {profile.user.gender ?? 'Not set'}
+                {profile.user.gender
+                  ? profile.user.gender === 'prefer_not_to_say'
+                    ? copy.profile.genderValue.preferNotToSay
+                    : copy.profile.genderValue[profile.user.gender]
+                  : copy.profile.notSet}
               </Typography>
             </Paper>
           </Box>
@@ -188,27 +207,35 @@ export default function UserProfilePage() {
             <FollowListPanel
               accounts={profile.followers}
               avatarSize={listAvatarSize}
-              emptyMessage="No followers to show."
+              emptyMessage={
+                language === 'fa'
+                  ? 'دنبال‌کننده‌ای وجود ندارد.'
+                  : 'No followers to show.'
+              }
               gap={listGap}
               height={listHeight}
               isCompact={isCompactMobile}
               padding={listPadding}
               spacing={listSpacing}
               subtitleSize={listSubtitleSize}
-              title="Followers"
+              title={copy.profile.followers}
               titleSize={listTitleSize}
             />
             <FollowListPanel
               accounts={profile.following}
               avatarSize={listAvatarSize}
-              emptyMessage="No following accounts to show."
+              emptyMessage={
+                language === 'fa'
+                  ? 'حساب دنبال‌شده‌ای وجود ندارد.'
+                  : 'No following accounts to show.'
+              }
               gap={listGap}
               height={listHeight}
               isCompact={isCompactMobile}
               padding={listPadding}
               spacing={listSpacing}
               subtitleSize={listSubtitleSize}
-              title="Following"
+              title={copy.profile.following}
               titleSize={listTitleSize}
             />
           </Box>

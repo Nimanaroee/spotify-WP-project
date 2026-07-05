@@ -2,7 +2,7 @@
  * ForgotPasswordPage — password recovery request
  * Spec reference: §2.1
  */
-import { zodResolver } from '@hookform/resolvers/zod'
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Alert,
   Box,
@@ -13,18 +13,22 @@ import {
   Stack,
   TextField,
   Typography,
-} from '@mui/material'
-import { Link as RouterLink } from 'react-router-dom'
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { requestPasswordRecovery } from '../lib/mock/authService'
+} from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { getAppText } from '../lib/constants/appText';
+import { requestPasswordRecovery } from '../lib/mock/authService';
+import { useAppLanguage } from '../theme/LanguageContext';
 import {
   forgotPasswordSchema,
   type ForgotPasswordFormValues,
-} from './authSchemas'
+} from './authSchemas';
 
 export default function ForgotPasswordPage() {
-  const [submitted, setSubmitted] = useState(false)
+  const [submitted, setSubmitted] = useState(false);
+  const { language } = useAppLanguage();
+  const copy = getAppText(language);
   const {
     register,
     handleSubmit,
@@ -32,11 +36,11 @@ export default function ForgotPasswordPage() {
   } = useForm<ForgotPasswordFormValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: { email: '' },
-  })
+  });
 
   function onSubmit(values: ForgotPasswordFormValues): void {
-    requestPasswordRecovery(values)
-    setSubmitted(true)
+    requestPasswordRecovery(values);
+    setSubmitted(true);
   }
 
   return (
@@ -49,7 +53,7 @@ export default function ForgotPasswordPage() {
           <Stack spacing={3}>
             <Box>
               <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-                Recover password
+                {copy.auth.recoverPassword}
               </Typography>
               <Typography color="text.secondary">
                 Enter your email and we will prepare a recovery request.
@@ -60,9 +64,13 @@ export default function ForgotPasswordPage() {
               <Alert severity="success">Password recovery request saved.</Alert>
             ) : null}
 
-            <Stack component="form" spacing={2} onSubmit={handleSubmit(onSubmit)}>
+            <Stack
+              component="form"
+              spacing={2}
+              onSubmit={handleSubmit(onSubmit)}
+            >
               <TextField
-                label="Email"
+                label={copy.auth.email}
                 type="email"
                 autoComplete="email"
                 error={Boolean(errors.email)}
@@ -70,16 +78,16 @@ export default function ForgotPasswordPage() {
                 {...register('email')}
               />
               <Button type="submit" variant="contained">
-                Send recovery email
+                {copy.auth.sendRecoveryEmail}
               </Button>
             </Stack>
 
             <Link component={RouterLink} to="/login">
-              Back to login
+              {copy.auth.backToLogin}
             </Link>
           </Stack>
         </CardContent>
       </Card>
     </Box>
-  )
+  );
 }
