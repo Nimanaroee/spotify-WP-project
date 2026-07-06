@@ -4,7 +4,7 @@ export type {
   Follow,
   ForgotPasswordPayload,
   Gender,
-  ListenerManagementProfile,
+  ManageProfile,
   LoginPayload,
   RegisterArtistPayload,
   RegisterListenerPayload,

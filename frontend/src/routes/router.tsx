@@ -5,7 +5,7 @@ import RegisterPage from '../pages/RegisterPage'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage'
 import ArtworkManagementPage from '../pages/ArtworkManagementPage'
 import MainLayout from '../layouts/MainLayout'
-import ListenerManagementPage from '../pages/ListenerManagementPage'
+import ManagePage from '../pages/ManagePage'
 import UserProfilePage from '../pages/UserProfilePage'
 import AdminLayout from '../layouts/AdminLayout'
 import RoleGuard from './RoleGuard'
@@ -26,11 +26,11 @@ export default function Router() {
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
       <Route path={ROUTES.HOME} element={<HomePage />} />
-      <Route path={ROUTES.MANAGE} element={<ListenerManagementPage />} />
+      <Route path={ROUTES.MANAGE} element={<ManagePage />} />
       <Route
         path={ROUTES.SETTINGS}
         element={
-          <RoleGuard allowedRoles={[ROLES.LISTENER]}>
+          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST]}>
             <MainLayout>
               <SettingsPage />
             </MainLayout>
@@ -41,7 +41,7 @@ export default function Router() {
       <Route
         path={ROUTES.ARTIST_STUDIO}
         element={
-          <RoleGuard allowedRoles={[ROLES.ARTIST]} requireVerifiedArtist>
+          <RoleGuard allowedRoles={[ROLES.ARTIST]}>
             <MainLayout>
               <ArtworkManagementPage />
             </MainLayout>

@@ -3,10 +3,10 @@ import { ROLES } from '../constants/roles'
 import { storage } from './storage'
 import {
   getUserProfileView,
-  getListenerManagementProfile,
+  getManageProfile,
   removeFollower,
   unfollowAccount,
-  updateListenerProfile,
+  updateUserProfile,
 } from './userProfileService'
 
 describe('userProfileService', () => {
@@ -87,7 +87,7 @@ describe('userProfileService', () => {
   })
 
   it('loads profile details with daily stream statistics and non-self relationships', () => {
-    const profile = getListenerManagementProfile(1)
+    const profile = getManageProfile(1)
 
     expect(profile.user.username).toBe('listener')
     expect(profile.daily_streams_count).toBe(37)
@@ -119,7 +119,7 @@ describe('userProfileService', () => {
   })
 
   it('updates editable personal information', () => {
-    const updatedUser = updateListenerProfile(1, {
+    const updatedUser = updateUserProfile(1, {
       display_name: 'Updated Listener',
       birth_date: '1999-09-09',
       gender: 'other',
@@ -131,15 +131,15 @@ describe('userProfileService', () => {
   })
 
   it('prevents Basic subscribers from changing profile pictures', () => {
-    updateListenerProfile(1, { profile_picture: 'https://example.com/avatar.png' })
+    updateUserProfile(1, { profile_picture: 'https://example.com/avatar.png' })
 
-    expect(getListenerManagementProfile(1).user.profile_picture).toBeNull()
+    expect(getManageProfile(1).user.profile_picture).toBeNull()
   })
 
   it('allows non-Basic subscribers to change profile pictures', () => {
-    updateListenerProfile(4, { profile_picture: 'data:image/png;base64,avatar' })
+    updateUserProfile(4, { profile_picture: 'data:image/png;base64,avatar' })
 
-    expect(getListenerManagementProfile(4).user.profile_picture).toBe(
+    expect(getManageProfile(4).user.profile_picture).toBe(
       'data:image/png;base64,avatar',
     )
   })

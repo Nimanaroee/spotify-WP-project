@@ -35,9 +35,19 @@ export default function ProfileSummaryHeader({
         alignItems: { xs: 'flex-start', md: 'center' },
         flexDirection: { xs: 'column', md: 'row' },
         justifyContent: 'space-between',
+        width: '100%',
       }}
     >
-      <Box sx={{ alignItems: 'center', display: 'flex', gap }}>
+      <Box
+        sx={{
+          alignItems: 'center',
+          display: 'flex',
+          flex: '1 1 auto',
+          gap,
+          maxWidth: '100%',
+          minWidth: 0,
+        }}
+      >
         <Avatar
           alt={`Profile picture for ${user.display_name}`}
           src={user.profile_picture ?? undefined}
@@ -50,32 +60,38 @@ export default function ProfileSummaryHeader({
         >
           {getProfileInitials(user.display_name)}
         </Avatar>
-        <Box>
+        <Box sx={{ flex: '1 1 auto', minWidth: 0 }}>
           <Typography
             component="h1"
             variant="h4"
-            sx={{ fontWeight: 800, fontSize: titleSize }}
+            sx={{
+              fontWeight: 800,
+              fontSize: titleSize,
+              overflowWrap: 'anywhere',
+              wordBreak: 'break-word',
+            }}
           >
             {user.display_name}
           </Typography>
           <Typography
             color="text.secondary"
-            sx={{ fontSize: { xs: '0.85rem', md: '1rem' } }}
+            sx={{
+              fontSize: { xs: '0.85rem', md: '1rem' },
+              overflowWrap: 'anywhere',
+            }}
           >
             @{user.username}
           </Typography>
-          <Chip
-            sx={{ mt: 1 }}
-            color={subscriptionTier === 'gold' ? 'warning' : 'primary'}
-            label={
-              showSubscriptionLabel
-                ? `${subscriptionTier.toUpperCase()} ${
-                    copy.profile.subscription
-                  }`
-                : subscriptionTier.toUpperCase()
-            }
-            variant={subscriptionTier === 'basic' ? 'outlined' : 'filled'}
-          />
+          {showSubscriptionLabel ? (
+            <Chip
+              sx={{ mt: 1 }}
+              color={subscriptionTier === 'gold' ? 'warning' : 'primary'}
+              label={`${subscriptionTier.toUpperCase()} ${
+                copy.profile.subscription
+              }`}
+              variant={subscriptionTier === 'basic' ? 'outlined' : 'filled'}
+            />
+          ) : null}
         </Box>
       </Box>
       {action}

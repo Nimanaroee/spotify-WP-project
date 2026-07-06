@@ -39,6 +39,20 @@ type SharedCopy = {
     streamedToday: string;
     subscription: string;
     unfollow: string;
+    artistBio: string;
+    albums: string;
+    singles: string;
+    noAlbums: string;
+    noSingles: string;
+    verifiedArtist: string;
+    listenerStats: string;
+    totalListeners: string;
+    totalStreams: string;
+    goldOnlyAnalytics: string;
+    artisticName: string;
+    saveArtistProfile: string;
+    artistProfileUpdated: string;
+    artistContent: string;
   };
   roleLanding: {
     goHome: string;
@@ -134,7 +148,7 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       welcome: 'Welcome',
     },
     home: {
-      manageProfile: 'Manage listener profile',
+      manageProfile: 'Manage profile',
       settings: 'Settings',
     },
     profile: {
@@ -153,6 +167,20 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       streamedToday: 'Streamed today',
       subscription: 'subscription',
       unfollow: 'Unfollow',
+      artistBio: 'Biography',
+      albums: 'Albums',
+      singles: 'Singles',
+      noAlbums: 'No albums released yet.',
+      noSingles: 'No singles released yet.',
+      verifiedArtist: 'Verified Artist',
+      listenerStats: 'Listener statistics',
+      totalListeners: 'Total listeners',
+      totalStreams: 'Total streams',
+      goldOnlyAnalytics: 'Upgrade to Gold to view premium artist analytics.',
+      artisticName: 'Artistic name',
+      saveArtistProfile: 'Save artist profile',
+      artistProfileUpdated: 'Artist profile updated.',
+      artistContent: 'Artist content',
     },
     roleLanding: {
       goHome: 'Go to home',
@@ -246,7 +274,7 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       welcome: 'خوش آمدید',
     },
     home: {
-      manageProfile: 'مدیریت پروفایل شنونده',
+      manageProfile: 'مدیریت پروفایل',
       settings: 'تنظیمات',
     },
     profile: {
@@ -265,6 +293,20 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       streamedToday: 'پخش امروز',
       subscription: 'اشتراک',
       unfollow: 'لغو دنبال‌کردن',
+      artistBio: 'زندگی‌نامه',
+      albums: 'آلبوم‌ها',
+      singles: 'تک‌آهنگ‌ها',
+      noAlbums: 'هنوز آلبومی منتشر نشده است.',
+      noSingles: 'هنوز تک‌آهنگی منتشر نشده است.',
+      verifiedArtist: 'هنرمند تاییدشده',
+      listenerStats: 'آمار شنوندگان',
+      totalListeners: 'کل شنوندگان',
+      totalStreams: 'کل پخش‌ها',
+      goldOnlyAnalytics: 'برای مشاهده آمار ویژه هنرمند، اشتراک طلایی تهیه کنید.',
+      artisticName: 'نام هنری',
+      saveArtistProfile: 'ذخیره پروفایل هنرمند',
+      artistProfileUpdated: 'پروفایل هنرمند به‌روزرسانی شد.',
+      artistContent: 'محتوای هنرمند',
     },
     roleLanding: {
       goHome: 'رفتن به صفحه اصلی',

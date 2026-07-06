@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   Divider,
   MenuItem,
   Paper,
@@ -13,27 +14,37 @@ import {
   Typography,
   useMediaQuery,
 } from '@mui/material';
+import { BadgeCheck } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
+import ArtistReleaseCard from '../components/profile/ArtistReleaseCard';
 import FollowListPanel from '../components/profile/FollowListPanel';
 import ProfileStatsGrid from '../components/profile/ProfileStatsGrid';
 import ProfileSummaryHeader from '../components/profile/ProfileSummaryHeader';
+import { getAppText } from '../lib/constants/appText';
 import { getManagePageText } from '../lib/constants/managePageText';
 import { ROLES } from '../lib/constants/roles';
 import { ROUTES, userProfilePath } from '../lib/constants/routes';
 import { SUBSCRIPTION_LIMITS } from '../lib/constants/subscriptionLimits';
 import {
-  getListenerManagementProfile,
+  getOwnArtistProfileView,
+  type ArtistProfileView,
+  updateArtistProfile,
+} from '../lib/mock/artistProfileService';
+import {
+  getManageProfile,
+  getUserProfileView,
   removeFollower,
   unfollowAccount,
-  updateListenerProfile,
+  updateUserProfile,
 } from '../lib/mock/userProfileService';
 import { useAuthStore } from '../store/authStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import type {
   Gender,
-  ListenerManagementProfile,
+  ManageProfile,
   UpdateUserProfilePayload,
+  User,
   UserSummary,
 } from '../types';
 
@@ -46,8 +57,14 @@ type EditableProfile = Required<
 
 type FollowListType = 'followers' | 'following';
 
+type ArtistEditableProfile = {
+  stage_name: string;
+  bio: string;
+  profile_picture: string;
+};
+
 function createEditableProfile(
-  profile: ListenerManagementProfile
+  profile: ManageProfile
 ): EditableProfile {
   return {
     display_name: profile.user.display_name,
@@ -57,7 +74,295 @@ function createEditableProfile(
   };
 }
 
-export default function ListenerManagementPage() {
+function ArtistManagementPage({ authUser }: { authUser: User }) {
+  const setUser = useAuthStore((state) => state.setUser);
+  const { language } = useAppLanguage();
+  const copy = getAppText(language);
+  const manageCopy = getManagePageText(language);
+  const isMobile = useMediaQuery('(max-width:767px)');
+  const [message, setMessage] = useState<string | null>(null);
+  const [artistView, setArtistView] = useState<ArtistProfileView>(() => {
+    const baseProfile = getUserProfileView(authUser.id, authUser.username);
+    return getOwnArtistProfileView(authUser.id, baseProfile);
+  });
+  const [editableArtistProfile, setEditableArtistProfile] =
+    useState<ArtistEditableProfile>({
+      stage_name: artistView.artist_profile.stage_name,
+      bio: artistView.artist_profile.bio ?? '',
+      profile_picture: artistView.user.profile_picture ?? '',
+    });
+  const [activeFollowList, setActiveFollowList] =
+    useState<FollowListType>('followers');
+  const isCompactMobile = isMobile;
+  const statsGridColumns = isCompactMobile
+    ? 'repeat(2, minmax(0, 1fr))'
+    : 'repeat(2, 1fr)';
+  const statsCardPadding = isCompactMobile ? 1.25 : 2;
+  const statsLabelSize = isCompactMobile ? '0.68rem' : '0.875rem';
+  const statsValueSize = isCompactMobile ? '1rem' : '1.5rem';
+  const listHeight = isCompactMobile ? 260 : 320;
+  const listPadding = isCompactMobile ? 1 : 2;
+  const listSpacing = isCompactMobile ? 0.75 : 1;
+  const listGap = isCompactMobile ? 1 : 1.5;
+  const listAvatarSize = isCompactMobile ? 30 : 40;
+  const listTitleSize = isCompactMobile ? '0.82rem' : '1rem';
+  const listSubtitleSize = isCompactMobile ? '0.68rem' : '0.875rem';
+
+  function refreshArtistView(): void {
+    const baseProfile = getUserProfileView(authUser.id, authUser.username);
+    const nextView = getOwnArtistProfileView(authUser.id, baseProfile);
+    setArtistView(nextView);
+    setEditableArtistProfile({
+      stage_name: nextView.artist_profile.stage_name,
+      bio: nextView.artist_profile.bio ?? '',
+      profile_picture: nextView.user.profile_picture ?? '',
+    });
+  }
+
+  function handleSaveArtisticName(): void {
+    const nextProfile = updateArtistProfile(authUser.id, {
+      stage_name: editableArtistProfile.stage_name,
+      bio: editableArtistProfile.bio,
+      profile_picture: editableArtistProfile.profile_picture || null,
+    });
+    setUser({ ...authUser, display_name: nextProfile.stage_name });
+    refreshArtistView();
+    setMessage(copy.profile.artistProfileUpdated);
+  }
+
+  function handleArtistPhotoUpload(event: ChangeEvent<HTMLInputElement>): void {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setEditableArtistProfile((current) => ({
+          ...current,
+          profile_picture: reader.result as string,
+        }));
+        setMessage(manageCopy.messages.photoReady);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleRemoveFollowAccount(account: UserSummary): void {
+    if (activeFollowList === 'followers') {
+      removeFollower(authUser.id, account.id);
+    } else {
+      unfollowAccount(authUser.id, account.id);
+    }
+    refreshArtistView();
+    setMessage(
+      activeFollowList === 'followers'
+        ? manageCopy.messages.removedFollower(account.display_name)
+        : manageCopy.messages.unfollowed(account.display_name)
+    );
+  }
+
+  const activeAccounts =
+    activeFollowList === 'followers'
+      ? artistView.followers
+      : artistView.following;
+
+  return (
+    <Box
+      className="min-h-screen p-4 md:p-8"
+      dir={language === 'fa' ? 'rtl' : 'ltr'}
+      sx={{ bgcolor: 'background.default' }}
+    >
+      <Stack className="mx-auto max-w-5xl" spacing={3}>
+        <Paper className="p-5 md:p-8">
+          <Stack spacing={3}>
+            <ProfileSummaryHeader
+              avatarSize={88}
+              gap={2.5}
+              language={language}
+              showSubscriptionLabel={false}
+              titleSize={{ xs: '2.125rem', md: '2.125rem' }}
+              user={{
+                ...artistView.user,
+                display_name: artistView.artist_profile.stage_name,
+              }}
+              action={
+                artistView.artist_profile.is_verified ? (
+                  <Chip
+                    color="success"
+                    icon={<BadgeCheck size={16} />}
+                    label={copy.profile.verifiedArtist}
+                  />
+                ) : null
+              }
+            />
+
+            {message ? <Alert severity="success">{message}</Alert> : null}
+
+            <Paper className="p-4" variant="outlined">
+              <Stack spacing={2}>
+                <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
+                  {copy.profile.artistContent}
+                </Typography>
+                <TextField
+                  fullWidth
+                  label={copy.profile.artisticName}
+                  onChange={(event) =>
+                    setEditableArtistProfile((current) => ({
+                      ...current,
+                      stage_name: event.target.value,
+                    }))
+                  }
+                  value={editableArtistProfile.stage_name}
+                />
+                <Box>
+                  <Button component="label" variant="outlined">
+                    {manageCopy.form.changePhoto}
+                    <input
+                      aria-label="Profile photo upload"
+                      accept="image/*"
+                      hidden
+                      onChange={handleArtistPhotoUpload}
+                      type="file"
+                    />
+                  </Button>
+                </Box>
+                <Box>
+                  <Button onClick={handleSaveArtisticName} variant="contained">
+                    {copy.profile.saveArtistProfile}
+                  </Button>
+                </Box>
+                <Divider />
+                <TextField
+                  fullWidth
+                  label={copy.profile.artistBio}
+                  minRows={4}
+                  multiline
+                  onChange={(event) =>
+                    setEditableArtistProfile((current) => ({
+                      ...current,
+                      bio: event.target.value,
+                    }))
+                  }
+                  value={editableArtistProfile.bio}
+                />
+              </Stack>
+            </Paper>
+
+            <ProfileStatsGrid
+              columns={statsGridColumns}
+              labelSize={statsLabelSize}
+              padding={statsCardPadding}
+              stats={[
+                {
+                  label: copy.profile.totalListeners,
+                  value: artistView.listener_count,
+                },
+                {
+                  label: copy.profile.totalStreams,
+                  value: artistView.total_streams,
+                },
+              ]}
+              valueSize={statsValueSize}
+            />
+
+            <Box>
+              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                {copy.profile.albums}
+              </Typography>
+              <Stack spacing={1.5}>
+                {artistView.albums.length > 0 ? (
+                  artistView.albums.map((album) => (
+                    <ArtistReleaseCard key={album.id} release={album} />
+                  ))
+                ) : (
+                  <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
+                )}
+              </Stack>
+            </Box>
+
+            <Box>
+              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                {copy.profile.singles}
+              </Typography>
+              <Stack spacing={1.5}>
+                {artistView.singles.length > 0 ? (
+                  artistView.singles.map((single) => (
+                    <ArtistReleaseCard key={single.id} release={single} />
+                  ))
+                ) : (
+                  <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
+                )}
+              </Stack>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                {manageCopy.sections.followersAndFollowing}
+              </Typography>
+              <Paper variant="outlined">
+                <Tabs
+                  onChange={(_event, value: FollowListType) => {
+                    setActiveFollowList(value);
+                    setMessage(null);
+                  }}
+                  value={activeFollowList}
+                  variant="fullWidth"
+                >
+                  <Tab
+                    label={`${manageCopy.tabs.followers} (${artistView.followers.length})`}
+                    value="followers"
+                  />
+                  <Tab
+                    label={`${manageCopy.tabs.following} (${artistView.following.length})`}
+                    value="following"
+                  />
+                </Tabs>
+                <Divider />
+                <FollowListPanel
+                  accounts={activeAccounts}
+                  avatarSize={listAvatarSize}
+                  emptyStateKey="accounts"
+                  gap={listGap}
+                  getAccountAction={(account) =>
+                    activeFollowList === 'following' ? (
+                      <Button
+                        aria-label={`Unfollow ${account.display_name}`}
+                        color="inherit"
+                        onClick={() => handleRemoveFollowAccount(account)}
+                        size="small"
+                        variant="text"
+                      >
+                        {manageCopy.actions.unfollow}
+                      </Button>
+                    ) : null
+                  }
+                  getAccountHref={(account) =>
+                    userProfilePath(account.username ?? String(account.id))
+                  }
+                  height={listHeight}
+                  isCompact={isCompactMobile}
+                  language={language}
+                  padding={listPadding}
+                  spacing={listSpacing}
+                  surface={false}
+                  subtitleSize={listSubtitleSize}
+                  titleSize={listTitleSize}
+                />
+              </Paper>
+            </Box>
+          </Stack>
+        </Paper>
+      </Stack>
+    </Box>
+  );
+}
+
+export default function ManagePage() {
   const authUser = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const { language } = useAppLanguage();
@@ -65,8 +370,8 @@ export default function ListenerManagementPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [activeFollowList, setActiveFollowList] =
     useState<FollowListType>('followers');
-  const [profile, setProfile] = useState<ListenerManagementProfile | null>(() =>
-    authUser ? getListenerManagementProfile(authUser.id) : null
+  const [profile, setProfile] = useState<ManageProfile | null>(() =>
+    authUser ? getManageProfile(authUser.id) : null
   );
   const isMobile = useMediaQuery('(max-width:767px)');
   const [editableProfile, setEditableProfile] = useState<EditableProfile>(() =>
@@ -83,6 +388,10 @@ export default function ListenerManagementPage() {
 
   if (!authUser) {
     return <Navigate to={ROUTES.LOGIN} replace />;
+  }
+
+  if (authUser.role === ROLES.ARTIST) {
+    return <ArtistManagementPage authUser={authUser} />;
   }
 
   if (authUser.role !== ROLES.LISTENER) {
@@ -158,8 +467,8 @@ export default function ListenerManagementPage() {
       gender: editableProfile.gender as Gender,
       profile_picture: editableProfile.profile_picture || null,
     };
-    const updatedUser = updateListenerProfile(currentProfile.user.id, payload);
-    const nextProfile = getListenerManagementProfile(currentProfile.user.id);
+    const updatedUser = updateUserProfile(currentProfile.user.id, payload);
+    const nextProfile = getManageProfile(currentProfile.user.id);
     setUser(updatedUser);
     setProfile(nextProfile);
     setEditableProfile(createEditableProfile(nextProfile));
@@ -212,8 +521,9 @@ export default function ListenerManagementPage() {
                   <Box
                     sx={{
                       display: 'flex',
+                      flexShrink: 0,
                       justifyContent: 'flex-end',
-                      width: '100%',
+                      width: { xs: '100%', md: 'auto' },
                     }}
                   >
                     <Button
@@ -423,13 +733,6 @@ export default function ListenerManagementPage() {
                         type="file"
                       />
                     </Button>
-                    <Typography
-                      color="text.secondary"
-                      sx={{ mt: 1 }}
-                      variant="body2"
-                    >
-                      {copy.form.profilePhotoNote}
-                    </Typography>
                   </Box>
                 ) : null}
               </Box>

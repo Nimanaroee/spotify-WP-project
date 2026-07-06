@@ -57,8 +57,27 @@ describe('HomePage', () => {
   it('shows listener profile management entry point', () => {
     renderHomePage()
 
-    expect(
-      screen.getByRole('button', { name: /manage listener profile/i }),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /manage profile/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument()
+  })
+
+  it('shows musician manage and settings entry points', () => {
+    useAuthStore.setState({
+      user: {
+        id: 2,
+        username: 'artist',
+        email: 'artist@example.com',
+        display_name: 'Artist',
+        role: ROLES.ARTIST,
+        subscription_tier: 'basic',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    })
+
+    renderHomePage()
+
+    expect(screen.getByRole('button', { name: /manage profile/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument()
   })
 })

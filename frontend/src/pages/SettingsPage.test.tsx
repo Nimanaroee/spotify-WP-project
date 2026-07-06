@@ -121,6 +121,25 @@ describe('SettingsPage', () => {
     ).toBe('gold')
   })
 
+  it('hides subscription controls for artists', () => {
+    useAuthStore.setState({
+      user: {
+        id: 2,
+        username: 'artist',
+        email: 'artist@example.com',
+        display_name: 'Artist',
+        role: ROLES.ARTIST,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    })
+
+    renderSettingsPage()
+
+    expect(screen.queryByText('Subscription status')).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /current plan/i })).not.toBeInTheDocument()
+  })
+
   it('deletes the local listener account after confirmation', async () => {
     const user = userEvent.setup()
     vi.spyOn(window, 'confirm').mockReturnValue(true)

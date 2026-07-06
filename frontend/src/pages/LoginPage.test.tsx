@@ -78,7 +78,7 @@ describe('LoginPage', () => {
     expect(useAuthStore.getState().user?.email).toBe('listener@example.com')
   })
 
-  it('shows a pending approval alert for unapproved artists', async () => {
+  it('logs in unapproved artists without blocking the session', async () => {
     const user = userEvent.setup()
     renderLoginPage()
 
@@ -86,9 +86,8 @@ describe('LoginPage', () => {
     await user.type(screen.getByLabelText(/password/i), 'password123')
     await user.click(screen.getByRole('button', { name: /log in/i }))
 
-    expect(
-      await screen.findByText('Your artist account is pending approval.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /welcome/i })).toBeInTheDocument()
+    expect(useAuthStore.getState().user?.email).toBe('pending@example.com')
   })
 
   it('links to password recovery', () => {

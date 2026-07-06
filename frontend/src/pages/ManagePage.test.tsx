@@ -4,12 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { ThemeProvider, createTheme } from '@mui/material';
 import { useMemo, useState, type ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import ListenerManagementPage from './ListenerManagementPage';
+import ManagePage from './ManagePage';
 import HomePage from './HomePage';
 import LoginPage from './LoginPage';
 import { ROLES } from '../lib/constants/roles';
 import { ROUTES } from '../lib/constants/routes';
-import { getListenerManagementProfile } from '../lib/mock/userProfileService';
+import { getManageProfile } from '../lib/mock/userProfileService';
 import { storage } from '../lib/mock/storage';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -50,7 +50,7 @@ function TestLanguageProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function renderListenerManagementPage(initialPath = ROUTES.MANAGE) {
+function renderManagePage(initialPath = ROUTES.MANAGE) {
   return render(
     <TestLanguageProvider>
       <ThemeProvider theme={createTheme()}>
@@ -58,7 +58,7 @@ function renderListenerManagementPage(initialPath = ROUTES.MANAGE) {
           <Routes>
             <Route path={ROUTES.HOME} element={<HomePage />} />
             <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-            <Route path={ROUTES.MANAGE} element={<ListenerManagementPage />} />
+            <Route path={ROUTES.MANAGE} element={<ManagePage />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -94,7 +94,7 @@ function setDesktopViewport(): void {
   window.dispatchEvent(new Event('resize'));
 }
 
-describe('ListenerManagementPage', () => {
+describe('ManagePage', () => {
   beforeEach(() => {
     localStorage.clear();
     storage.set('users', [
@@ -136,7 +136,45 @@ describe('ListenerManagementPage', () => {
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
       },
+      {
+        id: 4,
+        username: 'demo_artist',
+        email: 'artist@example.com',
+        password: 'password123',
+        display_name: 'Demo Artist',
+        role: ROLES.ARTIST,
+        profile_picture: null,
+        subscription_tier: 'basic',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
     ]);
+    storage.set('artist_profiles', [
+      {
+        id: 1,
+        user_id: 4,
+        stage_name: 'Demo Artist',
+        bio: 'Artist biography.',
+        verification_status: 'pending',
+        is_verified: false,
+        listener_count: 30,
+        total_streams: 80,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    storage.set('tracks', [
+      {
+        id: 1,
+        title: 'Artist Single',
+        artist_id: 4,
+        artist_name: 'Demo Artist',
+        release_type: 'single',
+        created_at: '2026-01-02T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+      },
+    ]);
+    storage.set('albums', []);
     storage.set('daily_streams', { 1: 12 });
     storage.set('follows', [
       {
@@ -173,7 +211,7 @@ describe('ListenerManagementPage', () => {
 
   it('shows listener profile details and stream stats', () => {
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(
       screen.getByRole('heading', { name: 'Listener' })
@@ -196,7 +234,7 @@ describe('ListenerManagementPage', () => {
 
   it('does not render the old language switcher on the management page', () => {
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(
       screen.queryByRole('button', { name: /فارسی|persian|english/i })
@@ -206,7 +244,7 @@ describe('ListenerManagementPage', () => {
   it('hides profile photo upload for Basic subscribers', async () => {
     const user = userEvent.setup();
     setMobileViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(
       screen.getByRole('button', { name: /edit/i, hidden: false })
@@ -247,7 +285,7 @@ describe('ListenerManagementPage', () => {
         updated_at: '2026-01-01T00:00:00.000Z',
       },
     });
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(
       screen.getByRole('button', { name: /edit/i, hidden: false })
@@ -260,7 +298,7 @@ describe('ListenerManagementPage', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() =>
-      expect(getListenerManagementProfile(1).user.profile_picture).toMatch(
+      expect(getManageProfile(1).user.profile_picture).toMatch(
         /^data:image\/png;base64,/
       )
     );
@@ -269,7 +307,7 @@ describe('ListenerManagementPage', () => {
   it('saves edited personal information', async () => {
     const user = userEvent.setup();
     setMobileViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(
       screen.getByRole('button', { name: /edit/i, hidden: false })
@@ -278,7 +316,7 @@ describe('ListenerManagementPage', () => {
     await user.type(screen.getByLabelText(/display name/i), 'Updated Listener');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    expect(getListenerManagementProfile(1).user.display_name).toBe(
+    expect(getManageProfile(1).user.display_name).toBe(
       'Updated Listener'
     );
     expect(screen.getByText('Profile updated.')).toBeInTheDocument();
@@ -287,40 +325,89 @@ describe('ListenerManagementPage', () => {
   it('removes a follower from the followers list', async () => {
     const user = userEvent.setup();
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(screen.getByRole('tab', { name: /following \(1\)/i }));
     await user.click(
       screen.getByRole('button', { name: /unfollow following friend/i })
     );
 
-    expect(getListenerManagementProfile(1).following).toHaveLength(0);
+    expect(getManageProfile(1).following).toHaveLength(0);
   });
 
   it('unfollows an account from the following list', async () => {
     const user = userEvent.setup();
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(screen.getByRole('tab', { name: /following \(1\)/i }));
     await user.click(
       screen.getByRole('button', { name: /unfollow following friend/i })
     );
 
-    expect(getListenerManagementProfile(1).following).toHaveLength(0);
+    expect(getManageProfile(1).following).toHaveLength(0);
   });
 
   it('renders fixed-height scrollable follow panels', () => {
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(screen.getByRole('list')).toHaveStyle({ maxHeight: '320px' });
   });
 
   it('keeps follow panels compact on mobile', () => {
     setMobileViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(screen.getByRole('list')).toHaveStyle({ maxHeight: '260px' });
+  });
+
+  it('renders musician management with editable artistic name', async () => {
+    const user = userEvent.setup();
+    setDesktopViewport();
+    useAuthStore.setState({
+      user: {
+        id: 4,
+        username: 'demo_artist',
+        email: 'artist@example.com',
+        display_name: 'Demo Artist',
+        role: ROLES.ARTIST,
+        subscription_tier: 'basic',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    });
+
+    renderManagePage();
+
+    expect(screen.getByLabelText(/artistic name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/biography/i)).toHaveValue('Artist biography.');
+    expect(screen.getByText('Artist Single')).toBeInTheDocument();
+    expect(screen.queryByText('Verified Artist')).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText(/artistic name/i));
+    await user.type(screen.getByLabelText(/artistic name/i), 'Updated Artist');
+    await user.clear(screen.getByLabelText(/biography/i));
+    await user.type(screen.getByLabelText(/biography/i), 'Updated biography.');
+    await user.upload(
+      screen.getByLabelText(/profile photo upload/i),
+      new File(['avatar'], 'artist.png', { type: 'image/png' })
+    );
+    await screen.findByText('Profile photo ready to save.');
+    await user.click(screen.getByRole('button', { name: /save artist profile/i }));
+
+    expect(await screen.findByText('Artist profile updated.')).toBeInTheDocument();
+    const artistProfile = storage
+      .get<Array<{ user_id: number; stage_name: string; bio?: string }>>(
+        'artist_profiles'
+      )
+      ?.find((profile) => profile.user_id === 4);
+    expect(artistProfile?.stage_name).toBe('Updated Artist');
+    expect(artistProfile?.bio).toBe('Updated biography.');
+    expect(
+      storage
+        .get<Array<{ id: number; profile_picture?: string | null }>>('users')
+        ?.find((storedUser) => storedUser.id === 4)?.profile_picture
+    ).toMatch(/^data:image\/png;base64,/);
   });
 });

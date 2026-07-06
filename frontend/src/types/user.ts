@@ -67,7 +67,7 @@ export interface UpdateUserProfilePayload {
   profile_picture?: string | null
 }
 
-export interface ListenerManagementProfile {
+export interface ManageProfile {
   user: User
   daily_streams_count: number
   followers: UserSummary[]
