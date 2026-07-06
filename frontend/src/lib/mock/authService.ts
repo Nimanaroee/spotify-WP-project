@@ -110,10 +110,6 @@ export function login(email: string, password: string): LoginResult {
   const normalizedEmail = normalizeEmail(email)
   const user = readUsers().find((candidate) => candidate.email === normalizedEmail)
 
-  if (user?.account_status === 'pending_approval') {
-    throw new Error('Your artist account is pending approval.')
-  }
-
   if (!user || user.password !== password) {
     throw new Error('Invalid email or password.')
   }

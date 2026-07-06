@@ -63,13 +63,14 @@ export default function SettingsPage() {
     return <Navigate to={ROUTES.LOGIN} replace />
   }
 
-  if (user.role !== ROLES.LISTENER) {
+  if (user.role !== ROLES.LISTENER && user.role !== ROLES.ARTIST) {
     return <Navigate to={ROUTES.HOME} replace />
   }
 
   const currentUser = user
   const currentPreferences = preferences ?? getUserPreferences(currentUser.id)
   const subscriptionTier = currentUser.subscription_tier ?? 'basic'
+  const isListener = currentUser.role === ROLES.LISTENER
 
   function handlePreferenceChange(
     payload: Partial<
@@ -246,27 +247,31 @@ export default function SettingsPage() {
               </Button>
             </Box>
 
-            <Divider />
+            {isListener ? (
+              <>
+                <Divider />
 
-            <Box>
-              <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
-                {copy.settings.subscriptionTitle}
-              </Typography>
-              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
-                {copy.settings.subscriptionDescription}
-              </Typography>
-            </Box>
-            <TextField
-              fullWidth
-              label={copy.settings.currentPlan}
-              onChange={handleSubscriptionChange}
-              select
-              value={subscriptionTier}
-            >
-              <MenuItem value="basic">{copy.settings.tierOptions.basic}</MenuItem>
-              <MenuItem value="silver">{copy.settings.tierOptions.silver}</MenuItem>
-              <MenuItem value="gold">{copy.settings.tierOptions.gold}</MenuItem>
-            </TextField>
+                <Box>
+                  <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
+                    {copy.settings.subscriptionTitle}
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                    {copy.settings.subscriptionDescription}
+                  </Typography>
+                </Box>
+                <TextField
+                  fullWidth
+                  label={copy.settings.currentPlan}
+                  onChange={handleSubscriptionChange}
+                  select
+                  value={subscriptionTier}
+                >
+                  <MenuItem value="basic">{copy.settings.tierOptions.basic}</MenuItem>
+                  <MenuItem value="silver">{copy.settings.tierOptions.silver}</MenuItem>
+                  <MenuItem value="gold">{copy.settings.tierOptions.gold}</MenuItem>
+                </TextField>
+              </>
+            ) : null}
 
             <Divider />
 

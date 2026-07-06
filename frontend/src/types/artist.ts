@@ -33,5 +33,6 @@ export interface RejectArtistPayload {
 export interface UpdateArtistProfilePayload {
   stage_name?: string
   bio?: string
+  profile_picture?: string | null
   portfolio_links?: string[]
 }

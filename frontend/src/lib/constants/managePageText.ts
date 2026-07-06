@@ -20,7 +20,6 @@ type ManageCopy = {
       other: string;
       preferNotToSay: string;
     };
-    profilePhotoNote: string;
     systemUsername: string;
   };
   messages: {
@@ -72,8 +71,6 @@ export const MANAGE_PAGE_TEXT: Record<AppLanguage, ManageCopy> = {
         other: 'Other',
         preferNotToSay: 'Prefer not to say',
       },
-      profilePhotoNote:
-        'Uploaded photos are stored locally for the Phase 1 demo.',
       systemUsername: 'System username',
     },
     messages: {
@@ -123,7 +120,6 @@ export const MANAGE_PAGE_TEXT: Record<AppLanguage, ManageCopy> = {
         other: 'سایر',
         preferNotToSay: 'ترجیح می‌دهم نگویم',
       },
-      profilePhotoNote: 'عکس‌های بارگذاری‌شده فقط به‌صورت محلی ذخیره می‌شوند.',
       systemUsername: 'نام کاربری سیستم',
     },
     messages: {

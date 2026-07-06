@@ -30,7 +30,7 @@ export default function Router() {
       <Route
         path={ROUTES.SETTINGS}
         element={
-          <RoleGuard allowedRoles={[ROLES.LISTENER]}>
+          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST]}>
             <MainLayout>
               <SettingsPage />
             </MainLayout>
@@ -41,7 +41,7 @@ export default function Router() {
       <Route
         path={ROUTES.ARTIST_STUDIO}
         element={
-          <RoleGuard allowedRoles={[ROLES.ARTIST]} requireVerifiedArtist>
+          <RoleGuard allowedRoles={[ROLES.ARTIST]}>
             <MainLayout>
               <ArtworkManagementPage />
             </MainLayout>

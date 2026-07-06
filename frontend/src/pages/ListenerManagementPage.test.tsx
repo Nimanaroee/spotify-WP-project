@@ -136,7 +136,45 @@ describe('ListenerManagementPage', () => {
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
       },
+      {
+        id: 4,
+        username: 'demo_artist',
+        email: 'artist@example.com',
+        password: 'password123',
+        display_name: 'Demo Artist',
+        role: ROLES.ARTIST,
+        profile_picture: null,
+        subscription_tier: 'basic',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
     ]);
+    storage.set('artist_profiles', [
+      {
+        id: 1,
+        user_id: 4,
+        stage_name: 'Demo Artist',
+        bio: 'Artist biography.',
+        verification_status: 'pending',
+        is_verified: false,
+        listener_count: 30,
+        total_streams: 80,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+    storage.set('tracks', [
+      {
+        id: 1,
+        title: 'Artist Single',
+        artist_id: 4,
+        artist_name: 'Demo Artist',
+        release_type: 'single',
+        created_at: '2026-01-02T00:00:00.000Z',
+        updated_at: '2026-01-02T00:00:00.000Z',
+      },
+    ]);
+    storage.set('albums', []);
     storage.set('daily_streams', { 1: 12 });
     storage.set('follows', [
       {
@@ -322,5 +360,54 @@ describe('ListenerManagementPage', () => {
     renderListenerManagementPage();
 
     expect(screen.getByRole('list')).toHaveStyle({ maxHeight: '260px' });
+  });
+
+  it('renders musician management with editable artistic name', async () => {
+    const user = userEvent.setup();
+    setDesktopViewport();
+    useAuthStore.setState({
+      user: {
+        id: 4,
+        username: 'demo_artist',
+        email: 'artist@example.com',
+        display_name: 'Demo Artist',
+        role: ROLES.ARTIST,
+        subscription_tier: 'basic',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    });
+
+    renderListenerManagementPage();
+
+    expect(screen.getByLabelText(/artistic name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/biography/i)).toHaveValue('Artist biography.');
+    expect(screen.getByText('Artist Single')).toBeInTheDocument();
+    expect(screen.queryByText('Verified Artist')).not.toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText(/artistic name/i));
+    await user.type(screen.getByLabelText(/artistic name/i), 'Updated Artist');
+    await user.clear(screen.getByLabelText(/biography/i));
+    await user.type(screen.getByLabelText(/biography/i), 'Updated biography.');
+    await user.upload(
+      screen.getByLabelText(/profile photo upload/i),
+      new File(['avatar'], 'artist.png', { type: 'image/png' })
+    );
+    await screen.findByText('Profile photo ready to save.');
+    await user.click(screen.getByRole('button', { name: /save artist profile/i }));
+
+    expect(await screen.findByText('Artist profile updated.')).toBeInTheDocument();
+    const artistProfile = storage
+      .get<Array<{ user_id: number; stage_name: string; bio?: string }>>(
+        'artist_profiles'
+      )
+      ?.find((profile) => profile.user_id === 4);
+    expect(artistProfile?.stage_name).toBe('Updated Artist');
+    expect(artistProfile?.bio).toBe('Updated biography.');
+    expect(
+      storage
+        .get<Array<{ id: number; profile_picture?: string | null }>>('users')
+        ?.find((storedUser) => storedUser.id === 4)?.profile_picture
+    ).toMatch(/^data:image\/png;base64,/);
   });
 });

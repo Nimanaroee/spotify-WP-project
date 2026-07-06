@@ -44,6 +44,16 @@ export default function HomePage() {
             </Button>
           </>
         ) : null}
+        {user?.role === ROLES.ARTIST ? (
+          <>
+            <Button variant="contained" onClick={() => navigate(ROUTES.MANAGE)}>
+              {copy.home.manageProfile}
+            </Button>
+            <Button variant="outlined" onClick={() => navigate(ROUTES.SETTINGS)}>
+              {copy.home.settings}
+            </Button>
+          </>
+        ) : null}
         {showArtistStudio ? (
           <Button variant="contained" onClick={() => navigate(ROUTES.ARTIST_STUDIO)}>
             {artworkCopy.pageTitle}

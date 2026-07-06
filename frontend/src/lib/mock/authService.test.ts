@@ -73,10 +73,12 @@ describe('authService', () => {
     expect(manager ? getRoleHomePath(manager) : '').toBe('/admin/tickets')
   })
 
-  it('shows a pending approval error for unapproved artists', () => {
-    expect(() => login('pending@example.com', 'password123')).toThrow(
-      'Your artist account is pending approval.',
-    )
+  it('allows unverified artists to log in without a verified badge', () => {
+    const result = login('pending@example.com', 'password123')
+
+    expect(result.user.email).toBe('pending@example.com')
+    expect(result.user.role).toBe(ROLES.ARTIST)
+    expect(storage.get<number>('auth_user_id')).toBe(3)
   })
 
   it('registers a listener and starts a session', () => {
