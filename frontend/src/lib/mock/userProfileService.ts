@@ -2,7 +2,7 @@ import { SUBSCRIPTION_LIMITS } from '../constants/subscriptionLimits'
 import type {
   EntityId,
   Follow,
-  ListenerManagementProfile,
+  ManageProfile,
   UpdateUserProfilePayload,
   User,
   UserSummary,
@@ -87,7 +87,7 @@ function isFollowing(userId: EntityId, targetUserId: EntityId, follows: Follow[]
   )
 }
 
-export function getListenerManagementProfile(userId: EntityId): ListenerManagementProfile {
+export function getManageProfile(userId: EntityId): ManageProfile {
   const users = readUsers()
   const user = users.find((candidate) => candidate.id === userId)
 
@@ -140,7 +140,7 @@ export function getUserProfileView(
 export function removeFollower(
   userId: EntityId,
   followerId: EntityId,
-): ListenerManagementProfile {
+): ManageProfile {
   const follows = readFollows()
   writeFollows(
     follows.filter(
@@ -148,20 +148,20 @@ export function removeFollower(
     ),
   )
 
-  return getListenerManagementProfile(userId)
+  return getManageProfile(userId)
 }
 
 export function unfollowAccount(
   userId: EntityId,
   followedId: EntityId,
-): ListenerManagementProfile {
+): ManageProfile {
   const follows = readFollows()
   writeFollows(
     follows.filter(
       (follow) => !(follow.follower_id === userId && follow.followed_id === followedId),
     ),
   )
-  return getListenerManagementProfile(userId)
+  return getManageProfile(userId)
 }
 
 export function followAccount(
@@ -196,7 +196,7 @@ export function followAccount(
   return getUserProfileView(userId, followedUser.username)
 }
 
-export function updateListenerProfile(
+export function updateUserProfile(
   userId: EntityId,
   payload: UpdateUserProfilePayload,
 ): User {

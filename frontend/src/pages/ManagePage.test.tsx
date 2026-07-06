@@ -4,12 +4,12 @@ import userEvent from '@testing-library/user-event';
 import { ThemeProvider, createTheme } from '@mui/material';
 import { useMemo, useState, type ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import ListenerManagementPage from './ListenerManagementPage';
+import ManagePage from './ManagePage';
 import HomePage from './HomePage';
 import LoginPage from './LoginPage';
 import { ROLES } from '../lib/constants/roles';
 import { ROUTES } from '../lib/constants/routes';
-import { getListenerManagementProfile } from '../lib/mock/userProfileService';
+import { getManageProfile } from '../lib/mock/userProfileService';
 import { storage } from '../lib/mock/storage';
 import { useAuthStore } from '../store/authStore';
 import {
@@ -50,7 +50,7 @@ function TestLanguageProvider({ children }: { children: ReactNode }) {
   );
 }
 
-function renderListenerManagementPage(initialPath = ROUTES.MANAGE) {
+function renderManagePage(initialPath = ROUTES.MANAGE) {
   return render(
     <TestLanguageProvider>
       <ThemeProvider theme={createTheme()}>
@@ -58,7 +58,7 @@ function renderListenerManagementPage(initialPath = ROUTES.MANAGE) {
           <Routes>
             <Route path={ROUTES.HOME} element={<HomePage />} />
             <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-            <Route path={ROUTES.MANAGE} element={<ListenerManagementPage />} />
+            <Route path={ROUTES.MANAGE} element={<ManagePage />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -94,7 +94,7 @@ function setDesktopViewport(): void {
   window.dispatchEvent(new Event('resize'));
 }
 
-describe('ListenerManagementPage', () => {
+describe('ManagePage', () => {
   beforeEach(() => {
     localStorage.clear();
     storage.set('users', [
@@ -211,7 +211,7 @@ describe('ListenerManagementPage', () => {
 
   it('shows listener profile details and stream stats', () => {
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(
       screen.getByRole('heading', { name: 'Listener' })
@@ -234,7 +234,7 @@ describe('ListenerManagementPage', () => {
 
   it('does not render the old language switcher on the management page', () => {
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(
       screen.queryByRole('button', { name: /فارسی|persian|english/i })
@@ -244,7 +244,7 @@ describe('ListenerManagementPage', () => {
   it('hides profile photo upload for Basic subscribers', async () => {
     const user = userEvent.setup();
     setMobileViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(
       screen.getByRole('button', { name: /edit/i, hidden: false })
@@ -285,7 +285,7 @@ describe('ListenerManagementPage', () => {
         updated_at: '2026-01-01T00:00:00.000Z',
       },
     });
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(
       screen.getByRole('button', { name: /edit/i, hidden: false })
@@ -298,7 +298,7 @@ describe('ListenerManagementPage', () => {
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
     await waitFor(() =>
-      expect(getListenerManagementProfile(1).user.profile_picture).toMatch(
+      expect(getManageProfile(1).user.profile_picture).toMatch(
         /^data:image\/png;base64,/
       )
     );
@@ -307,7 +307,7 @@ describe('ListenerManagementPage', () => {
   it('saves edited personal information', async () => {
     const user = userEvent.setup();
     setMobileViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(
       screen.getByRole('button', { name: /edit/i, hidden: false })
@@ -316,7 +316,7 @@ describe('ListenerManagementPage', () => {
     await user.type(screen.getByLabelText(/display name/i), 'Updated Listener');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
 
-    expect(getListenerManagementProfile(1).user.display_name).toBe(
+    expect(getManageProfile(1).user.display_name).toBe(
       'Updated Listener'
     );
     expect(screen.getByText('Profile updated.')).toBeInTheDocument();
@@ -325,39 +325,39 @@ describe('ListenerManagementPage', () => {
   it('removes a follower from the followers list', async () => {
     const user = userEvent.setup();
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(screen.getByRole('tab', { name: /following \(1\)/i }));
     await user.click(
       screen.getByRole('button', { name: /unfollow following friend/i })
     );
 
-    expect(getListenerManagementProfile(1).following).toHaveLength(0);
+    expect(getManageProfile(1).following).toHaveLength(0);
   });
 
   it('unfollows an account from the following list', async () => {
     const user = userEvent.setup();
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     await user.click(screen.getByRole('tab', { name: /following \(1\)/i }));
     await user.click(
       screen.getByRole('button', { name: /unfollow following friend/i })
     );
 
-    expect(getListenerManagementProfile(1).following).toHaveLength(0);
+    expect(getManageProfile(1).following).toHaveLength(0);
   });
 
   it('renders fixed-height scrollable follow panels', () => {
     setDesktopViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(screen.getByRole('list')).toHaveStyle({ maxHeight: '320px' });
   });
 
   it('keeps follow panels compact on mobile', () => {
     setMobileViewport();
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(screen.getByRole('list')).toHaveStyle({ maxHeight: '260px' });
   });
@@ -378,7 +378,7 @@ describe('ListenerManagementPage', () => {
       },
     });
 
-    renderListenerManagementPage();
+    renderManagePage();
 
     expect(screen.getByLabelText(/artistic name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/biography/i)).toHaveValue('Artist biography.');

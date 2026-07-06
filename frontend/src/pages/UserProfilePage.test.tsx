@@ -5,7 +5,7 @@ import { ThemeProvider, createTheme } from '@mui/material'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import UserProfilePage from './UserProfilePage'
-import ListenerManagementPage from './ListenerManagementPage'
+import ManagePage from './ManagePage'
 import { ROLES } from '../lib/constants/roles'
 import { ROUTES } from '../lib/constants/routes'
 import { storage } from '../lib/mock/storage'
@@ -25,7 +25,7 @@ function renderUserProfilePage(path = '/profile/other_user') {
     <TestProviders>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path={ROUTES.MANAGE} element={<ListenerManagementPage />} />
+          <Route path={ROUTES.MANAGE} element={<ManagePage />} />
           <Route path="/profile/:username" element={<UserProfilePage />} />
         </Routes>
       </MemoryRouter>

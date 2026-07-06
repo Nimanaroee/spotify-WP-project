@@ -32,17 +32,17 @@ import {
   updateArtistProfile,
 } from '../lib/mock/artistProfileService';
 import {
-  getListenerManagementProfile,
+  getManageProfile,
   getUserProfileView,
   removeFollower,
   unfollowAccount,
-  updateListenerProfile,
+  updateUserProfile,
 } from '../lib/mock/userProfileService';
 import { useAuthStore } from '../store/authStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import type {
   Gender,
-  ListenerManagementProfile,
+  ManageProfile,
   UpdateUserProfilePayload,
   User,
   UserSummary,
@@ -64,7 +64,7 @@ type ArtistEditableProfile = {
 };
 
 function createEditableProfile(
-  profile: ListenerManagementProfile
+  profile: ManageProfile
 ): EditableProfile {
   return {
     display_name: profile.user.display_name,
@@ -362,7 +362,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
   );
 }
 
-export default function ListenerManagementPage() {
+export default function ManagePage() {
   const authUser = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
   const { language } = useAppLanguage();
@@ -370,8 +370,8 @@ export default function ListenerManagementPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [activeFollowList, setActiveFollowList] =
     useState<FollowListType>('followers');
-  const [profile, setProfile] = useState<ListenerManagementProfile | null>(() =>
-    authUser ? getListenerManagementProfile(authUser.id) : null
+  const [profile, setProfile] = useState<ManageProfile | null>(() =>
+    authUser ? getManageProfile(authUser.id) : null
   );
   const isMobile = useMediaQuery('(max-width:767px)');
   const [editableProfile, setEditableProfile] = useState<EditableProfile>(() =>
@@ -467,8 +467,8 @@ export default function ListenerManagementPage() {
       gender: editableProfile.gender as Gender,
       profile_picture: editableProfile.profile_picture || null,
     };
-    const updatedUser = updateListenerProfile(currentProfile.user.id, payload);
-    const nextProfile = getListenerManagementProfile(currentProfile.user.id);
+    const updatedUser = updateUserProfile(currentProfile.user.id, payload);
+    const nextProfile = getManageProfile(currentProfile.user.id);
     setUser(updatedUser);
     setProfile(nextProfile);
     setEditableProfile(createEditableProfile(nextProfile));
@@ -521,8 +521,9 @@ export default function ListenerManagementPage() {
                   <Box
                     sx={{
                       display: 'flex',
+                      flexShrink: 0,
                       justifyContent: 'flex-end',
-                      width: '100%',
+                      width: { xs: '100%', md: 'auto' },
                     }}
                   >
                     <Button
