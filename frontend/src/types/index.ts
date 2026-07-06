@@ -44,6 +44,8 @@ export type {
   Track,
   TrackStats,
   TrackSummary,
+  UpdateReleasePayload,
+  UpdateTrackPayload,
 } from './music'
 
 export type {

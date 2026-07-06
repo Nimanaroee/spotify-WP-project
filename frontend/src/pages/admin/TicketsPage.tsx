@@ -1,7 +1,3 @@
-/**
- * TicketsPage — support tickets and artist approval hub
- * Spec reference: §2.11.1
- */
 import {
   Box,
   Button,
@@ -17,33 +13,25 @@ import {
   Tabs,
   Typography,
 } from '@mui/material'
-import { format } from 'date-fns'
 import { useState } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import EmptyState from '../../components/common/EmptyState'
+import {
+  formatAdminDate,
+  getAdminPageText,
+} from '../../lib/constants/adminPageText'
 import {
   adminTicketDetailPath,
   adminVerificationDetailPath,
 } from '../../lib/constants/routes'
 import { listTickets } from '../../lib/mock/ticketService'
 import { listPendingRequests } from '../../lib/mock/verificationService'
-import type { TicketStatus } from '../../types/support'
-
-const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
-  open: 'Open',
-  answered: 'Answered',
-  closed: 'Closed',
-}
-
-function formatDate(iso: string): string {
-  try {
-    return format(new Date(iso), 'MMM d, yyyy')
-  } catch {
-    return iso
-  }
-}
+import { useAppLanguage } from '../../theme/LanguageContext'
 
 export default function TicketsPage() {
+  const { language } = useAppLanguage()
+  const copy = getAdminPageText(language)
+  const isRtl = language === 'fa'
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const tabParam = searchParams.get('tab')
@@ -58,31 +46,31 @@ export default function TicketsPage() {
   }
 
   return (
-    <Box>
+    <Box dir={isRtl ? 'rtl' : 'ltr'}>
       <Typography className="mb-4" component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-        Tickets & Authentication
+        {copy.tickets.title}
       </Typography>
 
       <Paper sx={{ mb: 3 }}>
         <Tabs value={tab} onChange={handleTabChange}>
-          <Tab label="Support Tickets" />
-          <Tab label="Artist Approval Requests" />
+          <Tab label={copy.tickets.ticketsTab} />
+          <Tab label={copy.tickets.verificationTab} />
         </Tabs>
       </Paper>
 
       {tab === 0 ? (
         tickets.length === 0 ? (
-          <EmptyState title="No support tickets yet." />
+          <EmptyState title={copy.tickets.noTickets} />
         ) : (
           <TableContainer component={Paper}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Ticket ID</TableCell>
-                  <TableCell>User Name</TableCell>
-                  <TableCell>Subject</TableCell>
-                  <TableCell>Date Submitted</TableCell>
-                  <TableCell>Status</TableCell>
+                  <TableCell>{copy.tickets.ticketId}</TableCell>
+                  <TableCell>{copy.tickets.userName}</TableCell>
+                  <TableCell>{copy.tickets.subject}</TableCell>
+                  <TableCell>{copy.tickets.dateSubmitted}</TableCell>
+                  <TableCell>{copy.tickets.status}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -96,10 +84,10 @@ export default function TicketsPage() {
                     <TableCell>#{ticket.id}</TableCell>
                     <TableCell>{ticket.user_name}</TableCell>
                     <TableCell>{ticket.subject}</TableCell>
-                    <TableCell>{formatDate(ticket.created_at)}</TableCell>
+                    <TableCell>{formatAdminDate(ticket.created_at, language)}</TableCell>
                     <TableCell>
                       <Chip
-                        label={TICKET_STATUS_LABELS[ticket.status]}
+                        label={copy.tickets.statusLabels[ticket.status]}
                         size="small"
                         color={
                           ticket.status === 'open'
@@ -117,15 +105,15 @@ export default function TicketsPage() {
           </TableContainer>
         )
       ) : pendingRequests.length === 0 ? (
-        <EmptyState title="No pending artist approval requests." />
+        <EmptyState title={copy.tickets.noRequests} />
       ) : (
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Stage Name</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>{copy.tickets.stageName}</TableCell>
+                <TableCell>{copy.tickets.email}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>{copy.tickets.actions}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -133,14 +121,14 @@ export default function TicketsPage() {
                 <TableRow key={request.id}>
                   <TableCell>{request.stage_name}</TableCell>
                   <TableCell>{request.email}</TableCell>
-                  <TableCell align="right">
+                  <TableCell sx={{ textAlign: 'end' }}>
                     <Button
                       component={RouterLink}
                       size="small"
                       to={adminVerificationDetailPath(request.id)}
                       variant="outlined"
                     >
-                      View portfolio/samples
+                      {copy.tickets.viewPortfolio}
                     </Button>
                   </TableCell>
                 </TableRow>

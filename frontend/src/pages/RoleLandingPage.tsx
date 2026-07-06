@@ -1,7 +1,3 @@
-/**
- * RoleLandingPage — temporary role destination placeholder
- * Spec reference: §2.1
- */
 import { Box, Button, Paper, Stack, Typography } from '@mui/material'
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'

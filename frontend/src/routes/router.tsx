@@ -3,7 +3,8 @@ import HomePage from '../pages/HomePage'
 import LoginPage from '../pages/LoginPage'
 import RegisterPage from '../pages/RegisterPage'
 import ForgotPasswordPage from '../pages/ForgotPasswordPage'
-import RoleLandingPage from '../pages/RoleLandingPage'
+import ArtworkManagementPage from '../pages/ArtworkManagementPage'
+import MainLayout from '../layouts/MainLayout'
 import ListenerManagementPage from '../pages/ListenerManagementPage'
 import UserProfilePage from '../pages/UserProfilePage'
 import AdminLayout from '../layouts/AdminLayout'
@@ -15,6 +16,7 @@ import TicketDetailPage from '../pages/admin/TicketDetailPage'
 import VerificationDetailPage from '../pages/admin/VerificationDetailPage'
 import AuditingPage from '../pages/admin/AuditingPage'
 import SubscriptionAdminPage from '../pages/admin/SubscriptionAdminPage'
+import NotificationsPage from '../pages/NotificationsPage'
 
 export default function Router() {
   return (
@@ -25,7 +27,26 @@ export default function Router() {
       <Route path={ROUTES.HOME} element={<HomePage />} />
       <Route path={ROUTES.MANAGE} element={<ListenerManagementPage />} />
       <Route path={ROUTES.USER_PROFILE} element={<UserProfilePage />} />
-      <Route path={ROUTES.ARTIST_STUDIO} element={<RoleLandingPage title="Artist Studio" />} />
+      <Route
+        path={ROUTES.ARTIST_STUDIO}
+        element={
+          <RoleGuard allowedRoles={[ROLES.ARTIST]} requireVerifiedArtist>
+            <MainLayout>
+              <ArtworkManagementPage />
+            </MainLayout>
+          </RoleGuard>
+        }
+      />
+      <Route
+        path={ROUTES.NOTIFICATIONS}
+        element={
+          <RoleGuard
+            allowedRoles={[ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN]}
+          >
+            <NotificationsPage />
+          </RoleGuard>
+        }
+      />
 
       <Route
         element={

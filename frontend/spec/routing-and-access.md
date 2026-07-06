@@ -16,24 +16,38 @@ Update this table as routes are implemented. Mark done with ✅.
 | `/register` | RegisterPage | AuthLayout | public | §2.1 |
 | `/forgot-password` | ForgotPasswordPage | AuthLayout | public | §2.1 |
 | `/` | HomePage | MainLayout | listener, artist | §2.2 |
-| `/listener/manage` | ListenerManagementPage | MainLayout | listener | §2.3 ✅ |
-| `/profile/:userId?` | UserProfilePage | MainLayout | all authenticated | §2.3 |
+| `/manage` | ListenerManagementPage | page wraps own shell | listener | §2.3 ✅ |
+| `/profile/:username` | UserProfilePage | page wraps own shell | all authenticated | §2.3 |
 | `/artists/:artistId` | ArtistProfilePage | MainLayout | all authenticated | §2.4 |
 | `/settings` | SettingsPage | MainLayout | all authenticated | §2.5 |
-| `/notifications` | NotificationsPage | MainLayout | all authenticated | §2.6 |
+| `/notifications` | NotificationsPage | none (full-page) | listener, artist, support, admin | §2.6 ✅ |
 | `/playlists` | PlaylistsPage | MainLayout | listener (+ artist as listener) | §2.7 |
 | `/albums` | AlbumsPage | MainLayout | listener, artist | §2.8 |
 | `/albums/:albumId` | AlbumDetailPage | MainLayout | listener, artist | §2.8 |
-| `/artist/studio` | ArtworkManagementPage | MainLayout | artist (verified) | §2.10 |
-| `/admin` | AdminDashboardPage | AdminLayout | support, admin | §2.11 |
-| `/admin/tickets` | TicketsPage | AdminLayout | support, admin | §2.11.1 |
-| `/admin/verification` | VerificationPage | AdminLayout | support, admin | §2.11.1 |
-| `/admin/auditing` | AuditingPage | AdminLayout | support, admin | §2.11.2 |
-| `/admin/subscriptions` | SubscriptionAdminPage | AdminLayout | **admin only** | §2.11.3 |
+| `/artist/studio` | ArtworkManagementPage | MainLayout | artist (verified) | §2.10 ✅ |
+| `/admin` | redirect → `/admin/tickets` | AdminLayout | support, admin | §2.11 ✅ |
+| `/admin/tickets` | TicketsPage (tickets + verification tabs) | AdminLayout | support, admin | §2.11.1 ✅ |
+| `/admin/tickets/:ticketId` | TicketDetailPage | AdminLayout | support, admin | §2.11.1 ✅ |
+| `/admin/verification/:requestId` | VerificationDetailPage | AdminLayout | support, admin | §2.11.1 ✅ |
+| `/admin/auditing` | AuditingPage | AdminLayout | support, admin | §2.11.2 ✅ |
+| `/admin/subscriptions` | SubscriptionAdminPage | AdminLayout | **admin only** | §2.11.3 ✅ |
 
 ## RoleGuard
 
 `src/routes/RoleGuard.tsx` wraps routes that require specific roles.
+
+```tsx
+<Route
+  path={ROUTES.ARTIST_STUDIO}
+  element={
+    <RoleGuard allowedRoles={[ROLES.ARTIST]} requireVerifiedArtist>
+      <MainLayout>
+        <ArtworkManagementPage />
+      </MainLayout>
+    </RoleGuard>
+  }
+/>
+```
 
 ```tsx
 <Route
@@ -51,7 +65,7 @@ Behavior:
 
 1. No user → redirect to `/login` (preserve `returnUrl`).
 2. User role not in `allowedRoles` → redirect to `/` or `/403`.
-3. Artist-only routes → also check `verification_status === 'approved'` where required.
+3. Artist-only routes → also check `isVerifiedArtist(userId)` via `requireVerifiedArtist` on `RoleGuard` (reads `artist_profiles` in mock storage).
 
 ## Layout switching by role
 
@@ -59,8 +73,8 @@ Behavior:
 |------|---------------------|
 | Listener | Home, Playlists, Albums, Profile, Settings |
 | Artist | Above + Artist Studio (if verified) |
-| Support | Admin dashboard: Tickets, Verification only |
-| Admin | Full admin sidebar including Auditing + Subscription pricing |
+| Support | Admin sidebar: Tickets (includes verification tab), Auditing |
+| Admin | Support nav + Subscription pricing |
 
 Implement nav config as data — do not duplicate sidebar markup per role.
 
@@ -91,6 +105,12 @@ Use `SUBSCRIPTION_LIMITS[tier]` — do not hardcode tier checks in many places. 
 ```ts
 function canUseFeature(tier: SubscriptionTier, feature: keyof SubscriptionTierLimits): boolean
 ```
+
+## Notification panel
+
+- `NotificationPanel` lives in `MainLayout` and `AdminLayout` app bars (unread badge + quick list).
+- Full inbox: `/notifications` (`NotificationsPage`).
+- Shared state: `notificationStore` (loaded in `App.tsx` when auth user changes).
 
 ## Player bar
 

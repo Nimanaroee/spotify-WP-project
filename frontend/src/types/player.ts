@@ -1,6 +1,5 @@
 import type { TrackSummary } from './music'
 
-/** Repeat modes required by the music player spec. */
 export type RepeatMode = 'none' | 'all' | 'one'
 
 export interface QueueItem {
@@ -9,7 +8,6 @@ export interface QueueItem {
   source_id?: number
 }
 
-/** Client-side player state (Phase 1 mock; synced via backend in Phase 2). */
 export interface PlayerState {
   currentTrack: TrackSummary | null
   queue: QueueItem[]

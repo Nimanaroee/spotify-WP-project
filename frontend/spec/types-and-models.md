@@ -20,7 +20,7 @@ import type { PlayerState, RepeatMode } from '../types/player'
 | `user.ts` | `User`, `UserSummary`, `Follow`, auth/register payloads |
 | `artist.ts` | `ArtistProfile`, `ArtistVerificationRequest`, `VerificationStatus` |
 | `subscription.ts` | `SubscriptionPlan`, `UserSubscription`, `SubscriptionPricing` |
-| `music.ts` | `Track`, `Album`, `Genre`, `ReleaseType`, publish/search types |
+| `music.ts` | `Track`, `Album`, `Genre`, `ReleaseType`, `PublishReleasePayload`, `UpdateTrackPayload` |
 | `playlist.ts` | `Playlist`, `PlaylistTrack`, CRUD payloads |
 | `player.ts` | `PlayerState`, `QueueItem`, `RepeatMode` (frontend-only) |
 | `notification.ts` | `Notification`, category unions by role |

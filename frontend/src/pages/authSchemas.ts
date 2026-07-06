@@ -1,7 +1,3 @@
-/**
- * Auth form schemas and helpers
- * Spec reference: §2.1
- */
 import { z } from 'zod'
 
 export const loginSchema = z.object({

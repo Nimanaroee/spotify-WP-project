@@ -1,7 +1,3 @@
-/**
- * AuditingPage — monthly artist financial calculations
- * Spec reference: §2.11.2
- */
 import {
   Alert,
   Box,
@@ -20,6 +16,10 @@ import {
 } from '@mui/material'
 import { useMemo, useState } from 'react'
 import EmptyState from '../../components/common/EmptyState'
+import {
+  formatAdminMonthName,
+  getAdminPageText,
+} from '../../lib/constants/adminPageText'
 import { ROLES } from '../../lib/constants/roles'
 import {
   confirmSettlement,
@@ -28,17 +28,15 @@ import {
 } from '../../lib/mock/auditService'
 import { hasRole } from '../../routes/RoleGuard'
 import { useAuthStore } from '../../store/authStore'
-import type { PaymentStatus } from '../../types/admin'
-
-const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
-  pending: 'Pending Payment',
-  settled: 'Settled',
-}
+import { useAppLanguage } from '../../theme/LanguageContext'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 
 export default function AuditingPage() {
   const user = useAuthStore((state) => state.user)
+  const { language } = useAppLanguage()
+  const copy = getAdminPageText(language)
+  const isRtl = language === 'fa'
   const currentPeriod = getCurrentPeriod()
   const [year, setYear] = useState(currentPeriod.year)
   const [month, setMonth] = useState(currentPeriod.month)
@@ -60,19 +58,19 @@ export default function AuditingPage() {
       confirmSettlement(auditId, user.role)
       setRefreshKey((k) => k + 1)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to confirm settlement.')
+      setError(err instanceof Error ? err.message : copy.auditing.failedSettlement)
     }
   }
 
   return (
-    <Box>
+    <Box dir={isRtl ? 'rtl' : 'ltr'}>
       <Typography className="mb-4" component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-        Auditing / Accounting
+        {copy.auditing.title}
       </Typography>
 
       <Stack className="mb-4" direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <TextField
-          label="Year"
+          label={copy.auditing.year}
           select
           size="small"
           sx={{ minWidth: 120 }}
@@ -86,7 +84,7 @@ export default function AuditingPage() {
           ))}
         </TextField>
         <TextField
-          label="Month"
+          label={copy.auditing.month}
           select
           size="small"
           sx={{ minWidth: 140 }}
@@ -95,7 +93,7 @@ export default function AuditingPage() {
         >
           {MONTHS.map((m) => (
             <MenuItem key={m} value={m}>
-              {new Date(2000, m - 1).toLocaleString('default', { month: 'long' })}
+              {formatAdminMonthName(m, language)}
             </MenuItem>
           ))}
         </TextField>
@@ -108,18 +106,18 @@ export default function AuditingPage() {
       ) : null}
 
       {audits.length === 0 ? (
-        <EmptyState title="No audit records for this period." />
+        <EmptyState title={copy.auditing.noRecords} />
       ) : (
         <TableContainer component={Paper}>
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Artist</TableCell>
-                <TableCell align="right">Unique Listeners</TableCell>
-                <TableCell align="right">Registered Streams</TableCell>
-                <TableCell align="right">Calculated Reward</TableCell>
-                <TableCell>Payment Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>{copy.auditing.artist}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.uniqueListeners}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.registeredStreams}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.calculatedReward}</TableCell>
+                <TableCell>{copy.auditing.paymentStatus}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.actions}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -131,20 +129,20 @@ export default function AuditingPage() {
                       ART-{audit.artist_id}
                     </Typography>
                   </TableCell>
-                  <TableCell align="right">{audit.unique_listeners_count}</TableCell>
-                  <TableCell align="right">{audit.total_streams_count}</TableCell>
-                  <TableCell align="right">
+                  <TableCell sx={{ textAlign: 'end' }}>{audit.unique_listeners_count}</TableCell>
+                  <TableCell sx={{ textAlign: 'end' }}>{audit.total_streams_count}</TableCell>
+                  <TableCell sx={{ textAlign: 'end' }}>
                     ${audit.payout_amount?.toFixed(2) ?? '—'}
                   </TableCell>
-                  <TableCell>{PAYMENT_STATUS_LABELS[audit.payment_status]}</TableCell>
-                  <TableCell align="right">
+                  <TableCell>{copy.auditing.paymentStatusLabels[audit.payment_status]}</TableCell>
+                  <TableCell sx={{ textAlign: 'end' }}>
                     {audit.payment_status === 'pending' && isAdmin ? (
                       <Button
                         size="small"
                         variant="contained"
                         onClick={() => handleConfirmSettlement(audit.id)}
                       >
-                        Confirm Settlement
+                        {copy.auditing.confirmSettlement}
                       </Button>
                     ) : null}
                   </TableCell>

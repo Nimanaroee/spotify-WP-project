@@ -27,7 +27,7 @@ frontend/
     ├── main.tsx             # App entry
     ├── App.tsx              # Root providers + router
     ├── index.css            # Tailwind directives + global styles
-    ├── theme/               # Material UI palette, theme mode context
+    ├── theme/               # MUI palette, theme mode, language, RTL emotion cache
     ├── components/          # Reusable UI
     │   ├── common/          # EmptyState, Button, Modal, ...
     │   ├── layout/          # Sidebar, Navbar, PlayerBar, ...
@@ -39,12 +39,13 @@ frontend/
     ├── types/               # Domain TypeScript models
     ├── lib/
     │   ├── api/             # Axios client, endpoint helpers (Phase 2)
-    │   ├── constants/       # roles, subscription limits, route paths
+    │   ├── constants/       # roles, subscription limits, route paths, locale copy
+    │   ├── artwork/         # client-side upload helpers (Phase 1: base64 in storage)
     │   └── mock/            # localStorage wrapper, seed, mock services
     └── setupTests.ts
 ```
 
-Add app-wide language context alongside theme concerns in `src/theme/` so pages can read the active locale without prop drilling.
+Add app-wide language context alongside theme concerns in `src/theme/` so pages can read the active locale without prop drilling. For Persian (`fa`), `App.tsx` swaps Emotion cache direction via `theme/emotionCache.ts` and sets `document.documentElement.dir`.
 
 ## Layer rules
 
@@ -155,5 +156,6 @@ The app uses Material UI as the source of truth for color, radius, and component
 | Payment page UI stub only | Real payment gateway |
 | Admin price form updates mock | Admin price form hits backend |
 | No file uploads to server | Upload songs/images to backend |
+| Artwork audio/cover as base64 in mock storage | Real media storage + CDN URLs |
 
 Build Phase 1 abstractions (types, service interfaces, stores) so Phase 2 is mostly wiring.

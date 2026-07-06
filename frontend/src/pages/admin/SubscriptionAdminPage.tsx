@@ -1,7 +1,3 @@
-/**
- * SubscriptionAdminPage — price control and revenue reports
- * Spec reference: §2.11.3
- */
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Alert,
@@ -13,27 +9,28 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { format } from 'date-fns'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { z } from 'zod'
 import {
-  getCurrentPeriod,
-} from '../../lib/mock/auditService'
+  formatAdminDateTime,
+  formatAdminMonthYear,
+  getAdminPageText,
+} from '../../lib/constants/adminPageText'
+import { getCurrentPeriod } from '../../lib/mock/auditService'
 import {
   getPricing,
   getRevenueReport,
   updatePricing,
 } from '../../lib/mock/subscriptionAdminService'
+import { useAppLanguage } from '../../theme/LanguageContext'
 import type { SubscriptionTier } from '../../lib/constants/subscriptionLimits'
 
-const pricingSchema = z.object({
-  silver_price: z.coerce.number().positive('Silver price must be greater than zero.'),
-  gold_price: z.coerce.number().positive('Gold price must be greater than zero.'),
-})
-
-type PricingFormValues = z.infer<typeof pricingSchema>
+type PricingFormValues = {
+  silver_price: number
+  gold_price: number
+}
 
 const TIER_COLORS: Record<SubscriptionTier, string> = {
   basic: '#9e9e9e',
@@ -41,13 +38,9 @@ const TIER_COLORS: Record<SubscriptionTier, string> = {
   gold: '#ffd700',
 }
 
-const TIER_LABELS: Record<SubscriptionTier, string> = {
-  basic: 'Basic',
-  silver: 'Silver',
-  gold: 'Gold',
-}
-
 export default function SubscriptionAdminPage() {
+  const { language } = useAppLanguage()
+  const copy = getAdminPageText(language)
   const period = getCurrentPeriod()
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
@@ -57,15 +50,24 @@ export default function SubscriptionAdminPage() {
   const pricing = getPricing()
   const report = getRevenueReport(period.year, period.month)
 
+  const pricingSchema = useMemo(
+    () =>
+      z.object({
+        silver_price: z.coerce.number().positive(copy.subscriptions.silverPriceError),
+        gold_price: z.coerce.number().positive(copy.subscriptions.goldPriceError),
+      }),
+    [copy.subscriptions.goldPriceError, copy.subscriptions.silverPriceError],
+  )
+
   const chartData = useMemo(
     () =>
       report.subscription_distribution.map((item) => ({
-        name: TIER_LABELS[item.tier],
+        name: `${copy.subscriptions.tierLabels[item.tier]} (${item.percentage}%)`,
         value: item.user_count,
         percentage: item.percentage,
         fill: TIER_COLORS[item.tier],
       })),
-    [report.subscription_distribution],
+    [copy.subscriptions.tierLabels, report.subscription_distribution],
   )
 
   const {
@@ -86,21 +88,28 @@ export default function SubscriptionAdminPage() {
     setSuccess('')
     try {
       const updated = updatePricing(values)
-      setSuccess('Subscription prices updated successfully.')
+      setSuccess(copy.subscriptions.updateSuccess)
       reset({
         silver_price: updated.silver_price,
         gold_price: updated.gold_price,
       })
       setRefreshKey((k) => k + 1)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update prices.')
+      setError(err instanceof Error ? err.message : copy.subscriptions.failedUpdate)
     }
   }
+
+  const periodLabel = formatAdminMonthYear(period.year, period.month, language)
+  const lastUpdatedLabel = pricing.updated_at
+    ? copy.subscriptions.lastUpdated(
+        formatAdminDateTime(pricing.updated_at, language),
+      )
+    : null
 
   return (
     <Box>
       <Typography className="mb-4" component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-        Subscription Management
+        {copy.subscriptions.title}
       </Typography>
 
       {error ? (
@@ -118,7 +127,7 @@ export default function SubscriptionAdminPage() {
         <Grid size={{ xs: 12, md: 5 }}>
           <Paper className="p-6">
             <Typography className="mb-4" variant="h6" sx={{ fontWeight: 600 }}>
-              Price Control Panel
+              {copy.subscriptions.pricePanel}
             </Typography>
             <form onSubmit={handleSubmit(onSubmit)}>
               <Stack spacing={3}>
@@ -126,7 +135,7 @@ export default function SubscriptionAdminPage() {
                   fullWidth
                   error={Boolean(errors.silver_price)}
                   helperText={errors.silver_price?.message}
-                  label="Silver Subscription Price ($)"
+                  label={copy.subscriptions.silverPrice}
                   type="number"
                   slotProps={{ htmlInput: { step: '0.01', min: 0 } }}
                   {...register('silver_price')}
@@ -135,19 +144,18 @@ export default function SubscriptionAdminPage() {
                   fullWidth
                   error={Boolean(errors.gold_price)}
                   helperText={errors.gold_price?.message}
-                  label="Gold Subscription Price ($)"
+                  label={copy.subscriptions.goldPrice}
                   type="number"
                   slotProps={{ htmlInput: { step: '0.01', min: 0 } }}
                   {...register('gold_price')}
                 />
-                {pricing.updated_at ? (
+                {lastUpdatedLabel ? (
                   <Typography color="text.secondary" variant="caption">
-                    Last updated:{' '}
-                    {format(new Date(pricing.updated_at), 'MMM d, yyyy h:mm a')}
+                    {lastUpdatedLabel}
                   </Typography>
                 ) : null}
                 <Button disabled={isSubmitting} type="submit" variant="contained">
-                  Update Prices
+                  {copy.subscriptions.updatePrices}
                 </Button>
               </Stack>
             </form>
@@ -158,38 +166,42 @@ export default function SubscriptionAdminPage() {
           <Stack spacing={3}>
             <Paper className="p-6">
               <Typography className="mb-2" variant="h6" sx={{ fontWeight: 600 }}>
-                Monthly Subscription Revenue
+                {copy.subscriptions.monthlyRevenue}
               </Typography>
               <Typography variant="h3" sx={{ fontWeight: 700 }}>
                 ${report.total_subscription_revenue.toFixed(2)}
               </Typography>
               <Typography color="text.secondary" variant="body2">
-                {format(new Date(period.year, period.month - 1), 'MMMM yyyy')}
+                {periodLabel}
               </Typography>
             </Paper>
 
             <Paper className="p-6">
               <Typography className="mb-4" variant="h6" sx={{ fontWeight: 600 }}>
-                User Distribution by Tier
+                {copy.subscriptions.userDistribution}
               </Typography>
-              <Box sx={{ height: 300, width: '100%' }}>
+              <Box sx={{ height: 340, width: '100%' }}>
                 <ResponsiveContainer>
                   <PieChart>
                     <Pie
                       cx="50%"
-                      cy="50%"
+                      cy="42%"
                       data={chartData}
                       dataKey="value"
-                      innerRadius={60}
-                      label={({ name, percentage }) => `${name}: ${percentage}%`}
-                      outerRadius={100}
+                      innerRadius={55}
+                      outerRadius={85}
                     >
                       {chartData.map((entry) => (
                         <Cell key={entry.name} fill={entry.fill} />
                       ))}
                     </Pie>
                     <Tooltip />
-                    <Legend />
+                    <Legend
+                      align="center"
+                      layout="horizontal"
+                      verticalAlign="bottom"
+                      wrapperStyle={{ paddingTop: 16, lineHeight: '28px' }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </Box>

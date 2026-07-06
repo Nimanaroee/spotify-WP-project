@@ -1,12 +1,3 @@
-/**
- * UserProfilePage — read-only user profile view
- * Spec reference: §2.3
- *
- * Responsibilities:
- *  - [x] show another user's profile details
- *  - [x] allow follow/unfollow for the viewed user
- *  - [x] redirect self-viewing users to their management page
- */
 import { useEffect, useState } from 'react';
 import {
   Alert,

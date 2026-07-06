@@ -85,3 +85,15 @@ export interface TrackStats {
   stream_count: number
   revenue: number
 }
+
+export interface UpdateTrackPayload {
+  title?: string
+  lyrics?: string | null
+  genre?: string
+  release_year?: number
+  co_artists?: string[]
+  cover_art?: string
+  audio_url?: string
+}
+
+export interface UpdateReleasePayload extends UpdateTrackPayload {}

@@ -1,5 +1,3 @@
-/** Shared primitives and API wrappers used across domain models. */
-
 export type EntityId = number
 
 export interface Timestamps {

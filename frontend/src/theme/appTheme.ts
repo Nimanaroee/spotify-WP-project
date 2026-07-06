@@ -4,10 +4,14 @@ export type AppThemeMode = PaletteMode
 
 export const THEME_MODE_STORAGE_KEY = 'spotify-wp-theme-mode'
 
-export function createAppTheme(mode: AppThemeMode) {
+export function createAppTheme(
+  mode: AppThemeMode,
+  direction: 'ltr' | 'rtl' = 'ltr',
+) {
   const isDark = mode === 'dark'
 
   return createTheme({
+    direction,
     palette: {
       mode,
       primary: {
