@@ -35,9 +35,14 @@ export default function HomePage() {
           {copy.auth.welcome} {user?.display_name ?? copy.auth.guest}
         </Typography>
         {user?.role === ROLES.LISTENER ? (
-          <Button variant="contained" onClick={() => navigate(ROUTES.MANAGE)}>
-            {copy.home.manageProfile}
-          </Button>
+          <>
+            <Button variant="contained" onClick={() => navigate(ROUTES.MANAGE)}>
+              {copy.home.manageProfile}
+            </Button>
+            <Button variant="outlined" onClick={() => navigate(ROUTES.SETTINGS)}>
+              {copy.home.settings}
+            </Button>
+          </>
         ) : null}
         {showArtistStudio ? (
           <Button variant="contained" onClick={() => navigate(ROUTES.ARTIST_STUDIO)}>

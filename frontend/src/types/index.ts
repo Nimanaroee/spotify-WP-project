@@ -69,6 +69,8 @@ export type {
 
 export type {
   AppLanguage,
+  SystemVoice,
+  UpdateSubscriptionTierPayload,
   UpdateUserPreferencesPayload,
   UserPreferences,
 } from './settings'

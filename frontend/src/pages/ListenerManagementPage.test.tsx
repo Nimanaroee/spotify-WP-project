@@ -194,18 +194,13 @@ describe('ListenerManagementPage', () => {
     ).toBeNull();
   });
 
-  it('switches manage page labels to Persian', async () => {
-    const user = userEvent.setup();
+  it('does not render the old language switcher on the management page', () => {
     setDesktopViewport();
     renderListenerManagementPage();
 
-    await user.click(screen.getByRole('button', { name: /فارسی/i }));
-
     expect(
-      screen.getByRole('button', { name: /english/i })
-    ).toBeInTheDocument();
-    expect(screen.getByText('دنبال‌کنندگان')).toBeInTheDocument();
-    expect(screen.getByText('اطلاعات شخصی')).toBeInTheDocument();
+      screen.queryByRole('button', { name: /فارسی|persian|english/i })
+    ).not.toBeInTheDocument();
   });
 
   it('hides profile photo upload for Basic subscribers', async () => {
