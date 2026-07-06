@@ -60,7 +60,7 @@ function createEditableProfile(
 export default function ListenerManagementPage() {
   const authUser = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
-  const { language, toggleLanguage } = useAppLanguage();
+  const { language } = useAppLanguage();
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [activeFollowList, setActiveFollowList] =
@@ -199,20 +199,6 @@ export default function ListenerManagementPage() {
       sx={{ bgcolor: 'background.default' }}
     >
       <Stack className="mx-auto max-w-5xl" spacing={3}>
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Button
-            onClick={() => {
-              toggleLanguage();
-              setMessage(null);
-            }}
-            variant="outlined"
-          >
-            {language === 'en'
-              ? copy.actions.switchToPersian
-              : copy.actions.switchToEnglish}
-          </Button>
-        </Box>
-
         <Paper className="p-5 md:p-8">
           <Stack spacing={3}>
             <ProfileSummaryHeader

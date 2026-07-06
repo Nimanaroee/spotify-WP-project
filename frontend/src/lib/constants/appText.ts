@@ -21,6 +21,7 @@ type SharedCopy = {
   };
   home: {
     manageProfile: string;
+    settings: string;
   };
   profile: {
     birthDate: string;
@@ -44,6 +45,37 @@ type SharedCopy = {
   };
   settings: {
     languageLabel: string;
+    pageTitle: string;
+    subtitle: string;
+    notificationsTitle: string;
+    notificationsDescription: string;
+    notificationLimit: string;
+    appSoundEnabled: string;
+    systemTitle: string;
+    systemDescription: string;
+    systemVoice: string;
+    theme: string;
+    subscriptionTitle: string;
+    subscriptionDescription: string;
+    currentPlan: string;
+    accountTitle: string;
+    accountDescription: string;
+    deleteAccount: string;
+    deleteConfirmation: string;
+    savePreferences: string;
+    preferencesSaved: string;
+    subscriptionSaved: string;
+    accountDeleted: string;
+    voiceOptions: {
+      default: string;
+      calm: string;
+      bright: string;
+    };
+    tierOptions: {
+      basic: string;
+      silver: string;
+      gold: string;
+    };
   };
   common: {
     english: string;
@@ -103,6 +135,7 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
     },
     home: {
       manageProfile: 'Manage listener profile',
+      settings: 'Settings',
     },
     profile: {
       birthDate: 'Birth date',
@@ -126,6 +159,37 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
     },
     settings: {
       languageLabel: 'Language',
+      pageTitle: 'Settings',
+      subtitle: 'Control notifications, system preferences, account access, and subscription status.',
+      notificationsTitle: 'Notification settings',
+      notificationsDescription: 'Limit how many notifications the app keeps visible for your listener account.',
+      notificationLimit: 'Notification limit',
+      appSoundEnabled: 'Notification sounds',
+      systemTitle: 'System preferences',
+      systemDescription: 'Choose the app language, voice style, and theme for this device.',
+      systemVoice: 'System voice',
+      theme: 'Theme',
+      subscriptionTitle: 'Subscription status',
+      subscriptionDescription: 'Your current plan is stored locally for Phase 1. Change it to preview upgrades or downgrades.',
+      currentPlan: 'Current plan',
+      accountTitle: 'Account management',
+      accountDescription: 'Delete your local mock account and sign out from this browser.',
+      deleteAccount: 'Delete account',
+      deleteConfirmation: 'Delete your account? This removes the local mock user from this browser.',
+      savePreferences: 'Save preferences',
+      preferencesSaved: 'Settings saved.',
+      subscriptionSaved: 'Subscription updated.',
+      accountDeleted: 'Account deleted.',
+      voiceOptions: {
+        default: 'Default',
+        calm: 'Calm',
+        bright: 'Bright',
+      },
+      tierOptions: {
+        basic: 'Basic',
+        silver: 'Silver',
+        gold: 'Gold',
+      },
     },
     common: {
       english: 'English',
@@ -183,6 +247,7 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
     },
     home: {
       manageProfile: 'مدیریت پروفایل شنونده',
+      settings: 'تنظیمات',
     },
     profile: {
       birthDate: 'تاریخ تولد',
@@ -206,6 +271,37 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
     },
     settings: {
       languageLabel: 'زبان',
+      pageTitle: 'تنظیمات',
+      subtitle: 'اعلان‌ها، ترجیحات سیستم، حساب کاربری و وضعیت اشتراک را مدیریت کنید.',
+      notificationsTitle: 'تنظیمات اعلان',
+      notificationsDescription: 'تعداد اعلان‌هایی را که برنامه برای حساب شنونده نشان می‌دهد محدود کنید.',
+      notificationLimit: 'حد اعلان‌ها',
+      appSoundEnabled: 'صدای اعلان‌ها',
+      systemTitle: 'ترجیحات سیستم',
+      systemDescription: 'زبان برنامه، سبک صدا و پوسته این دستگاه را انتخاب کنید.',
+      systemVoice: 'صدای سیستم',
+      theme: 'پوسته',
+      subscriptionTitle: 'وضعیت اشتراک',
+      subscriptionDescription: 'اشتراک فعلی در فاز اول به‌صورت محلی ذخیره می‌شود. برای پیش‌نمایش ارتقا یا کاهش، آن را تغییر دهید.',
+      currentPlan: 'طرح فعلی',
+      accountTitle: 'مدیریت حساب',
+      accountDescription: 'حساب محلی آزمایشی خود را حذف کنید و از این مرورگر خارج شوید.',
+      deleteAccount: 'حذف حساب',
+      deleteConfirmation: 'حساب حذف شود؟ این کار کاربر آزمایشی محلی را از این مرورگر حذف می‌کند.',
+      savePreferences: 'ذخیره تنظیمات',
+      preferencesSaved: 'تنظیمات ذخیره شد.',
+      subscriptionSaved: 'اشتراک به‌روزرسانی شد.',
+      accountDeleted: 'حساب حذف شد.',
+      voiceOptions: {
+        default: 'پیش‌فرض',
+        calm: 'آرام',
+        bright: 'روشن',
+      },
+      tierOptions: {
+        basic: 'پایه',
+        silver: 'نقره‌ای',
+        gold: 'طلایی',
+      },
     },
     common: {
       english: 'انگلیسی',

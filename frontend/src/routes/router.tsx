@@ -17,6 +17,7 @@ import VerificationDetailPage from '../pages/admin/VerificationDetailPage'
 import AuditingPage from '../pages/admin/AuditingPage'
 import SubscriptionAdminPage from '../pages/admin/SubscriptionAdminPage'
 import NotificationsPage from '../pages/NotificationsPage'
+import SettingsPage from '../pages/SettingsPage'
 
 export default function Router() {
   return (
@@ -26,6 +27,16 @@ export default function Router() {
       <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
       <Route path={ROUTES.HOME} element={<HomePage />} />
       <Route path={ROUTES.MANAGE} element={<ListenerManagementPage />} />
+      <Route
+        path={ROUTES.SETTINGS}
+        element={
+          <RoleGuard allowedRoles={[ROLES.LISTENER]}>
+            <MainLayout>
+              <SettingsPage />
+            </MainLayout>
+          </RoleGuard>
+        }
+      />
       <Route path={ROUTES.USER_PROFILE} element={<UserProfilePage />} />
       <Route
         path={ROUTES.ARTIST_STUDIO}

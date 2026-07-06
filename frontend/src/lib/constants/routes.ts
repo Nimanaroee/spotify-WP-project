@@ -4,6 +4,7 @@ export const ROUTES = {
   REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
   MANAGE: '/manage',
+  SETTINGS: '/settings',
   USER_PROFILE: '/profile/:username',
   NOTIFICATIONS: '/notifications',
   ARTIST_STUDIO: '/artist/studio',
