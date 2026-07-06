@@ -1,13 +1,3 @@
-/**
- * ListenerManagementPage — listener profile management and stats
- * Spec reference: §2.3
- *
- * Responsibilities:
- *  - [x] show listener personal and subscription details
- *  - [x] support local profile edits through the mock service
- *  - [x] disable profile picture changes for Basic subscribers
- *  - [x] support English/Persian language switching in the manage view
- */
 import { useState, type ChangeEvent } from 'react';
 import {
   Alert,

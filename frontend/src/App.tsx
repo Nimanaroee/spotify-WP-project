@@ -1,10 +1,12 @@
 import { BrowserRouter } from 'react-router-dom';
+import { CacheProvider } from '@emotion/react';
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import Router from './routes/router';
 import { seedDemoData } from './lib/mock/seed';
 import { getCurrentUser } from './lib/mock/authService';
 import { useAuthStore } from './store/authStore';
+import { useNotificationStore } from './store/notificationStore';
 import {
   APP_LANGUAGE_STORAGE_KEY,
   LanguageContext,
@@ -14,6 +16,7 @@ import {
   createAppTheme,
   type AppThemeMode,
 } from './theme/appTheme';
+import { emotionCacheLtr, emotionCacheRtl } from './theme/emotionCache';
 import { ThemeModeContext } from './theme/ThemeModeContext';
 import type { AppLanguage } from './types';
 
@@ -32,10 +35,18 @@ function getStoredLanguage(): AppLanguage {
 }
 
 export default function App() {
+  const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
+  const loadNotificationsForUser = useNotificationStore((state) => state.loadForUser);
+  const clearNotifications = useNotificationStore((state) => state.clear);
   const [mode, setMode] = useState<AppThemeMode>(getStoredThemeMode);
   const [language, setLanguage] = useState<AppLanguage>(getStoredLanguage);
-  const theme = useMemo(() => createAppTheme(mode), [mode]);
+  const isRtl = language === 'fa';
+  const theme = useMemo(
+    () => createAppTheme(mode, isRtl ? 'rtl' : 'ltr'),
+    [mode, isRtl],
+  );
+  const emotionCache = isRtl ? emotionCacheRtl : emotionCacheLtr;
   const themeModeContextValue = useMemo(
     () => ({
       mode,
@@ -75,20 +86,30 @@ export default function App() {
   }, [setUser]);
 
   useEffect(() => {
+    if (user) {
+      loadNotificationsForUser(user.id, user.role);
+      return;
+    }
+    clearNotifications();
+  }, [user, loadNotificationsForUser, clearNotifications]);
+
+  useEffect(() => {
     document.documentElement.lang = language;
     document.documentElement.dir = language === 'fa' ? 'rtl' : 'ltr';
   }, [language]);
 
   return (
-    <ThemeModeContext.Provider value={themeModeContextValue}>
-      <LanguageContext.Provider value={languageContextValue}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <BrowserRouter>
-            <Router />
-          </BrowserRouter>
-        </ThemeProvider>
-      </LanguageContext.Provider>
-    </ThemeModeContext.Provider>
+    <CacheProvider value={emotionCache}>
+      <ThemeModeContext.Provider value={themeModeContextValue}>
+        <LanguageContext.Provider value={languageContextValue}>
+          <ThemeProvider theme={theme}>
+            <CssBaseline />
+            <BrowserRouter>
+              <Router />
+            </BrowserRouter>
+          </ThemeProvider>
+        </LanguageContext.Provider>
+      </ThemeModeContext.Provider>
+    </CacheProvider>
   );
 }

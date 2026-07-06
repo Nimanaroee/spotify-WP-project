@@ -80,15 +80,16 @@ This runs typecheck, build, and tests — same expectation as CI.
 
 ## Coverage goals (team target)
 
-| Area | Minimum tests |
-|------|----------------|
-| common components | 3+ |
-| auth/register forms | 2+ |
-| playlist limits | 2+ |
-| notifications empty/read | 1+ |
-| player controls / queue | 2+ |
+| Area | Minimum tests | Status |
+|------|----------------|--------|
+| common components | 3+ | met (`EmptyState`, etc.) |
+| auth/register forms | 2+ | met |
+| playlist limits | 2+ | pending (playlists not built) |
+| notifications empty/read | 1+ | met (`notificationService`, `NotificationsPage`) |
+| artwork upload / releases | 2+ | met (`fileUpload`, `musicService`, `ArtworkManagementPage`) |
+| player controls / queue | 2+ | pending (player not built) |
 
-Track progress in PR descriptions until we exceed 10 tests total.
+**Current count:** 19 test files (exceeds course minimum of 10). Track new areas in PR descriptions as features land.
 
 ## Mocking
 

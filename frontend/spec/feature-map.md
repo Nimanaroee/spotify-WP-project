@@ -13,11 +13,11 @@ Maps course project sections to frontend locations. Update the **Status** column
 | §2.3 | User profile | `pages/UserProfilePage`, `pages/ListenerManagementPage` | WIP |
 | §2.4 | Artist profile | `pages/ArtistProfilePage`, `types/artist.ts` | TODO |
 | §2.5 | App settings | `pages/SettingsPage`, `types/settings.ts` | TODO |
-| §2.6 | Notifications | `pages/NotificationsPage`, `types/notification.ts` | TODO |
+| §2.6 | Notifications | `pages/NotificationsPage`, `components/notifications/*`, `store/notificationStore`, `lib/mock/notificationService` | DONE |
 | §2.7 | Playlists | `pages/PlaylistsPage`, `types/playlist.ts` | TODO |
 | §2.8 | Albums & singles | `pages/AlbumsPage`, `pages/AlbumDetailPage`, `types/music.ts` | TODO |
 | §2.9 | Music player | `components/layout/PlayerBar`, `store/playerStore`, `types/player.ts` | TODO |
-| §2.10 | Artwork management | `pages/ArtworkManagementPage` | TODO |
+| §2.10 | Artwork management | `pages/ArtworkManagementPage`, `components/artwork/*`, `lib/mock/musicService`, `lib/artwork/fileUpload` | DONE |
 | §2.11 | Admin dashboard | `layouts/AdminLayout`, `pages/admin/*` | DONE |
 | §2.11.1 | Tickets & verification | `pages/admin/TicketsPage`, `pages/admin/VerificationDetailPage` | DONE |
 | §2.11.2 | Auditing | `pages/admin/AuditingPage`, `types/admin.ts` | DONE |
@@ -30,7 +30,9 @@ Maps course project sections to frontend locations. Update the **Status** column
 | Role-based nav | `lib/constants/navItems.ts`, layouts | §2 intro |
 | Subscription limits | `lib/constants/subscriptionLimits.ts` | Table 1 |
 | Responsive layouts | all pages, Tailwind breakpoints | §2 intro |
-| Empty states | `components/common/EmptyState.tsx` | §2.6, §2.7 |
+| Empty states | `components/common/EmptyState.tsx` | §2.6, §2.7, §2.10 |
+| Notification bell + panel | `components/notifications/NotificationPanel.tsx`, layouts | §2.6 |
+| Locale copy modules | `lib/constants/*PageText.ts`, `theme/LanguageContext` | Cross-cutting |
 | Theme mode toggle | `components/common/ThemeToggleButton.tsx`, `theme/*` | Cross-cutting |
 | Verified artist badge | `components/common/VerifiedBadge.tsx` (create) | §2.4 |
 | Follow/unfollow | `lib/mock/followService.ts` (create), profile pages | §2.3, §2.4 |

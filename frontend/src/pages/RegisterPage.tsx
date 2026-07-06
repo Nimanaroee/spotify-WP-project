@@ -1,7 +1,3 @@
-/**
- * RegisterPage — listener and artist registration
- * Spec reference: §2.1
- */
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Alert,

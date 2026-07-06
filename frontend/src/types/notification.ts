@@ -25,6 +25,5 @@ export interface Notification extends Timestamps {
   title: string
   message: string
   is_read: boolean
-  /** Deep link target, e.g. track, album, or ticket page. */
   link?: string
 }

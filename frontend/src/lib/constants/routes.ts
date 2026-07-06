@@ -5,6 +5,7 @@ export const ROUTES = {
   FORGOT_PASSWORD: '/forgot-password',
   MANAGE: '/manage',
   USER_PROFILE: '/profile/:username',
+  NOTIFICATIONS: '/notifications',
   ARTIST_STUDIO: '/artist/studio',
   ADMIN: '/admin',
   ADMIN_TICKETS: '/admin/tickets',

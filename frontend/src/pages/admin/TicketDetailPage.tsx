@@ -1,7 +1,3 @@
-/**
- * TicketDetailPage — chat-style support ticket detail
- * Spec reference: §2.11.1
- */
 import {
   Alert,
   Box,
@@ -12,31 +8,24 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { format } from 'date-fns'
 import { useMemo, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
+import {
+  formatAdminDateTime,
+  getAdminPageText,
+} from '../../lib/constants/adminPageText'
 import { ROUTES } from '../../lib/constants/routes'
 import { closeTicket, getTicket, replyToTicket } from '../../lib/mock/ticketService'
 import { useAuthStore } from '../../store/authStore'
-import type { SupportTicket, TicketStatus } from '../../types/support'
-
-const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
-  open: 'Open',
-  answered: 'Answered',
-  closed: 'Closed',
-}
-
-function formatDateTime(iso: string): string {
-  try {
-    return format(new Date(iso), 'MMM d, yyyy h:mm a')
-  } catch {
-    return iso
-  }
-}
+import { useAppLanguage } from '../../theme/LanguageContext'
+import type { SupportTicket } from '../../types/support'
 
 export default function TicketDetailPage() {
   const { ticketId } = useParams()
   const user = useAuthStore((state) => state.user)
+  const { language } = useAppLanguage()
+  const copy = getAdminPageText(language)
+  const isRtl = language === 'fa'
   const parsedId = Number(ticketId)
   const [reply, setReply] = useState('')
   const [error, setError] = useState('')
@@ -51,10 +40,10 @@ export default function TicketDetailPage() {
 
   if (!ticket) {
     return (
-      <Box>
-        <Alert severity="error">Ticket not found.</Alert>
+      <Box dir={isRtl ? 'rtl' : 'ltr'}>
+        <Alert severity="error">{copy.ticketDetail.notFound}</Alert>
         <Button className="mt-4" component={RouterLink} to={ROUTES.ADMIN_TICKETS}>
-          Back to tickets
+          {copy.ticketDetail.backToTickets}
         </Button>
       </Box>
     )
@@ -63,6 +52,7 @@ export default function TicketDetailPage() {
   const messages = ticket.messages ?? []
   const isClosed = ticket.status === 'closed'
   const currentTicket = ticket
+  const submittedAt = formatAdminDateTime(ticket.created_at, language)
 
   function handleSendReply(): void {
     if (!user) {
@@ -79,7 +69,7 @@ export default function TicketDetailPage() {
       setReply('')
       setTicketOverride(updated)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send reply.')
+      setError(err instanceof Error ? err.message : copy.ticketDetail.failedSendReply)
     }
   }
 
@@ -89,24 +79,24 @@ export default function TicketDetailPage() {
       const updated = closeTicket(currentTicket.id)
       setTicketOverride(updated)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to close ticket.')
+      setError(err instanceof Error ? err.message : copy.ticketDetail.failedCloseTicket)
     }
   }
 
   return (
-    <Box>
+    <Box dir={isRtl ? 'rtl' : 'ltr'}>
       <Stack className="mb-4" direction="row" spacing={2} sx={{ alignItems: 'center' }}>
         <Button component={RouterLink} to={ROUTES.ADMIN_TICKETS} variant="outlined">
-          Back
+          {copy.ticketDetail.back}
         </Button>
         <Typography className="flex-1" component="h1" variant="h5" sx={{ fontWeight: 700 }}>
-          Ticket #{ticket.id}: {ticket.subject}
+          {copy.ticketDetail.ticketHeading(ticket.id, ticket.subject)}
         </Typography>
-        <Chip label={TICKET_STATUS_LABELS[ticket.status]} size="small" />
+        <Chip label={copy.tickets.statusLabels[ticket.status]} size="small" />
       </Stack>
 
       <Typography className="mb-4" color="text.secondary" variant="body2">
-        From {ticket.user_name} · Submitted {formatDateTime(ticket.created_at)}
+        {copy.ticketDetail.submittedBy(ticket.user_name, submittedAt)}
       </Typography>
 
       <Paper className="mb-4 max-h-96 overflow-y-auto p-4" sx={{ bgcolor: 'background.paper' }}>
@@ -124,7 +114,7 @@ export default function TicketDetailPage() {
                 }}
               >
                 <Typography variant="caption" sx={{ opacity: 0.8 }}>
-                  {msg.sender_name} · {formatDateTime(msg.created_at)}
+                  {msg.sender_name} · {formatAdminDateTime(msg.created_at, language)}
                 </Typography>
                 <Typography variant="body1">{msg.message}</Typography>
               </Box>
@@ -144,22 +134,22 @@ export default function TicketDetailPage() {
           <TextField
             fullWidth
             multiline
-            label="Your reply"
+            label={copy.ticketDetail.yourReply}
             minRows={3}
             value={reply}
             onChange={(e) => setReply(e.target.value)}
           />
           <Stack direction="row" spacing={2}>
             <Button variant="contained" onClick={handleSendReply}>
-              Send reply
+              {copy.ticketDetail.sendReply}
             </Button>
             <Button color="inherit" variant="outlined" onClick={handleClose}>
-              Close ticket
+              {copy.ticketDetail.closeTicket}
             </Button>
           </Stack>
         </Stack>
       ) : (
-        <Alert severity="info">This ticket is closed.</Alert>
+        <Alert severity="info">{copy.ticketDetail.ticketClosed}</Alert>
       )}
     </Box>
   )

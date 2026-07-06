@@ -26,7 +26,6 @@ export interface UserSubscription extends Timestamps {
   is_active: boolean
 }
 
-/** Admin-configurable prices; must not require code changes to update. */
 export interface SubscriptionPricing {
   silver_price: number
   gold_price: number

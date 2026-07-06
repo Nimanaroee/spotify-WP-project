@@ -5,6 +5,7 @@
 | State | Where | Example |
 |-------|-------|---------|
 | Auth session | `authStore` | logged-in `User` |
+| Notifications | `notificationStore` | unread count, inbox list for panel + page |
 | Player | `playerStore` (create) | queue, repeat, shuffle, volume |
 | App language | app-wide context | active locale for English/Persian copy |
 | Page-local UI | `useState` in page | modal open, tab index |
@@ -109,6 +110,20 @@ export function createPlaylist(payload: CreatePlaylistPayload): Playlist {
 ```
 
 Pages call services — not raw storage. Phase 2 replaces the service body with API calls.
+
+### Implemented mock services
+
+| Service | Feature | Storage keys |
+|---------|---------|--------------|
+| `authService` | login, session | `users`, `auth_user_id` |
+| `userProfileService` | profiles, follows | `users`, `follows`, `daily_streams` |
+| `artistProfileService` | verified-artist check | `artist_profiles` |
+| `notificationService` | inbox CRUD, read state | `notifications` |
+| `musicService` | publish/edit/delete releases | `tracks`, `albums` |
+| `ticketService` | support tickets | `tickets` |
+| `verificationService` | artist verification queue | `verification_requests` |
+| `auditService` | monthly artist audits | `artist_audits` |
+| `subscriptionAdminService` | admin pricing | `subscription_pricing` |
 
 ## Subscription limits
 

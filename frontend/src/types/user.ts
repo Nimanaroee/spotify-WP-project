@@ -19,7 +19,6 @@ export interface User extends Timestamps {
   daily_streams_count?: number
 }
 
-/** Minimal user shape for lists, cards, and auth session bootstrap. */
 export interface UserSummary {
   id: EntityId
   display_name: string
