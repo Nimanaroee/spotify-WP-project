@@ -74,6 +74,33 @@ describe('verificationService', () => {
     )
   })
 
+  it('updates an existing pending artist profile when approving', () => {
+    const createdAt = new Date().toISOString()
+    storageState.set('artist_profiles', [
+      {
+        id: 1,
+        user_id: 5,
+        stage_name: 'Neon Waves',
+        bio: '',
+        portfolio_links: [],
+        verification_status: 'pending',
+        is_verified: false,
+        created_at: createdAt,
+        updated_at: createdAt,
+      },
+    ])
+
+    approveRequest(1)
+
+    const profiles = storageState.get('artist_profiles') as Array<{
+      verification_status: string
+      is_verified: boolean
+    }>
+    expect(profiles).toHaveLength(1)
+    expect(profiles[0].verification_status).toBe('approved')
+    expect(profiles[0].is_verified).toBe(true)
+  })
+
   it('rejects a request with a reason', () => {
     const updated = rejectRequest(1, 'Portfolio quality is insufficient.')
     expect(updated.verification_status).toBe('rejected')

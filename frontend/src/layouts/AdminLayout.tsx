@@ -1,24 +1,28 @@
 import {
   AppBar,
+  Avatar,
   Box,
   Button,
+  Divider,
   Drawer,
   IconButton,
   List,
   ListItemButton,
   ListItemText,
+  Menu,
+  MenuItem,
   Stack,
   Toolbar,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from '@mui/material'
-import { Menu } from 'lucide-react'
+import { Menu as MenuIcon, MoreVertical } from 'lucide-react'
 import { useState } from 'react'
 import { Link as RouterLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import NotificationPanel from '../components/notifications/NotificationPanel'
+import { getProfileInitials } from '../components/profile/profileUtils'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { getAdminPageText } from '../lib/constants/adminPageText'
-import { getAdminNavForRole } from '../lib/constants/navItems'
+import { getAdminAccountNav, getAdminNavForRole } from '../lib/constants/navItems'
 import { ROUTES } from '../lib/constants/routes'
 import { logout } from '../lib/mock/authService'
 import { useAuthStore } from '../store/authStore'
@@ -32,12 +36,16 @@ export default function AdminLayout() {
   const { language, toggleLanguage } = useAppLanguage()
   const navigate = useNavigate()
   const location = useLocation()
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isMobile = useIsMobile()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [moreAnchor, setMoreAnchor] = useState<null | HTMLElement>(null)
   const copy = getAdminPageText(language)
 
   const navItems = user ? getAdminNavForRole(user.role, language) : []
+  const accountNavItems = getAdminAccountNav(language)
+  const languageLabel =
+    language === 'en' ? copy.layout.switchToPersian : copy.layout.switchToEnglish
+  const languageShort = language === 'en' ? 'FA' : 'EN'
 
   function handleLogout(): void {
     logout()
@@ -45,31 +53,46 @@ export default function AdminLayout() {
     navigate(ROUTES.LOGIN)
   }
 
+  function isNavItemActive(path: string): boolean {
+    if (path === ROUTES.ADMIN_TICKETS) {
+      return (
+        location.pathname.startsWith('/admin/tickets') ||
+        location.pathname.startsWith('/admin/verification')
+      )
+    }
+
+    return location.pathname === path
+  }
+
   const drawerContent = (
-    <Box sx={{ pt: 2 }}>
+    <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', height: '100%' }}>
       <Typography className="px-4 pb-4" variant="h6" sx={{ fontWeight: 700 }}>
         {copy.layout.panelTitle}
       </Typography>
-      <List>
-        {navItems.map((item) => {
-          const isActive =
-            location.pathname === item.path ||
-            (item.path === ROUTES.ADMIN_TICKETS &&
-              (location.pathname.startsWith('/admin/tickets') ||
-                location.pathname.startsWith('/admin/verification')))
-
-          return (
-            <ListItemButton
-              key={item.path}
-              component={RouterLink}
-              selected={isActive}
-              to={item.path}
-              onClick={() => setMobileOpen(false)}
-            >
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          )
-        })}
+      <List sx={{ flexGrow: 1 }}>
+        {navItems.map((item) => (
+          <ListItemButton
+            key={item.path}
+            component={RouterLink}
+            selected={isNavItemActive(item.path)}
+            to={item.path}
+            onClick={() => setMobileOpen(false)}
+          >
+            <ListItemText primary={item.label} />
+          </ListItemButton>
+        ))}
+        <Divider sx={{ my: 1.5 }} />
+        {accountNavItems.map((item) => (
+          <ListItemButton
+            key={item.path}
+            component={RouterLink}
+            selected={location.pathname === item.path}
+            to={item.path}
+            onClick={() => setMobileOpen(false)}
+          >
+            <ListItemText primary={item.label} />
+          </ListItemButton>
+        ))}
       </List>
     </Box>
   )
@@ -102,42 +125,136 @@ export default function AdminLayout() {
         }}
       >
         <AppBar color="default" elevation={0} position="sticky">
-          <Toolbar sx={{ gap: 1 }}>
+          <Toolbar sx={{ gap: { xs: 0.5, md: 1 }, minWidth: 0 }}>
             {isMobile ? (
               <IconButton
                 aria-label={copy.layout.openNav}
                 onClick={() => setMobileOpen(true)}
+                sx={{ flexShrink: 0 }}
               >
-                <Menu size={20} />
+                <MenuIcon size={20} />
               </IconButton>
             ) : null}
-            <Typography sx={{ flex: 1, fontWeight: 600 }} variant="h6">
+            <Typography
+              noWrap
+              sx={{
+                flex: 1,
+                fontWeight: 600,
+                minWidth: 0,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+              variant="h6"
+            >
               {user?.display_name ?? copy.layout.panelTitle}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+            <Stack
+              direction="row"
+              spacing={{ xs: 0.5, md: 1 }}
+              sx={{ alignItems: 'center', flexShrink: 0 }}
+            >
               <Button
+                aria-label={languageLabel}
                 size="small"
                 variant="text"
                 onClick={() => {
                   toggleLanguage()
                 }}
+                sx={{ minWidth: { xs: 36, md: 'auto' }, px: { xs: 1, md: 1.5 } }}
               >
-                {language === 'en'
-                  ? copy.layout.switchToPersian
-                  : copy.layout.switchToEnglish}
+                {isMobile ? languageShort : languageLabel}
               </Button>
               <NotificationPanel />
-              <Button component={RouterLink} size="small" to={ROUTES.HOME} variant="outlined">
-                {copy.layout.home}
-              </Button>
-              <Button size="small" variant="outlined" onClick={handleLogout}>
-                {copy.layout.logout}
-              </Button>
+              {!isMobile && user ? (
+                <>
+                  <Button component={RouterLink} size="small" to={ROUTES.MANAGE} variant="text">
+                    {accountNavItems[0]?.label}
+                  </Button>
+                  <Button component={RouterLink} size="small" to={ROUTES.SETTINGS} variant="text">
+                    {accountNavItems[1]?.label}
+                  </Button>
+                </>
+              ) : null}
+              {user ? (
+                <Stack
+                  component={RouterLink}
+                  to={ROUTES.MANAGE}
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 8,
+                    transition: 'background-color 0.2s',
+                    '&:hover': { bgcolor: 'action.hover' },
+                    flexShrink: 0,
+                  }}
+                >
+                  <Avatar
+                    alt={`Profile of ${user.display_name}`}
+                    src={user.profile_picture ?? undefined}
+                    sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.875rem' }}
+                  >
+                    {getProfileInitials(user.display_name)}
+                  </Avatar>
+                </Stack>
+              ) : null}
+              {isMobile ? (
+                <>
+                  <IconButton
+                    aria-label={copy.layout.home}
+                    size="small"
+                    onClick={(event) => setMoreAnchor(event.currentTarget)}
+                  >
+                    <MoreVertical size={18} />
+                  </IconButton>
+                  <Menu
+                    anchorEl={moreAnchor}
+                    open={Boolean(moreAnchor)}
+                    onClose={() => setMoreAnchor(null)}
+                  >
+                    <MenuItem
+                      component={RouterLink}
+                      to={ROUTES.SETTINGS}
+                      onClick={() => setMoreAnchor(null)}
+                    >
+                      {accountNavItems[1]?.label}
+                    </MenuItem>
+                    <MenuItem
+                      component={RouterLink}
+                      to={ROUTES.HOME}
+                      onClick={() => setMoreAnchor(null)}
+                    >
+                      {copy.layout.home}
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() => {
+                        setMoreAnchor(null)
+                        handleLogout()
+                      }}
+                    >
+                      {copy.layout.logout}
+                    </MenuItem>
+                  </Menu>
+                </>
+              ) : (
+                <>
+                  <Button component={RouterLink} size="small" to={ROUTES.HOME} variant="outlined">
+                    {copy.layout.home}
+                  </Button>
+                  <Button size="small" variant="outlined" onClick={handleLogout}>
+                    {copy.layout.logout}
+                  </Button>
+                </>
+              )}
             </Stack>
           </Toolbar>
         </AppBar>
 
-        <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 3 } }}>
+        <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 } }}>
           <Outlet />
         </Box>
       </Box>

@@ -57,7 +57,7 @@ export default function LoginPage() {
               <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
                 {copy.auth.welcome}
               </Typography>
-              <Typography color="text.secondary">
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
                 {copy.auth.loginSubtitle}
               </Typography>
             </Box>
@@ -90,7 +90,11 @@ export default function LoginPage() {
               </Button>
             </Stack>
 
-            <Stack direction="row" sx={{ justifyContent: 'space-between' }}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{ justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' } }}
+            >
               <Link component={RouterLink} to="/forgot-password">
                 {copy.auth.forgotPassword}
               </Link>

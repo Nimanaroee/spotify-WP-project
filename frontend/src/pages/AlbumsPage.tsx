@@ -3,13 +3,13 @@ import {
   MenuItem,
   Stack,
   TextField,
-  Typography,
 } from '@mui/material';
 import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import EmptyState from '../components/common/EmptyState';
+import PageHeader from '../components/common/PageHeader';
 import MusicCard from '../components/music/MusicCard';
 import AddToPlaylistDialog from '../components/music/AddToPlaylistDialog';
 import { getAlbumsPageText } from '../lib/constants/albumsPageText';
@@ -68,9 +68,7 @@ export default function AlbumsPage() {
           alignItems={{ xs: 'stretch', md: 'center' }}
           justifyContent="space-between"
         >
-          <Typography variant="h4" sx={{ fontWeight: 800 }}>
-            {copy.pageTitle}
-          </Typography>
+          <PageHeader>{copy.pageTitle}</PageHeader>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ flex: 1, maxWidth: { md: 500 }}}>
             <TextField

@@ -78,8 +78,19 @@ export function approveRequest(id: number): ArtistVerificationRequest {
   }
 
   const profiles = storage.get<ArtistProfile[]>(ARTIST_PROFILES_KEY) ?? []
-  const existingProfile = profiles.find((p) => p.user_id === request.user_id)
-  if (!existingProfile) {
+  const existingProfileIndex = profiles.findIndex((p) => p.user_id === request.user_id)
+  if (existingProfileIndex !== -1) {
+    const updatedProfiles = [...profiles]
+    updatedProfiles[existingProfileIndex] = {
+      ...updatedProfiles[existingProfileIndex],
+      stage_name: request.stage_name,
+      portfolio_links: request.portfolio_links,
+      verification_status: 'approved',
+      is_verified: true,
+      updated_at: updatedAt,
+    }
+    storage.set(ARTIST_PROFILES_KEY, updatedProfiles)
+  } else {
     const profile: ArtistProfile = {
       id: getNextId(profiles),
       user_id: request.user_id,

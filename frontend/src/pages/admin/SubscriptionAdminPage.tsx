@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { z } from 'zod'
+import PageHeader from '../../components/common/PageHeader'
 import {
   formatAdminDateTime,
   formatAdminMonthYear,
@@ -108,9 +109,7 @@ export default function SubscriptionAdminPage() {
 
   return (
     <Box>
-      <Typography className="mb-4" component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-        {copy.subscriptions.title}
-      </Typography>
+      <PageHeader className="mb-4">{copy.subscriptions.title}</PageHeader>
 
       {error ? (
         <Alert className="mb-4" severity="error">
@@ -168,7 +167,7 @@ export default function SubscriptionAdminPage() {
               <Typography className="mb-2" variant="h6" sx={{ fontWeight: 600 }}>
                 {copy.subscriptions.monthlyRevenue}
               </Typography>
-              <Typography variant="h3" sx={{ fontWeight: 700 }}>
+              <Typography sx={{ typography: { xs: 'h4', md: 'h3' }, fontWeight: 700 }}>
                 ${report.total_subscription_revenue.toFixed(2)}
               </Typography>
               <Typography color="text.secondary" variant="body2">
@@ -180,7 +179,7 @@ export default function SubscriptionAdminPage() {
               <Typography className="mb-4" variant="h6" sx={{ fontWeight: 600 }}>
                 {copy.subscriptions.userDistribution}
               </Typography>
-              <Box sx={{ height: 340, width: '100%' }}>
+              <Box sx={{ height: { xs: 280, sm: 340 }, width: '100%', minHeight: 240 }}>
                 <ResponsiveContainer>
                   <PieChart>
                     <Pie

@@ -73,7 +73,7 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: /log in/i }))
 
     expect(
-      await screen.findByRole('heading', { name: /welcome listener/i }),
+      await screen.findByRole('heading', { name: /recently listened playlists/i }),
     ).toBeInTheDocument()
     expect(useAuthStore.getState().user?.email).toBe('listener@example.com')
   })
@@ -86,7 +86,9 @@ describe('LoginPage', () => {
     await user.type(screen.getByLabelText(/password/i), 'password123')
     await user.click(screen.getByRole('button', { name: /log in/i }))
 
-    expect(await screen.findByRole('heading', { name: /welcome/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: /recently listened playlists/i }),
+    ).toBeInTheDocument()
     expect(useAuthStore.getState().user?.email).toBe('pending@example.com')
   })
 

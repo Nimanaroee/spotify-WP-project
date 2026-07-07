@@ -11,6 +11,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import EmptyState from '../components/common/EmptyState';
+import PageHeader from '../components/common/PageHeader';
 import PlaylistListCard from '../components/playlists/PlaylistListCard';
 import { PlaylistEditDialog, PlaylistDeleteDialog, AddSongDialog } from '../components/playlists/PlaylistDialogs';
 import { getPlaylistsPageText } from '../lib/constants/playlistsPageText';
@@ -138,17 +139,20 @@ export default function PlaylistsPage() {
   return (
     <MainLayout>
       <Box className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto" dir={language === 'fa' ? 'rtl' : 'ltr'}>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={4}>
-          <Box>
-            <Typography variant="h4" sx={{ fontWeight: 800 }}>
-              {copy.pageTitle}
-            </Typography>
-            {limit !== Infinity && (
-              <Typography variant="body2" color="text.secondary" mt={0.5}>
-                {copy.limits.status(playlistCount, limit)}
-              </Typography>
-            )}
-          </Box>
+        <Stack
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+          direction={{ xs: 'column', sm: 'row' }}
+          justifyContent="space-between"
+          mb={4}
+          spacing={2}
+        >
+          <PageHeader
+            subtitle={
+              limit !== Infinity ? copy.limits.status(playlistCount, limit) : undefined
+            }
+          >
+            {copy.pageTitle}
+          </PageHeader>
           {isLimitReached ? (
             <Tooltip title={copy.limits.reachedTooltip(tierName, limit)} placement="bottom-end">
               <span>{createBtn}</span>

@@ -12,7 +12,6 @@ import {
   Tabs,
   TextField,
   Typography,
-  useMediaQuery,
 } from '@mui/material';
 import { BadgeCheck } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
@@ -38,6 +37,7 @@ import {
   unfollowAccount,
   updateUserProfile,
 } from '../lib/mock/userProfileService';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { useAuthStore } from '../store/authStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import type {
@@ -79,7 +79,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
   const { language } = useAppLanguage();
   const copy = getAppText(language);
   const manageCopy = getManagePageText(language);
-  const isMobile = useMediaQuery('(max-width:767px)');
+  const isMobile = useIsMobile();
   const [message, setMessage] = useState<string | null>(null);
   const [artistView, setArtistView] = useState<ArtistProfileView>(() => {
     const baseProfile = getUserProfileView(authUser.id, authUser.username);
@@ -269,7 +269,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
             />
 
             <Box>
-              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                 {copy.profile.albums}
               </Typography>
               <Stack spacing={1.5}>
@@ -284,7 +284,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
             </Box>
 
             <Box>
-              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                 {copy.profile.singles}
               </Typography>
               <Stack spacing={1.5}>
@@ -301,7 +301,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
             <Divider />
 
             <Box>
-              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                 {manageCopy.sections.followersAndFollowing}
               </Typography>
               <Paper variant="outlined">
@@ -373,7 +373,7 @@ export default function ManagePage() {
   const [profile, setProfile] = useState<ManageProfile | null>(() =>
     authUser ? getManageProfile(authUser.id) : null
   );
-  const isMobile = useMediaQuery('(max-width:767px)');
+  const isMobile = useIsMobile();
   const [editableProfile, setEditableProfile] = useState<EditableProfile>(() =>
     profile
       ? createEditableProfile(profile)
@@ -394,14 +394,18 @@ export default function ManagePage() {
     return <ArtistManagementPage authUser={authUser} />;
   }
 
-  if (authUser.role !== ROLES.LISTENER) {
+  if (
+    authUser.role !== ROLES.LISTENER &&
+    authUser.role !== ROLES.SUPPORT &&
+    authUser.role !== ROLES.ADMIN
+  ) {
     return <Navigate to={ROUTES.HOME} replace />;
   }
 
   if (!profile) {
     return (
       <Box
-        className="min-h-screen p-6"
+        className="min-h-screen p-4 md:p-8"
         dir={language === 'fa' ? 'rtl' : 'ltr'}
         sx={{ bgcolor: 'background.default' }}
       >
@@ -570,7 +574,7 @@ export default function ManagePage() {
               <Typography
                 component="h2"
                 variant="h6"
-                sx={{ fontWeight: 700, mb: 1 }}
+                sx={{ fontWeight: 700, mb: 1.5 }}
               >
                 {copy.sections.followersAndFollowing}
               </Typography>
@@ -632,7 +636,7 @@ export default function ManagePage() {
               <Typography
                 component="h2"
                 variant="h6"
-                sx={{ fontWeight: 700, mb: 2 }}
+                sx={{ fontWeight: 700, mb: 1.5 }}
               >
                 {copy.sections.personalInformation}
               </Typography>

@@ -51,7 +51,7 @@ export default function ForgotPasswordPage() {
               <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
                 {copy.auth.recoverPassword}
               </Typography>
-              <Typography color="text.secondary">
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
                 Enter your email and we will prepare a recovery request.
               </Typography>
             </Box>

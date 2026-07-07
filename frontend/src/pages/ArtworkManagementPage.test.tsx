@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { ThemeProvider, createTheme } from '@mui/material'
+import { ThemeProvider } from '@mui/material'
+import { createAppTheme } from '../theme/appTheme'
 import { MemoryRouter } from 'react-router-dom'
 import ArtworkManagementPage from './ArtworkManagementPage'
 import { ROLES } from '../lib/constants/roles'
@@ -14,7 +15,7 @@ const createdAt = '2026-01-01T00:00:00.000Z'
 function renderPage() {
   return render(
     <ThemeModeContext.Provider value={{ mode: 'dark', toggleThemeMode: () => undefined }}>
-      <ThemeProvider theme={createTheme()}>
+      <ThemeProvider theme={createAppTheme('dark')}>
         <MemoryRouter>
           <ArtworkManagementPage />
         </MemoryRouter>
@@ -89,5 +90,28 @@ describe('ArtworkManagementPage', () => {
   it('shows empty state when there are no releases', () => {
     renderPage()
     expect(screen.getByText(/you have not published any tracks yet/i)).toBeInTheDocument()
+  })
+
+  it('renders release list inside a scrollable table container when releases exist', () => {
+    storage.set('tracks', [
+      {
+        id: 1,
+        artist_id: 2,
+        title: 'Midnight Run',
+        release_type: 'single',
+        genre: 'Electronic',
+        release_year: 2026,
+        cover_art: '',
+        audio_file: '',
+        created_at: createdAt,
+        updated_at: createdAt,
+      },
+    ])
+
+    renderPage()
+
+    const table = screen.getByRole('table')
+    expect(table.closest('.MuiTableContainer-root')).toHaveStyle({ overflowX: 'auto' })
+    expect(screen.getByText('Midnight Run')).toBeInTheDocument()
   })
 })

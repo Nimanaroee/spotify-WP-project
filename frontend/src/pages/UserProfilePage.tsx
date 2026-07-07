@@ -8,7 +8,6 @@ import {
   Paper,
   Stack,
   Typography,
-  useMediaQuery,
 } from '@mui/material'
 import { BadgeCheck } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
@@ -29,6 +28,7 @@ import {
   getUserProfileView,
   unfollowAccount,
 } from '../lib/mock/userProfileService'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 import type { UserProfileView } from '../types'
@@ -43,7 +43,7 @@ export default function UserProfilePage() {
   const { username } = useParams()
   const navigate = useNavigate()
   const authUser = useAuthStore((state) => state.user)
-  const isCompactMobile = useMediaQuery('(max-width:767px)')
+  const isCompactMobile = useIsMobile()
   const { language } = useAppLanguage()
   const copy = getAppText(language)
   const [profile, setProfile] = useState<ProfileView | null>(null)
@@ -78,7 +78,11 @@ export default function UserProfilePage() {
 
   if (error) {
     return (
-      <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
+      <Box
+        className="min-h-screen p-4 md:p-8"
+        dir={language === 'fa' ? 'rtl' : 'ltr'}
+        sx={{ bgcolor: 'background.default' }}
+      >
         <Alert severity="error">{error}</Alert>
       </Box>
     )
@@ -209,7 +213,7 @@ export default function UserProfilePage() {
               <Divider />
 
               <Box>
-                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                   {copy.profile.albums}
                 </Typography>
                 <Stack spacing={1.5}>
@@ -224,7 +228,7 @@ export default function UserProfilePage() {
               </Box>
 
               <Box>
-                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                   {copy.profile.singles}
                 </Typography>
                 <Stack spacing={1.5}>

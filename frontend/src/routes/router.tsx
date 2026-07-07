@@ -64,7 +64,7 @@ export default function Router() {
       <Route
         path={ROUTES.SETTINGS}
         element={
-          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST]}>
+          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN]}>
             <MainLayout>
               <SettingsPage />
             </MainLayout>
@@ -88,7 +88,9 @@ export default function Router() {
           <RoleGuard
             allowedRoles={[ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN]}
           >
-            <NotificationsPage />
+            <MainLayout>
+              <NotificationsPage />
+            </MainLayout>
           </RoleGuard>
         }
       />

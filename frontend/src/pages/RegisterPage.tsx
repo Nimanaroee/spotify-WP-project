@@ -118,7 +118,7 @@ export default function RegisterPage() {
               <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
                 {copy.auth.createAccount}
               </Typography>
-              <Typography color="text.secondary">
+              <Typography color="text.secondary" sx={{ mt: 0.5 }}>
                 {language === 'fa'
                   ? 'به‌عنوان شنونده ثبت‌نام کنید یا دسترسی هنرمند را درخواست دهید.'
                   : 'Register as a listener or request artist access.'}
@@ -126,7 +126,10 @@ export default function RegisterPage() {
             </Box>
 
             <Tabs
+              allowScrollButtonsMobile
+              scrollButtons="auto"
               value={tab}
+              variant="scrollable"
               onChange={(_, value: RegisterTab) => setTab(value)}
             >
               <Tab label={copy.auth.regularUser} value="listener" />

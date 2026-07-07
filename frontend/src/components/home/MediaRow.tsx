@@ -17,7 +17,7 @@ export default function MediaRow({ title, children, show = true }: MediaRowProps
         sx={{
           fontWeight: 700,
           mb: 2,
-          px: { xs: 2, md: 3 },
+          px: { xs: 2, md: 4 },
         }}
       >
         {title}
@@ -28,7 +28,7 @@ export default function MediaRow({ title, children, show = true }: MediaRowProps
           overflowX: 'auto',
           gap: 2,
           pb: 2,
-          px: { xs: 2, md: 3 },
+          px: { xs: 2, md: 4 },
           scrollbarWidth: 'none',
           '&::-webkit-scrollbar': {
             display: 'none',

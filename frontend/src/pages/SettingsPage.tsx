@@ -22,6 +22,7 @@ import {
 } from '@mui/material'
 import { Navigate, useNavigate } from 'react-router-dom'
 
+import PageHeader from '../components/common/PageHeader'
 import ThemeToggleButton from '../components/common/ThemeToggleButton'
 import { getAppText } from '../lib/constants/appText'
 import { ROLES } from '../lib/constants/roles'
@@ -63,7 +64,7 @@ export default function SettingsPage() {
     return <Navigate to={ROUTES.LOGIN} replace />
   }
 
-  if (user.role !== ROLES.LISTENER && user.role !== ROLES.ARTIST) {
+  if (user.role !== ROLES.LISTENER && user.role !== ROLES.ARTIST && user.role !== ROLES.SUPPORT && user.role !== ROLES.ADMIN) {
     return <Navigate to={ROUTES.HOME} replace />
   }
 
@@ -130,14 +131,9 @@ export default function SettingsPage() {
       sx={{ bgcolor: 'background.default' }}
     >
       <Stack className="mx-auto max-w-5xl" spacing={3}>
-        <Box>
-          <Typography component="h1" variant="h4" sx={{ fontWeight: 800 }}>
-            {copy.settings.pageTitle}
-          </Typography>
-          <Typography color="text.secondary" sx={{ mt: 1 }}>
-            {copy.settings.subtitle}
-          </Typography>
-        </Box>
+        <PageHeader subtitle={copy.settings.subtitle}>
+          {copy.settings.pageTitle}
+        </PageHeader>
 
         {message ? (
           <Alert severity={message.severity}>{message.text}</Alert>

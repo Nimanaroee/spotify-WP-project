@@ -14,6 +14,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
+import { useIsMobile } from '../../hooks/useIsMobile'
 import { getArtworkManagementPageText } from '../../lib/constants/artworkManagementPageText'
 import { MUSIC_GENRES } from '../../lib/constants/musicGenres'
 import AudioUploadField from './AudioUploadField'
@@ -56,6 +57,7 @@ export default function ReleaseForm({
 }: ReleaseFormProps) {
   const { language } = useAppLanguage()
   const copy = getArtworkManagementPageText(language)
+  const isMobile = useIsMobile()
   const [coverPreview, setCoverPreview] = useState<string | null>(null)
   const [uploadedAudioNames, setUploadedAudioNames] = useState<Record<number, string>>({})
 
@@ -123,7 +125,11 @@ export default function ReleaseForm({
       <Stack spacing={2}>
         <FormControl>
           <FormLabel>{copy.form.releaseType}</FormLabel>
-          <RadioGroup row defaultValue="single">
+          <RadioGroup
+            row={!isMobile}
+            sx={{ flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 0, sm: 1 } }}
+            defaultValue="single"
+          >
             <FormControlLabel
               value="single"
               control={<Radio {...register('release_type')} />}
@@ -231,7 +237,7 @@ export default function ReleaseForm({
           </Button>
         ) : null}
 
-        <Button disabled={isSubmitting} type="submit" variant="contained">
+        <Button disabled={isSubmitting} sx={{ width: { xs: '100%', sm: 'auto' } }} type="submit" variant="contained">
           {copy.form.publish}
         </Button>
       </Stack>

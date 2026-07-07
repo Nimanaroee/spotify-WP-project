@@ -3,12 +3,9 @@ import {
   Box,
   Button,
   MenuItem,
-  Paper,
   Stack,
-  Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   TextField,
@@ -16,6 +13,8 @@ import {
 } from '@mui/material'
 import { useMemo, useState } from 'react'
 import EmptyState from '../../components/common/EmptyState'
+import PageHeader from '../../components/common/PageHeader'
+import ScrollableTableContainer from '../../components/common/ScrollableTableContainer'
 import {
   formatAdminMonthName,
   getAdminPageText,
@@ -64,9 +63,7 @@ export default function AuditingPage() {
 
   return (
     <Box dir={isRtl ? 'rtl' : 'ltr'}>
-      <Typography className="mb-4" component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-        {copy.auditing.title}
-      </Typography>
+      <PageHeader className="mb-4">{copy.auditing.title}</PageHeader>
 
       <Stack className="mb-4" direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <TextField
@@ -108,49 +105,48 @@ export default function AuditingPage() {
       {audits.length === 0 ? (
         <EmptyState title={copy.auditing.noRecords} />
       ) : (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>{copy.auditing.artist}</TableCell>
-                <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.uniqueListeners}</TableCell>
-                <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.registeredStreams}</TableCell>
-                <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.calculatedReward}</TableCell>
-                <TableCell>{copy.auditing.paymentStatus}</TableCell>
-                <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.actions}</TableCell>
+        <ScrollableTableContainer minWidth={{ xs: 720, md: 'auto' }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>{copy.auditing.artist}</TableCell>
+              <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.uniqueListeners}</TableCell>
+              <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.registeredStreams}</TableCell>
+              <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.calculatedReward}</TableCell>
+              <TableCell>{copy.auditing.paymentStatus}</TableCell>
+              <TableCell sx={{ textAlign: 'end' }}>{copy.auditing.actions}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {audits.map((audit) => (
+              <TableRow key={audit.id}>
+                <TableCell>
+                  <Typography sx={{ fontWeight: 600 }}>{audit.artist_name}</Typography>
+                  <Typography color="text.secondary" variant="caption">
+                    ART-{audit.artist_id}
+                  </Typography>
+                </TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>{audit.unique_listeners_count}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>{audit.total_streams_count}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>
+                  ${audit.payout_amount?.toFixed(2) ?? '—'}
+                </TableCell>
+                <TableCell>{copy.auditing.paymentStatusLabels[audit.payment_status]}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>
+                  {audit.payment_status === 'pending' && isAdmin ? (
+                    <Button
+                      size="small"
+                      sx={{ whiteSpace: 'nowrap' }}
+                      variant="contained"
+                      onClick={() => handleConfirmSettlement(audit.id)}
+                    >
+                      {copy.auditing.confirmSettlement}
+                    </Button>
+                  ) : null}
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {audits.map((audit) => (
-                <TableRow key={audit.id}>
-                  <TableCell>
-                    <Typography sx={{ fontWeight: 600 }}>{audit.artist_name}</Typography>
-                    <Typography color="text.secondary" variant="caption">
-                      ART-{audit.artist_id}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ textAlign: 'end' }}>{audit.unique_listeners_count}</TableCell>
-                  <TableCell sx={{ textAlign: 'end' }}>{audit.total_streams_count}</TableCell>
-                  <TableCell sx={{ textAlign: 'end' }}>
-                    ${audit.payout_amount?.toFixed(2) ?? '—'}
-                  </TableCell>
-                  <TableCell>{copy.auditing.paymentStatusLabels[audit.payment_status]}</TableCell>
-                  <TableCell sx={{ textAlign: 'end' }}>
-                    {audit.payment_status === 'pending' && isAdmin ? (
-                      <Button
-                        size="small"
-                        variant="contained"
-                        onClick={() => handleConfirmSettlement(audit.id)}
-                      >
-                        {copy.auditing.confirmSettlement}
-                      </Button>
-                    ) : null}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            ))}
+          </TableBody>
+        </ScrollableTableContainer>
       )}
     </Box>
   )

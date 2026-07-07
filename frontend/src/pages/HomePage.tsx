@@ -1,5 +1,5 @@
-import { Box } from '@mui/material';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Box, Button, Paper, Stack, Typography } from '@mui/material';
+import { Navigate, Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Disc3 } from 'lucide-react';
 import MainLayout from '../layouts/MainLayout';
 import MediaCard from '../components/home/MediaCard';
@@ -37,7 +37,42 @@ export default function HomePage() {
 
   return (
     <MainLayout>
-      <Box className="min-h-screen py-4" dir={language === 'fa' ? 'rtl' : 'ltr'}>
+      <Box className="min-h-screen py-4 px-4 md:px-8" dir={language === 'fa' ? 'rtl' : 'ltr'}>
+        {user.role === ROLES.ARTIST && (
+          <Paper
+            elevation={0}
+            sx={{
+              mb: 3,
+              p: { xs: 2, md: 3 },
+              bgcolor: 'action.hover',
+              borderRadius: 2,
+            }}
+          >
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={2}
+              sx={{ alignItems: { xs: 'stretch', sm: 'center' }, justifyContent: 'space-between' }}
+            >
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {copy.nav.artistStudio}
+                </Typography>
+                <Typography color="text.secondary" variant="body2" sx={{ mt: 0.5 }}>
+                  {copy.artistStudioPrompt}
+                </Typography>
+              </Box>
+              <Button
+                component={RouterLink}
+                to={ROUTES.ARTIST_STUDIO}
+                variant="contained"
+                sx={{ alignSelf: { xs: 'stretch', sm: 'center' }, flexShrink: 0 }}
+              >
+                {copy.nav.artistStudio}
+              </Button>
+            </Stack>
+          </Paper>
+        )}
+
         <MediaRow title={copy.showcase.recentPlaylists}>
           {playlists.map((playlist) => (
             <MediaCard

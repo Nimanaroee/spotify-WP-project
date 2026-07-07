@@ -1,6 +1,7 @@
-import { Box, Button, Stack, Typography } from '@mui/material'
+import { Box, Button, Stack } from '@mui/material'
 import { useNavigate } from 'react-router-dom'
 import EmptyState from '../components/common/EmptyState'
+import PageHeader from '../components/common/PageHeader'
 import NotificationCard from '../components/notifications/NotificationCard'
 import { getNotificationsPageText } from '../lib/constants/notificationsPageText'
 import { useNotificationStore } from '../store/notificationStore'
@@ -18,7 +19,10 @@ export default function NotificationsPage() {
   const markAllAsRead = useNotificationStore((state) => state.markAllAsRead)
 
   return (
-    <Box className="mx-auto max-w-3xl">
+    <Box
+      className="mx-auto max-w-3xl min-h-screen p-4 md:p-8"
+      dir={language === 'fa' ? 'rtl' : 'ltr'}
+    >
       <Stack
         className="mb-4"
         direction={{ xs: 'column', sm: 'row' }}
@@ -28,9 +32,7 @@ export default function NotificationsPage() {
           justifyContent: 'space-between',
         }}
       >
-        <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-          {copy.pageTitle}
-        </Typography>
+        <PageHeader>{copy.pageTitle}</PageHeader>
         <Button
           disabled={unreadCount === 0}
           variant="contained"

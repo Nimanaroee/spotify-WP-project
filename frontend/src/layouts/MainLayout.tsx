@@ -11,7 +11,6 @@ import {
   Stack,
   Toolbar,
   Typography,
-  useMediaQuery,
   useTheme,
 } from '@mui/material';
 import { Menu } from 'lucide-react';
@@ -20,6 +19,7 @@ import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import NotificationPanel from '../components/notifications/NotificationPanel';
 import PlayerBar from '../components/player/PlayerBar'; 
 import { getProfileInitials } from '../components/profile/profileUtils';
+import { useIsMobile } from '../hooks/useIsMobile';
 import { getAppText } from '../lib/constants/appText';
 import { getHomePageText } from '../lib/constants/homePageText';
 import { getMainNavForRole } from '../lib/constants/navItems';
@@ -41,8 +41,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useIsMobile();
   
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
 
@@ -53,6 +52,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const appCopy = getAppText(language);
   const homeCopy = getHomePageText(language);
   const navItems = user ? getMainNavForRole(user.role, user.username || '', language) : [];
+
+  const languageLabel = language === 'en' ? appCopy.common.persian : appCopy.common.english;
+  const languageShort = language === 'en' ? 'FA' : 'EN';
 
   function handleLogout(): void {
     logout();
@@ -143,22 +145,34 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       >
         {user ? (
           <AppBar color="transparent" elevation={0} position="sticky" sx={{ bgcolor: 'background.default' }}>
-            <Toolbar sx={{ gap: 2 }}>
+            <Toolbar sx={{ gap: { xs: 0.5, md: 2 }, minWidth: 0 }}>
               {!sidebarOpen && (
                 <IconButton
                   aria-label={homeCopy.nav.openSidebar}
                   onClick={() => setSidebarOpen(true)}
                   edge="start"
+                  sx={{ flexShrink: 0 }}
                 >
                   <Menu size={24} />
                 </IconButton>
               )}
               
-              <Box sx={{ flex: 1 }} />
+              <Box sx={{ flex: 1, minWidth: 0 }} />
 
-              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-                <Button size="small" variant="text" onClick={toggleLanguage} color="inherit">
-                  {language === 'en' ? appCopy.common.persian : appCopy.common.english}
+              <Stack
+                direction="row"
+                spacing={{ xs: 0.5, md: 1.5 }}
+                sx={{ alignItems: 'center', flexShrink: 0 }}
+              >
+                <Button
+                  aria-label={languageLabel}
+                  size="small"
+                  variant="text"
+                  onClick={toggleLanguage}
+                  color="inherit"
+                  sx={{ minWidth: { xs: 36, md: 'auto' }, px: { xs: 1, md: 1.5 } }}
+                >
+                  {isMobile ? languageShort : languageLabel}
                 </Button>
                 <NotificationPanel />
                 
@@ -169,14 +183,15 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                   spacing={1}
                   sx={{
                     alignItems: 'center',
-                    ml: 1,
+                    ml: { xs: 0, md: 1 },
                     textDecoration: 'none',
                     color: 'inherit',
                     px: 1,
                     py: 0.5,
                     borderRadius: 8,
                     transition: 'background-color 0.2s',
-                    '&:hover': { bgcolor: 'action.hover' }
+                    '&:hover': { bgcolor: 'action.hover' },
+                    flexShrink: 0,
                   }}
                 >
                    <Avatar
@@ -198,7 +213,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         ) : null}
 
         {/* Adjust PB for bottom clearance when player docks into window frame permanently. Desktop requires explicit spacer */}
-        <Box component="main" sx={{ flexGrow: 1, pb: currentTrack ? { xs: '120px', md: '140px' } : 8 }}>
+        <Box component="main" sx={{ flexGrow: 1, minWidth: 0, pb: currentTrack ? { xs: '120px', md: '140px' } : 8 }}>
           {children}
         </Box>
       </Box>

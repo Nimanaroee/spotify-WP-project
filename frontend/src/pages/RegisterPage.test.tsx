@@ -31,8 +31,9 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /privacy policy/i }))
 
     expect(screen.getByRole('dialog')).toHaveTextContent('Privacy Policy')
-    expect(screen.getByRole('dialog')).toHaveTextContent('1. Information We Collect')
-    expect(screen.getByRole('dialog')).toHaveTextContent('Account Registration:')
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'Your privacy is important to us',
+    )
   })
 
   it('submits artist registration as pending approval', async () => {
@@ -45,10 +46,10 @@ describe('RegisterPage', () => {
     await user.type(screen.getByLabelText(/confirm password/i), 'password123')
     await user.type(screen.getByLabelText(/artistic\/stage name/i), 'The Artist')
     await user.type(
-      screen.getByLabelText(/portfolio\/work samples/i),
+      screen.getByLabelText(/portfolio links/i),
       'https://example.com/music',
     )
-    await user.click(screen.getByRole('button', { name: /request artist approval/i }))
+    await user.click(screen.getByRole('button', { name: /^register$/i }))
 
     expect(await screen.findByText(/pending approval/i)).toBeInTheDocument()
     expect(storage.get<unknown[]>('verification_requests')).toHaveLength(1)

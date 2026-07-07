@@ -54,14 +54,14 @@ describe('HomePage', () => {
     expect(await screen.findByRole('heading', { name: /welcome/i })).toBeInTheDocument()
   })
 
-  it('shows listener profile management entry point', () => {
+  it('shows listener settings in sidebar', () => {
     renderHomePage()
 
-    expect(screen.getByRole('button', { name: /manage profile/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /artist studio/i })).not.toBeInTheDocument()
   })
 
-  it('shows musician manage and settings entry points', () => {
+  it('shows artist studio entry points for musicians', () => {
     useAuthStore.setState({
       user: {
         id: 2,
@@ -77,7 +77,8 @@ describe('HomePage', () => {
 
     renderHomePage()
 
-    expect(screen.getByRole('button', { name: /manage profile/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /settings/i })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /artist studio/i }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', { name: /artist studio/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument()
   })
 })

@@ -17,6 +17,7 @@ import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
+import PageHeader from '../../components/common/PageHeader'
 import { getAdminPageText } from '../../lib/constants/adminPageText'
 import { ROUTES } from '../../lib/constants/routes'
 import {
@@ -124,9 +125,7 @@ export default function VerificationDetailPage() {
         {copy.verification.back}
       </Button>
 
-      <Typography className="mb-4" component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-        {copy.verification.title}
-      </Typography>
+      <PageHeader className="mb-4">{copy.verification.title}</PageHeader>
 
       {error ? (
         <Alert className="mb-4" severity="error">
@@ -155,7 +154,13 @@ export default function VerificationDetailPage() {
           <Typography sx={{ fontWeight: 600 }}>{copy.verification.portfolio}</Typography>
           <Stack spacing={1}>
             {request.portfolio_links.map((link) => (
-              <Link key={link} href={link} rel="noopener noreferrer" target="_blank">
+              <Link
+                key={link}
+                href={link}
+                rel="noopener noreferrer"
+                sx={{ wordBreak: 'break-all' }}
+                target="_blank"
+              >
                 {link}
               </Link>
             ))}
@@ -164,11 +169,21 @@ export default function VerificationDetailPage() {
       </Paper>
 
       {isPending ? (
-        <Stack direction="row" spacing={2}>
-          <Button color="success" variant="contained" onClick={() => setConfirmOpen(true)}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Button
+            color="success"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+            variant="contained"
+            onClick={() => setConfirmOpen(true)}
+          >
             {copy.verification.approve}
           </Button>
-          <Button color="error" variant="outlined" onClick={() => setRejectOpen(true)}>
+          <Button
+            color="error"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+            variant="outlined"
+            onClick={() => setRejectOpen(true)}
+          >
             {copy.verification.reject}
           </Button>
         </Stack>

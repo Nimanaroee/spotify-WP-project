@@ -10,6 +10,7 @@ import {
 } from '@mui/material'
 import { useMemo, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
+import PageHeader from '../../components/common/PageHeader'
 import {
   formatAdminDateTime,
   getAdminPageText,
@@ -85,14 +86,22 @@ export default function TicketDetailPage() {
 
   return (
     <Box dir={isRtl ? 'rtl' : 'ltr'}>
-      <Stack className="mb-4" direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+      <Stack
+        className="mb-4"
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{ alignItems: { xs: 'stretch', sm: 'center' } }}
+      >
         <Button component={RouterLink} to={ROUTES.ADMIN_TICKETS} variant="outlined">
           {copy.ticketDetail.back}
         </Button>
-        <Typography className="flex-1" component="h1" variant="h5" sx={{ fontWeight: 700 }}>
+        <PageHeader
+          className="flex-1"
+          sx={{ wordBreak: 'break-word', typography: { xs: 'h6', sm: 'h5' } }}
+        >
           {copy.ticketDetail.ticketHeading(ticket.id, ticket.subject)}
-        </Typography>
-        <Chip label={copy.tickets.statusLabels[ticket.status]} size="small" />
+        </PageHeader>
+        <Chip label={copy.tickets.statusLabels[ticket.status]} size="small" sx={{ alignSelf: { sm: 'center' } }} />
       </Stack>
 
       <Typography className="mb-4" color="text.secondary" variant="body2">
@@ -139,11 +148,16 @@ export default function TicketDetailPage() {
             value={reply}
             onChange={(e) => setReply(e.target.value)}
           />
-          <Stack direction="row" spacing={2}>
-            <Button variant="contained" onClick={handleSendReply}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Button fullWidth={false} sx={{ width: { xs: '100%', sm: 'auto' } }} variant="contained" onClick={handleSendReply}>
               {copy.ticketDetail.sendReply}
             </Button>
-            <Button color="inherit" variant="outlined" onClick={handleClose}>
+            <Button
+              color="inherit"
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+              variant="outlined"
+              onClick={handleClose}
+            >
               {copy.ticketDetail.closeTicket}
             </Button>
           </Stack>

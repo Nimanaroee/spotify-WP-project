@@ -4,18 +4,17 @@ import {
   Chip,
   Paper,
   Tab,
-  Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Tabs,
-  Typography,
 } from '@mui/material'
 import { useState } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import EmptyState from '../../components/common/EmptyState'
+import PageHeader from '../../components/common/PageHeader'
+import ScrollableTableContainer from '../../components/common/ScrollableTableContainer'
 import {
   formatAdminDate,
   getAdminPageText,
@@ -47,12 +46,16 @@ export default function TicketsPage() {
 
   return (
     <Box dir={isRtl ? 'rtl' : 'ltr'}>
-      <Typography className="mb-4" component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-        {copy.tickets.title}
-      </Typography>
+      <PageHeader className="mb-4">{copy.tickets.title}</PageHeader>
 
       <Paper sx={{ mb: 3 }}>
-        <Tabs value={tab} onChange={handleTabChange}>
+        <Tabs
+          allowScrollButtonsMobile
+          scrollButtons="auto"
+          value={tab}
+          variant="scrollable"
+          onChange={handleTabChange}
+        >
           <Tab label={copy.tickets.ticketsTab} />
           <Tab label={copy.tickets.verificationTab} />
         </Tabs>
@@ -62,80 +65,85 @@ export default function TicketsPage() {
         tickets.length === 0 ? (
           <EmptyState title={copy.tickets.noTickets} />
         ) : (
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>{copy.tickets.ticketId}</TableCell>
-                  <TableCell>{copy.tickets.userName}</TableCell>
-                  <TableCell>{copy.tickets.subject}</TableCell>
-                  <TableCell>{copy.tickets.dateSubmitted}</TableCell>
-                  <TableCell>{copy.tickets.status}</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {tickets.map((ticket) => (
-                  <TableRow
-                    key={ticket.id}
-                    hover
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(adminTicketDetailPath(ticket.id))}
-                  >
-                    <TableCell>#{ticket.id}</TableCell>
-                    <TableCell>{ticket.user_name}</TableCell>
-                    <TableCell>{ticket.subject}</TableCell>
-                    <TableCell>{formatAdminDate(ticket.created_at, language)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={copy.tickets.statusLabels[ticket.status]}
-                        size="small"
-                        color={
-                          ticket.status === 'open'
-                            ? 'warning'
-                            : ticket.status === 'answered'
-                              ? 'info'
-                              : 'default'
-                        }
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )
-      ) : pendingRequests.length === 0 ? (
-        <EmptyState title={copy.tickets.noRequests} />
-      ) : (
-        <TableContainer component={Paper}>
-          <Table>
+          <ScrollableTableContainer minWidth={{ xs: 640, md: 'auto' }}>
             <TableHead>
               <TableRow>
-                <TableCell>{copy.tickets.stageName}</TableCell>
-                <TableCell>{copy.tickets.email}</TableCell>
-                <TableCell sx={{ textAlign: 'end' }}>{copy.tickets.actions}</TableCell>
+                <TableCell>{copy.tickets.ticketId}</TableCell>
+                <TableCell>{copy.tickets.userName}</TableCell>
+                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                  {copy.tickets.subject}
+                </TableCell>
+                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                  {copy.tickets.dateSubmitted}
+                </TableCell>
+                <TableCell>{copy.tickets.status}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {pendingRequests.map((request) => (
-                <TableRow key={request.id}>
-                  <TableCell>{request.stage_name}</TableCell>
-                  <TableCell>{request.email}</TableCell>
-                  <TableCell sx={{ textAlign: 'end' }}>
-                    <Button
-                      component={RouterLink}
+              {tickets.map((ticket) => (
+                <TableRow
+                  key={ticket.id}
+                  hover
+                  sx={{ cursor: 'pointer' }}
+                  onClick={() => navigate(adminTicketDetailPath(ticket.id))}
+                >
+                  <TableCell>#{ticket.id}</TableCell>
+                  <TableCell>{ticket.user_name}</TableCell>
+                  <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
+                    {ticket.subject}
+                  </TableCell>
+                  <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                    {formatAdminDate(ticket.created_at, language)}
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={copy.tickets.statusLabels[ticket.status]}
                       size="small"
-                      to={adminVerificationDetailPath(request.id)}
-                      variant="outlined"
-                    >
-                      {copy.tickets.viewPortfolio}
-                    </Button>
+                      color={
+                        ticket.status === 'open'
+                          ? 'warning'
+                          : ticket.status === 'answered'
+                            ? 'info'
+                            : 'default'
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
-        </TableContainer>
+          </ScrollableTableContainer>
+        )
+      ) : pendingRequests.length === 0 ? (
+        <EmptyState title={copy.tickets.noRequests} />
+      ) : (
+        <ScrollableTableContainer minWidth={{ xs: 480, md: 'auto' }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>{copy.tickets.stageName}</TableCell>
+              <TableCell>{copy.tickets.email}</TableCell>
+              <TableCell sx={{ textAlign: 'end' }}>{copy.tickets.actions}</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {pendingRequests.map((request) => (
+              <TableRow key={request.id}>
+                <TableCell>{request.stage_name}</TableCell>
+                <TableCell>{request.email}</TableCell>
+                <TableCell sx={{ textAlign: 'end' }}>
+                  <Button
+                    component={RouterLink}
+                    size="small"
+                    sx={{ whiteSpace: 'nowrap' }}
+                    to={adminVerificationDetailPath(request.id)}
+                    variant="outlined"
+                  >
+                    {copy.tickets.viewPortfolio}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </ScrollableTableContainer>
       )}
     </Box>
   )

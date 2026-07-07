@@ -14,6 +14,7 @@ import {
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import EditReleaseDialog from '../components/artwork/EditReleaseDialog'
+import PageHeader from '../components/common/PageHeader'
 import ReleaseForm from '../components/artwork/ReleaseForm'
 import ReleaseList from '../components/artwork/ReleaseList'
 import EmptyState from '../components/common/EmptyState'
@@ -57,7 +58,7 @@ export default function ArtworkManagementPage() {
 
   if (!verified) {
     return (
-      <Box dir={language === 'fa' ? 'rtl' : 'ltr'}>
+      <Box className="p-4 md:p-8" dir={language === 'fa' ? 'rtl' : 'ltr'}>
         <Alert severity="warning" sx={{ mb: 2 }}>
           <Typography sx={{ fontWeight: 700 }}>{copy.blocked.title}</Typography>
           {copy.blocked.message}
@@ -86,7 +87,7 @@ export default function ArtworkManagementPage() {
   }
 
   return (
-    <Box className="mx-auto max-w-5xl" dir={language === 'fa' ? 'rtl' : 'ltr'}>
+    <Box className="mx-auto max-w-5xl p-4 md:p-8" dir={language === 'fa' ? 'rtl' : 'ltr'}>
       <Box
         sx={{
           display: 'flex',
@@ -97,9 +98,7 @@ export default function ArtworkManagementPage() {
           mb: 3,
         }}
       >
-        <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-          {copy.pageTitle}
-        </Typography>
+        <PageHeader>{copy.pageTitle}</PageHeader>
         {tab === 0 ? (
           <Button variant="contained" onClick={() => setTab(1)}>
             {copy.tabs.publish}
@@ -119,7 +118,13 @@ export default function ArtworkManagementPage() {
       ) : null}
 
       <Paper sx={{ mb: 3 }}>
-        <Tabs value={tab} onChange={(_, value: number) => setTab(value)}>
+        <Tabs
+          allowScrollButtonsMobile
+          scrollButtons="auto"
+          value={tab}
+          variant="scrollable"
+          onChange={(_, value: number) => setTab(value)}
+        >
           <Tab label={copy.tabs.releases} />
           <Tab label={copy.tabs.publish} />
         </Tabs>

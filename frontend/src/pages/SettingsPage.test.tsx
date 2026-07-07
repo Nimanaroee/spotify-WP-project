@@ -121,6 +121,25 @@ describe('SettingsPage', () => {
     ).toBe('gold')
   })
 
+  it('allows support staff to open settings', () => {
+    useAuthStore.setState({
+      user: {
+        id: 3,
+        username: 'support_agent',
+        email: 'support@example.com',
+        display_name: 'Support Agent',
+        role: ROLES.SUPPORT,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    })
+
+    renderSettingsPage()
+
+    expect(screen.getByText('Settings')).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: /current plan/i })).not.toBeInTheDocument()
+  })
+
   it('hides subscription controls for artists', () => {
     useAuthStore.setState({
       user: {

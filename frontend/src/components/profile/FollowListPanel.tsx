@@ -83,7 +83,7 @@ export default function FollowListPanel({
   return (
     <Box>
       {title ? (
-        <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+        <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
           {title}
         </Typography>
       ) : null}

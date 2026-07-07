@@ -5,11 +5,13 @@ type HomePageCopy = {
     home: string
     playlists: string
     albums: string
+    artistStudio: string
     profile: string
     settings: string
     openSidebar: string
     closeSidebar: string
   }
+  artistStudioPrompt: string
   showcase: {
     recentPlaylists: string
     latestAlbums: string
@@ -26,11 +28,13 @@ const COPY: Record<AppLanguage, HomePageCopy> = {
       home: 'Home',
       playlists: 'Playlists',
       albums: 'Albums & Singles',
+      artistStudio: 'Artist Studio',
       profile: 'Profile',
       settings: 'Settings',
       openSidebar: 'Open Sidebar',
       closeSidebar: 'Close Sidebar',
     },
+    artistStudioPrompt: 'Manage your releases, upload tracks, and view performance stats.',
     showcase: {
       recentPlaylists: 'Recently Listened Playlists',
       latestAlbums: 'Latest Released Albums',
@@ -45,11 +49,13 @@ const COPY: Record<AppLanguage, HomePageCopy> = {
       home: 'صفحه اصلی',
       playlists: 'پلی‌لیست‌ها',
       albums: 'آلبوم‌ها و تک‌آهنگ‌ها',
+      artistStudio: 'استودیو هنرمند',
       profile: 'پروفایل',
       settings: 'تنظیمات',
       openSidebar: 'باز کردن منو',
       closeSidebar: 'بستن منو',
     },
+    artistStudioPrompt: 'انتشارات خود را مدیریت کنید، ترک بارگذاری کنید و آمار عملکرد را ببینید.',
     showcase: {
       recentPlaylists: 'پلی‌لیست‌های اخیر',
       latestAlbums: 'جدیدترین آلبوم‌ها',
