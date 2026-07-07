@@ -20,7 +20,8 @@ import { MUSIC_GENRES } from '../../lib/constants/musicGenres'
 import AudioUploadField from './AudioUploadField'
 import {
   parseCoArtists,
-  readFileAsDataUrl,
+  readAudioDurationSeconds,
+  uploadCoverFile,
 } from '../../lib/artwork/fileUpload'
 import { publishRelease } from '../../lib/mock/musicService'
 import { useAppLanguage } from '../../theme/LanguageContext'
@@ -67,6 +68,7 @@ export default function ReleaseForm({
     handleSubmit,
     watch,
     setValue,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<ReleaseFormValues>({
     resolver: zodResolver(releaseFormSchema),
@@ -75,6 +77,7 @@ export default function ReleaseForm({
 
   const { fields, append, remove } = useFieldArray({ control, name: 'tracks' })
   const releaseType = watch('release_type')
+  const coverArtValue = watch('cover_art')
 
   async function handleCoverUpload(
     event: React.ChangeEvent<HTMLInputElement>,
@@ -83,19 +86,31 @@ export default function ReleaseForm({
     if (!file) {
       return
     }
-    const dataUrl = await readFileAsDataUrl(file)
-    setValue('cover_art', dataUrl)
-    setCoverPreview(dataUrl)
-    onSuccess(copy.messages.coverReady)
+    try {
+      const dataUrl = await uploadCoverFile(file, copy.upload.errors)
+      setValue('cover_art', dataUrl)
+      setCoverPreview(dataUrl)
+      onSuccess(copy.messages.coverReady)
+    } catch (error) {
+      onError(error instanceof Error ? error.message : copy.upload.errors.uploadFailed)
+    }
   }
 
-  function handleAudioUploaded(index: number, dataUrl: string, fileName: string): void {
+  async function handleAudioUploaded(
+    index: number,
+    dataUrl: string,
+    fileName: string,
+  ): Promise<void> {
     setValue(`tracks.${index}.audio_file`, dataUrl, { shouldValidate: true })
+    const durationSeconds = await readAudioDurationSeconds(dataUrl)
+    if (durationSeconds > 0) {
+      setValue(`tracks.${index}.duration_seconds`, durationSeconds)
+    }
     setUploadedAudioNames((current) => ({ ...current, [index]: fileName }))
     onSuccess(copy.form.uploadedFile(fileName))
   }
 
-  function onSubmit(values: ReleaseFormValues): void {
+  async function onSubmit(values: ReleaseFormValues): Promise<void> {
     onError('')
     try {
       const payload: PublishReleasePayload = {
@@ -112,10 +127,17 @@ export default function ReleaseForm({
           duration_seconds: track.duration_seconds,
         })),
       }
-      publishRelease(artistId, stageName, payload)
+      await publishRelease(artistId, stageName, payload)
+      reset(defaultValues)
+      setCoverPreview(null)
+      setUploadedAudioNames({})
       onSuccess(copy.messages.published)
       onPublished()
     } catch (error) {
+      if (error instanceof Error && /storage quota exceeded/i.test(error.message)) {
+        onError(copy.messages.storageQuotaExceeded)
+        return
+      }
       onError(error instanceof Error ? error.message : 'Failed to publish release.')
     }
   }
@@ -177,11 +199,11 @@ export default function ReleaseForm({
             {copy.form.uploadCover}
             <input hidden accept="image/*" type="file" onChange={handleCoverUpload} />
           </Button>
-          {coverPreview ? (
+          {coverPreview || coverArtValue ? (
             <Box
               alt={copy.form.coverArt}
               component="img"
-              src={coverPreview}
+              src={coverPreview ?? coverArtValue}
               sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1 }}
             />
           ) : null}
@@ -206,7 +228,9 @@ export default function ReleaseForm({
               errorMessage={errors.tracks?.[index]?.audio_file?.message ?? null}
               uploadedFileName={uploadedAudioNames[index] ?? null}
               onError={onError}
-              onUploaded={(dataUrl, fileName) => handleAudioUploaded(index, dataUrl, fileName)}
+              onUploaded={(dataUrl, fileName) =>
+                void handleAudioUploaded(index, dataUrl, fileName)
+              }
             />
             <TextField
               label={copy.form.lyrics}

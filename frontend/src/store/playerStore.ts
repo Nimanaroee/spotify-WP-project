@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Track } from '../types';
 import type { RepeatMode } from '../types/player';
+import { hydrateTrack } from '../lib/mock/hydrateMedia';
 
 interface PlayerState {
   currentTrack: Track | null;
@@ -21,6 +22,7 @@ interface PlayerState {
   next: () => void;
   prev: () => void;
   seek: (seconds: number) => void;
+  setDurationSeconds: (seconds: number) => void;
   tick: () => void;
   setVolume: (volume: number) => void;
   toggleShuffle: () => void;
@@ -55,16 +57,19 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isQueueOpen: false,
 
   playTrack: (track, contextQueue = []) => {
-    let finalQueue = contextQueue.length > 0 ? contextQueue.filter(t => t.id !== track.id) : get().queue;
+    const hydratedTrack = hydrateTrack(track);
+    let finalQueue = contextQueue.length > 0
+      ? contextQueue.map(hydrateTrack).filter((t) => t.id !== hydratedTrack.id)
+      : get().queue;
     if (get().shuffle) {
       finalQueue = shuffleArray(finalQueue);
     }
     set({
-      currentTrack: track,
+      currentTrack: hydratedTrack,
       queue: finalQueue,
       isPlaying: true,
       progressSeconds: 0,
-      durationSeconds: track.duration_seconds || 180,
+      durationSeconds: hydratedTrack.duration_seconds || 180,
     });
   },
   
@@ -113,6 +118,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   seek: (seconds: number) => set({ progressSeconds: seconds }),
+
+  setDurationSeconds: (durationSeconds: number) => set({ durationSeconds }),
 
   tick: () => {
     const { isPlaying, progressSeconds, durationSeconds, next } = get();

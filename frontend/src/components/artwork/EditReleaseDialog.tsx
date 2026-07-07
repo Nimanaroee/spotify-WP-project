@@ -17,9 +17,10 @@ import { MUSIC_GENRES } from '../../lib/constants/musicGenres'
 import AudioUploadField from './AudioUploadField'
 import {
   parseCoArtists,
-  readFileAsDataUrl,
+  uploadCoverFile,
 } from '../../lib/artwork/fileUpload'
 import { updateTrack } from '../../lib/mock/musicService'
+import { resolveMediaUrl } from '../../lib/mock/mediaCache'
 import { useAppLanguage } from '../../theme/LanguageContext'
 import type { Track } from '../../types/music'
 import {
@@ -74,7 +75,7 @@ export default function EditReleaseDialog({
       cover_art: track.cover_art ?? '',
       audio_url: track.audio_url ?? '',
     })
-    setCoverPreview(track.cover_art ?? null)
+    setCoverPreview(resolveMediaUrl(track.cover_art) ?? null)
     setUploadedAudioName(track.audio_url ? copy.form.existingAudioAttached : null)
   }, [track, reset, copy.form.existingAudioAttached])
 
@@ -85,7 +86,7 @@ export default function EditReleaseDialog({
     if (!file) {
       return
     }
-    const dataUrl = await readFileAsDataUrl(file)
+    const dataUrl = await uploadCoverFile(file, copy.upload.errors)
     setValue('cover_art', dataUrl)
     setCoverPreview(dataUrl)
   }
@@ -96,13 +97,13 @@ export default function EditReleaseDialog({
     onSuccess(copy.form.uploadedFile(fileName))
   }
 
-  function onSubmit(values: EditTrackFormValues): void {
+  async function onSubmit(values: EditTrackFormValues): Promise<void> {
     if (!track) {
       return
     }
     onError('')
     try {
-      updateTrack(track.id, artistId, {
+      await updateTrack(track.id, artistId, {
         title: values.title,
         genre: values.genre || undefined,
         release_year: values.release_year,
@@ -160,14 +161,14 @@ export default function EditReleaseDialog({
               {copy.form.uploadCover}
               <input hidden accept="image/*" type="file" onChange={handleCoverUpload} />
             </Button>
-            {coverPreview ? (
-              <Box
-                alt={copy.form.coverArt}
-                component="img"
-                src={coverPreview}
-                sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1 }}
-              />
-            ) : null}
+          {coverPreview ? (
+            <Box
+              alt={copy.form.coverArt}
+              component="img"
+              src={coverPreview}
+              sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1 }}
+            />
+          ) : null}
             <AudioUploadField
               uploadedFileName={uploadedAudioName}
               onError={onError}

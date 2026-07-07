@@ -19,6 +19,7 @@ type PlayerPageCopy = {
     expand: string;
     collapse: string;
   };
+  audioUnavailable: string;
 }
 
 const COPY: Record<AppLanguage, PlayerPageCopy> = {
@@ -41,6 +42,7 @@ const COPY: Record<AppLanguage, PlayerPageCopy> = {
       expand: 'Expand',
       collapse: 'Collapse',
     },
+    audioUnavailable: 'Audio unavailable',
   },
   fa: {
     queue: 'صف پخش',
@@ -61,6 +63,7 @@ const COPY: Record<AppLanguage, PlayerPageCopy> = {
       expand: 'بزرگ کردن',
       collapse: 'کوچک کردن',
     },
+    audioUnavailable: 'فایل صوتی در دسترس نیست',
   },
 }
 

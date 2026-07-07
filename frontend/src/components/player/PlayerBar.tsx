@@ -33,10 +33,11 @@ import {
   Volume2,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { getPlayerText } from '../../lib/constants/playerText';
 import { ROUTES } from '../../lib/constants/routes';
+import { isPlayableMediaUrl } from '../../lib/mock/mediaCache';
 import { getTrackStats } from '../../lib/mock/musicService';
 import { useAuthStore } from '../../store/authStore';
 import { usePlayerStore } from '../../store/playerStore';
@@ -85,24 +86,83 @@ export default function PlayerBar() {
     next,
     prev,
     seek,
+    setDurationSeconds,
     setVolume,
     toggleShuffle,
     toggleRepeat,
     toggleQueue,
     toggleLyrics,
     removeFromQueue,
-    tick,
   } = usePlayerStore();
 
   const [goldStats, setGoldStats] = useState<{ streams: number; listeners: number } | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const loadedTrackIdRef = useRef<number | null>(null);
+  const usesNativeAudio = isPlayableMediaUrl(currentTrack?.audio_url);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isPlaying) {
-      interval = setInterval(() => tick(), 1000);
+    if (isPlaying && usesNativeAudio) {
+      return;
     }
-    return () => clearInterval(interval);
-  }, [isPlaying, tick]);
+    if (isPlaying && !usesNativeAudio) {
+      pause();
+    }
+  }, [isPlaying, usesNativeAudio, pause]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentTrack?.audio_url || !isPlayableMediaUrl(currentTrack.audio_url)) {
+      return;
+    }
+
+    if (loadedTrackIdRef.current !== currentTrack.id) {
+      audio.src = currentTrack.audio_url;
+      audio.load();
+      loadedTrackIdRef.current = currentTrack.id;
+    }
+
+    if (isPlaying) {
+      void audio.play().catch(() => pause());
+    } else {
+      audio.pause();
+    }
+  }, [currentTrack, isPlaying, pause]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !usesNativeAudio) {
+      return;
+    }
+
+    const handleTimeUpdate = () => {
+      seek(Math.floor(audio.currentTime));
+    };
+    const handleLoadedMetadata = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) {
+        setDurationSeconds(Math.floor(audio.duration));
+      }
+    };
+    const handleEnded = () => {
+      next();
+    };
+
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+    audio.addEventListener('ended', handleEnded);
+
+    return () => {
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
+      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      audio.removeEventListener('ended', handleEnded);
+    };
+  }, [usesNativeAudio, seek, setDurationSeconds, next]);
+
+  function handleSeek(seconds: number): void {
+    seek(seconds);
+    if (audioRef.current) {
+      audioRef.current.currentTime = seconds;
+    }
+  }
 
   useEffect(() => {
     if (user?.subscription_tier === 'gold' && currentTrack) {
@@ -172,6 +232,11 @@ export default function PlayerBar() {
             {copy.stats.streams(goldStats.streams)} • {copy.stats.listeners(goldStats.listeners)}
           </Typography>
         )}
+        {!usesNativeAudio && (
+          <Typography variant="caption" display="block" color="error.main" noWrap mt={0.5}>
+            {copy.audioUnavailable}
+          </Typography>
+        )}
       </Box>
     </Stack>
   );
@@ -188,6 +253,7 @@ export default function PlayerBar() {
         
         <IconButton
           onClick={(e) => { e.stopPropagation(); isPlaying ? pause() : resume(); }}
+          disabled={!usesNativeAudio}
           sx={{ bgcolor: 'text.primary', color: 'background.paper', '&:hover': { bgcolor: 'text.secondary' } }}
         >
           {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
@@ -212,7 +278,7 @@ export default function PlayerBar() {
           value={progressSeconds}
           min={0}
           max={durationSeconds}
-          onChange={(e, val) => seek(val as number)}
+          onChange={(e, val) => handleSeek(val as number)}
           onClick={(e) => e.stopPropagation()} 
           sx={{ transform: isRtlTheme ? 'rotate(180deg)' : 'none' }}
         />
@@ -397,6 +463,7 @@ export default function PlayerBar() {
   return (
     <CacheProvider value={emotionCacheLtr}>
       <ThemeProvider theme={ltrTheme}>
+        <audio ref={audioRef} hidden preload="metadata" />
         {innerUI}
       </ThemeProvider>
     </CacheProvider>

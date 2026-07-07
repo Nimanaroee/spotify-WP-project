@@ -10,13 +10,18 @@ export const storage = {
   set(key: string, value: unknown): void {
     try {
       localStorage.setItem(key, JSON.stringify(value))
-    } catch {
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'QuotaExceededError') {
+        throw new Error('Storage quota exceeded.')
+      }
+      throw error
     }
   },
   remove(key: string): void {
     try {
       localStorage.removeItem(key)
     } catch {
+      // Ignore errors
     }
   },
 }

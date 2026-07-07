@@ -1,6 +1,7 @@
 import { Box, Button, Paper, Stack, Typography } from '@mui/material';
 import { Navigate, Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Disc3 } from 'lucide-react';
+import { useMemo } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import MediaCard from '../components/home/MediaCard';
 import MediaRow from '../components/home/MediaRow';
@@ -8,32 +9,36 @@ import { getHomePageText } from '../lib/constants/homePageText';
 import { ROUTES } from '../lib/constants/routes';
 import { ROLES } from '../lib/constants/roles';
 import { useAuthStore } from '../store/authStore';
-import { usePlayerStore } from '../store/playerStore'; // CONNECT PLAYER STORE!
+import { useCatalogStore } from '../store/catalogStore';
+import { usePlayerStore } from '../store/playerStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import {
   getEarlyAccessReleases,
   getLatestAlbums,
+  getLatestReleases,
   getRecentPlaylists,
   getTopSongs,
 } from '../lib/mock/homeService';
 
 export default function HomePage() {
   const user = useAuthStore((state) => state.user);
-  const playTrack = usePlayerStore((state) => state.playTrack); // GRAB THE ACTION HOOK
+  const playTrack = usePlayerStore((state) => state.playTrack);
+  const catalogVersion = useCatalogStore((state) => state.version);
   const navigate = useNavigate();
   const { language } = useAppLanguage();
   const copy = getHomePageText(language);
+
+  const playlists = useMemo(() => getRecentPlaylists(), [catalogVersion]);
+  const latestAlbums = useMemo(() => getLatestAlbums(), [catalogVersion]);
+  const topSongs = useMemo(() => getTopSongs(), [catalogVersion]);
+  const latestReleases = useMemo(() => getLatestReleases(), [catalogVersion]);
+  const earlyAccessReleases = useMemo(() => getEarlyAccessReleases(), [catalogVersion]);
 
   if (!user) {
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
   const hasPremiumFeatures = user.subscription_tier === 'gold' || user.role !== ROLES.LISTENER;
-
-  const playlists = getRecentPlaylists();
-  const latestAlbums = getLatestAlbums();
-  const topSongs = getTopSongs();
-  const earlyAccessReleases = getEarlyAccessReleases();
 
   return (
     <MainLayout>
@@ -86,6 +91,18 @@ export default function HomePage() {
           ))}
         </MediaRow>
 
+        <MediaRow title={copy.showcase.latestReleases} show={latestReleases.length > 0}>
+          {latestReleases.map((track) => (
+            <MediaCard
+              key={`latest-${track.id}`}
+              title={track.title}
+              subtitle={track.artist_name}
+              imageUrl={track.cover_art}
+              onClick={() => playTrack(track, latestReleases)}
+            />
+          ))}
+        </MediaRow>
+
         <MediaRow title={copy.showcase.topSongs}>
           {topSongs.map((track) => (
             <MediaCard
@@ -93,7 +110,7 @@ export default function HomePage() {
               title={track.title}
               subtitle={track.artist_name}
               imageUrl={track.cover_art}
-              onClick={() => playTrack(track, topSongs)} // BOOM: Plays current track, queues remainder automatically!
+              onClick={() => playTrack(track, topSongs)}
             />
           ))}
         </MediaRow>

@@ -71,13 +71,13 @@ export default function ArtworkManagementPage() {
     setRefreshKey((current) => current + 1)
   }
 
-  function handleDeleteConfirm(): void {
+  async function handleDeleteConfirm(): Promise<void> {
     if (!deletingTrack || !authUser) {
       return
     }
     setError(null)
     try {
-      deleteTrack(deletingTrack.id, authUser.id)
+      await deleteTrack(deletingTrack.id, authUser.id)
       setMessage(copy.messages.deleted)
       setDeletingTrack(null)
       refreshReleases()

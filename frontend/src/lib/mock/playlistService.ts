@@ -1,4 +1,5 @@
 import { storage } from './storage';
+import { hydrateTrack, resolveDisplayUrl } from './hydrateMedia';
 import { SUBSCRIPTION_LIMITS } from '../constants/subscriptionLimits';
 import type { Playlist, PlaylistTrack, Track, User } from '../../types';
 
@@ -31,10 +32,12 @@ export function getUserPlaylists(userId: number): Playlist[] {
 
     const populatedTracks = ptMappings
       .map((pt) => allTracks.find((tr) => tr.id === pt.track_id))
-      .filter(Boolean) as Track[];
+      .filter(Boolean)
+      .map((track) => hydrateTrack(track as Track));
 
     return {
       ...playlist,
+      cover_art: resolveDisplayUrl(playlist.cover_art),
       tracks: populatedTracks,
       track_count: populatedTracks.length,
     };

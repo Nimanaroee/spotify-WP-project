@@ -15,6 +15,7 @@ type HomePageCopy = {
   showcase: {
     recentPlaylists: string
     latestAlbums: string
+    latestReleases: string
     topSongs: string
     earlyAccess: string
     earlyAccessBadge: string
@@ -38,6 +39,7 @@ const COPY: Record<AppLanguage, HomePageCopy> = {
     showcase: {
       recentPlaylists: 'Recently Listened Playlists',
       latestAlbums: 'Latest Released Albums',
+      latestReleases: 'Latest Releases',
       topSongs: 'Most-Listened Songs',
       earlyAccess: 'Early Access New Releases',
       earlyAccessBadge: 'Gold Early Access',
@@ -59,6 +61,7 @@ const COPY: Record<AppLanguage, HomePageCopy> = {
     showcase: {
       recentPlaylists: 'پلی‌لیست‌های اخیر',
       latestAlbums: 'جدیدترین آلبوم‌ها',
+      latestReleases: 'جدیدترین انتشارات',
       topSongs: 'پربازدیدترین آهنگ‌ها',
       earlyAccess: 'دسترسی زودهنگام به آثار جدید',
       earlyAccessBadge: 'ویژه طلایی',

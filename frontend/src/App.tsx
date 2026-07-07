@@ -4,6 +4,7 @@ import { CssBaseline, ThemeProvider } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import Router from './routes/router';
 import { seedDemoData } from './lib/mock/seed';
+import { preloadMockMediaCache } from './lib/mock/mediaCache';
 import { getCurrentUser } from './lib/mock/authService';
 import { useAuthStore } from './store/authStore';
 import { useNotificationStore } from './store/notificationStore';
@@ -41,6 +42,7 @@ export default function App() {
   const clearNotifications = useNotificationStore((state) => state.clear);
   const [mode, setMode] = useState<AppThemeMode>(getStoredThemeMode);
   const [language, setLanguage] = useState<AppLanguage>(getStoredLanguage);
+  const [mediaReady, setMediaReady] = useState(false);
   const isRtl = language === 'fa';
   const theme = useMemo(
     () => createAppTheme(mode, isRtl ? 'rtl' : 'ltr'),
@@ -83,6 +85,7 @@ export default function App() {
   useEffect(() => {
     seedDemoData();
     setUser(getCurrentUser());
+    void preloadMockMediaCache().finally(() => setMediaReady(true));
   }, [setUser]);
 
   useEffect(() => {
@@ -105,7 +108,7 @@ export default function App() {
           <ThemeProvider theme={theme}>
             <CssBaseline />
             <BrowserRouter>
-              <Router />
+              {mediaReady ? <Router /> : null}
             </BrowserRouter>
           </ThemeProvider>
         </LanguageContext.Provider>

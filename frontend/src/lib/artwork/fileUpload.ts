@@ -1,6 +1,9 @@
 import { ACCEPTED_AUDIO_EXTENSIONS } from '../../lib/constants/musicGenres'
 
 export const MAX_AUDIO_FILE_BYTES = 10 * 1024 * 1024
+export const MAX_COVER_FILE_BYTES = 5 * 1024 * 1024
+
+const ACCEPTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'] as const
 
 export type AudioUploadErrorCode =
   | 'empty_file'
@@ -9,6 +12,8 @@ export type AudioUploadErrorCode =
   | 'read_failed'
   | 'invalid_result'
   | 'aborted'
+
+export type CoverUploadErrorCode = AudioUploadErrorCode
 
 export function getAudioUploadErrorMessage(
   code: AudioUploadErrorCode,
@@ -36,6 +41,32 @@ export function getAudioUploadErrorMessage(
   }
 }
 
+export function getCoverUploadErrorMessage(
+  code: CoverUploadErrorCode,
+  messages: {
+    emptyFile: string
+    invalidImage: string
+    fileTooLarge: string
+    readFailed: string
+    uploadFailed: string
+  },
+): string {
+  switch (code) {
+    case 'empty_file':
+      return messages.emptyFile
+    case 'invalid_type':
+      return messages.invalidImage
+    case 'file_too_large':
+      return messages.fileTooLarge
+    case 'read_failed':
+    case 'invalid_result':
+    case 'aborted':
+      return messages.readFailed
+    default:
+      return messages.uploadFailed
+  }
+}
+
 export function validateAudioFile(file: File): AudioUploadErrorCode | null {
   if (file.size === 0) {
     return 'empty_file'
@@ -52,6 +83,24 @@ export function validateAudioFile(file: File): AudioUploadErrorCode | null {
 export function isAcceptedAudioFile(file: File): boolean {
   const lowerName = file.name.toLowerCase()
   return ACCEPTED_AUDIO_EXTENSIONS.some((ext) => lowerName.endsWith(ext))
+}
+
+export function isAcceptedCoverFile(file: File): boolean {
+  const lowerName = file.name.toLowerCase()
+  return ACCEPTED_IMAGE_EXTENSIONS.some((ext) => lowerName.endsWith(ext))
+}
+
+export function validateCoverFile(file: File): CoverUploadErrorCode | null {
+  if (file.size === 0) {
+    return 'empty_file'
+  }
+  if (!isAcceptedCoverFile(file)) {
+    return 'invalid_type'
+  }
+  if (file.size > MAX_COVER_FILE_BYTES) {
+    return 'file_too_large'
+  }
+  return null
 }
 
 export interface ReadFileProgress {
@@ -157,6 +206,36 @@ export async function uploadAudioFile(
   }
 }
 
+export async function uploadCoverFile(
+  file: File,
+  messages: {
+    emptyFile: string
+    invalidImage: string
+    fileTooLarge: string
+    readFailed: string
+    uploadFailed: string
+  },
+): Promise<string> {
+  const validationError = validateCoverFile(file)
+  if (validationError) {
+    throw new Error(getCoverUploadErrorMessage(validationError, messages))
+  }
+
+  try {
+    return await readFileAsDataUrl(file)
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'aborted') {
+        throw new Error(getCoverUploadErrorMessage('aborted', messages))
+      }
+      if (error.message === 'read_failed' || error.message === 'invalid_result') {
+        throw new Error(getCoverUploadErrorMessage('read_failed', messages))
+      }
+    }
+    throw new Error(messages.uploadFailed)
+  }
+}
+
 export function parseCoArtists(value: string | undefined): string[] {
   if (!value?.trim()) {
     return []
@@ -165,4 +244,16 @@ export function parseCoArtists(value: string | undefined): string[] {
     .split(',')
     .map((name) => name.trim())
     .filter(Boolean)
+}
+
+export function readAudioDurationSeconds(dataUrl: string): Promise<number> {
+  return new Promise((resolve) => {
+    const audio = new Audio()
+    audio.preload = 'metadata'
+    audio.onloadedmetadata = () => {
+      resolve(Number.isFinite(audio.duration) ? Math.round(audio.duration) : 0)
+    }
+    audio.onerror = () => resolve(0)
+    audio.src = dataUrl
+  })
 }

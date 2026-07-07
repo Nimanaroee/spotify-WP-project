@@ -6,6 +6,7 @@ import {
   publishRelease,
   updateTrack,
 } from './musicService'
+import { clearMockMediaCacheForTests, getMockMedia } from './mediaCache'
 import type { ArtistProfile } from '../../types/artist'
 import type { PublishReleasePayload, Track } from '../../types/music'
 
@@ -77,21 +78,23 @@ const albumPayload: PublishReleasePayload = {
 describe('musicService', () => {
   beforeEach(() => {
     storageState.clear()
+    sessionStorage.clear()
+    clearMockMediaCacheForTests()
     storageState.set('artist_profiles', [verifiedProfile, unverifiedProfile])
     storageState.set('tracks', [] as Track[])
     storageState.set('albums', [])
   })
 
-  it('publishes a single release for a verified artist', () => {
-    const created = publishRelease(2, 'Demo Artist', singlePayload)
+  it('publishes a single release for a verified artist', async () => {
+    const created = await publishRelease(2, 'Demo Artist', singlePayload)
     expect(created).toHaveLength(1)
     expect(created[0].artist_id).toBe(2)
     expect(created[0].release_type).toBe('single')
     expect(listArtistReleases(2)).toHaveLength(1)
   })
 
-  it('publishes an album with multiple tracks', () => {
-    const created = publishRelease(2, 'Demo Artist', albumPayload)
+  it('publishes an album with multiple tracks', async () => {
+    const created = await publishRelease(2, 'Demo Artist', albumPayload)
     expect(created).toHaveLength(2)
     expect(created.every((track) => track.album_id === 1)).toBe(true)
     expect(storageState.get('albums')).toEqual(
@@ -101,10 +104,10 @@ describe('musicService', () => {
     )
   })
 
-  it('updates track metadata', () => {
-    publishRelease(2, 'Demo Artist', singlePayload)
+  it('updates track metadata', async () => {
+    await publishRelease(2, 'Demo Artist', singlePayload)
     const [track] = listArtistReleases(2)
-    const updated = updateTrack(track.id, 2, {
+    const updated = await updateTrack(track.id, 2, {
       title: 'Renamed Single',
       lyrics: 'Updated lyrics',
     })
@@ -112,11 +115,16 @@ describe('musicService', () => {
     expect(updated.lyrics).toBe('Updated lyrics')
   })
 
-  it('deletes a track scoped to the artist', () => {
-    publishRelease(2, 'Demo Artist', singlePayload)
+  it('deletes a track scoped to the artist', async () => {
+    await publishRelease(2, 'Demo Artist', singlePayload)
+    const stored = storageState.get('tracks') as Track[]
+    const audioRef = stored[0].audio_url
     const [track] = listArtistReleases(2)
-    deleteTrack(track.id, 2)
+    await deleteTrack(track.id, 2)
     expect(listArtistReleases(2)).toHaveLength(0)
+    if (audioRef?.startsWith('mock-media://')) {
+      expect(getMockMedia(audioRef)).toBeUndefined()
+    }
   })
 
   it('calculates track stats with mock revenue', () => {
@@ -139,9 +147,20 @@ describe('musicService', () => {
     expect(stats.revenue).toBe(5)
   })
 
-  it('blocks publish for unverified artists', () => {
-    expect(() => publishRelease(11, 'Neon Waves', singlePayload)).toThrow(
+  it('blocks publish for unverified artists', async () => {
+    await expect(publishRelease(11, 'Neon Waves', singlePayload)).rejects.toThrow(
       /verified artists/i,
     )
+  })
+
+  it('stores media refs in localStorage and resolves playable URLs from cache', async () => {
+    await publishRelease(2, 'Demo Artist', singlePayload)
+    const stored = storageState.get('tracks') as Track[]
+    expect(stored[0].audio_url).toMatch(/^mock-media:\/\/track\/\d+\/audio$/)
+    expect(stored[0].cover_art).toMatch(/^mock-media:\/\/track\/\d+\/cover$/)
+
+    const [track] = listArtistReleases(2)
+    expect(track.audio_url).toBe(audioData)
+    expect(track.cover_art).toBe(singlePayload.cover_art)
   })
 })

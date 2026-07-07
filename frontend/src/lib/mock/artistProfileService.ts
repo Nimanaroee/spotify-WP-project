@@ -2,6 +2,7 @@ import type { ArtistProfile, UpdateArtistProfilePayload } from '../../types/arti
 import type { Album, Track } from '../../types/music'
 import type { EntityId, User, UserProfileView } from '../../types'
 import { ROLES } from '../constants/roles'
+import { hydrateAlbum, hydrateTrack } from './hydrateMedia'
 import { storage } from './storage'
 
 const ARTIST_PROFILES_KEY = 'artist_profiles'
@@ -107,10 +108,12 @@ export function getArtistProfileView(
   }
 
   const artistProfile = ensureArtistProfile(artistUser)
-  const tracks = readTracks().filter((track) => track.artist_id === artistUser.id)
+  const tracks = readTracks()
+    .filter((track) => track.artist_id === artistUser.id)
+    .map(hydrateTrack)
   const albums = readAlbums()
     .filter((album) => album.artist_id === artistUser.id)
-    .map((album) => ({
+    .map((album) => hydrateAlbum({
       ...album,
       tracks: tracks.filter((track) => track.album_id === album.id),
     }))

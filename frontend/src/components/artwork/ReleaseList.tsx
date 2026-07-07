@@ -7,10 +7,12 @@ import {
   TableRow,
   Tooltip,
 } from '@mui/material'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Play, Trash2 } from 'lucide-react'
 import ScrollableTableContainer from '../common/ScrollableTableContainer'
 import { getArtworkManagementPageText } from '../../lib/constants/artworkManagementPageText'
 import { getTrackStats } from '../../lib/mock/musicService'
+import { isPlayableMediaUrl } from '../../lib/mock/mediaCache'
+import { usePlayerStore } from '../../store/playerStore'
 import { useAppLanguage } from '../../theme/LanguageContext'
 import type { Track } from '../../types/music'
 
@@ -33,6 +35,7 @@ export default function ReleaseList({
 }: ReleaseListProps) {
   const { language } = useAppLanguage()
   const copy = getArtworkManagementPageText(language)
+  const playTrack = usePlayerStore((state) => state.playTrack)
 
   return (
     <ScrollableTableContainer minWidth={{ xs: 640, md: 'auto' }}>
@@ -65,6 +68,17 @@ export default function ReleaseList({
               <TableCell align="right">{stats.stream_count}</TableCell>
               <TableCell align="right">{formatRevenue(stats.revenue)}</TableCell>
               <TableCell align="right">
+                <Tooltip title={copy.list.play}>
+                  <span>
+                    <IconButton
+                      aria-label={copy.list.play}
+                      disabled={!isPlayableMediaUrl(track.audio_url)}
+                      onClick={() => playTrack(track, releases)}
+                    >
+                      <Play size={18} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
                 <Tooltip title={copy.list.edit}>
                   <IconButton aria-label={copy.list.edit} onClick={() => onEdit(track)}>
                     <Pencil size={18} />

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '@mui/material'
 import { createAppTheme } from '../theme/appTheme'
 import { MemoryRouter } from 'react-router-dom'
@@ -102,7 +103,7 @@ describe('ArtworkManagementPage', () => {
         genre: 'Electronic',
         release_year: 2026,
         cover_art: '',
-        audio_file: '',
+        audio_url: '',
         created_at: createdAt,
         updated_at: createdAt,
       },
@@ -113,5 +114,32 @@ describe('ArtworkManagementPage', () => {
     const table = screen.getByRole('table')
     expect(table.closest('.MuiTableContainer-root')).toHaveStyle({ overflowX: 'auto' })
     expect(screen.getByText('Midnight Run')).toBeInTheDocument()
+  })
+
+  it('shows a newly published single in My Releases after publish', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('button', { name: /^publish$/i }))
+    await user.type(screen.getByLabelText(/release title/i), 'Fresh Single')
+    await user.type(screen.getByLabelText(/^track title$/i), 'Fresh Track')
+
+    const audioInput = document.querySelector('input[type="file"][accept*="audio"]')
+    expect(audioInput).toBeTruthy()
+
+    const audioFile = new File(['audio-bytes'], 'fresh-track.mp3', { type: 'audio/mpeg' })
+    await user.upload(audioInput as HTMLInputElement, audioFile)
+
+    await waitFor(() => {
+      expect(screen.getAllByText(/fresh-track\.mp3/i).length).toBeGreaterThan(0)
+    })
+
+    await user.click(screen.getByRole('button', { name: /publish release/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Fresh Track')).toBeInTheDocument()
+    })
+    expect(screen.getByText(/release published successfully/i)).toBeInTheDocument()
+    expect(storage.get<Array<{ title: string }>>('tracks')).toHaveLength(1)
   })
 })

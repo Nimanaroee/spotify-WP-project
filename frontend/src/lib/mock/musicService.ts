@@ -6,7 +6,16 @@ import type {
   TrackStats,
   UpdateTrackPayload,
 } from '../../types/music'
+import { useCatalogStore } from '../../store/catalogStore'
 import { isVerifiedArtist } from './artistProfileService'
+import { hydrateAlbum, hydrateTrack } from './hydrateMedia'
+import {
+  createAlbumCoverRef,
+  createTrackMediaRef,
+  deleteMockMediaForAlbum,
+  deleteMockMediaForTrack,
+  toStoredMediaRef,
+} from './mediaCache'
 import { storage } from './storage'
 
 const TRACKS_KEY = 'tracks'
@@ -31,6 +40,7 @@ function readTracks(): Track[] {
 
 function writeTracks(tracks: Track[]): void {
   storage.set(TRACKS_KEY, tracks)
+  useCatalogStore.getState().bumpCatalogVersion()
 }
 
 function readAlbums(): Album[] {
@@ -39,6 +49,7 @@ function readAlbums(): Album[] {
 
 function writeAlbums(albums: Album[]): void {
   storage.set(ALBUMS_KEY, albums)
+  useCatalogStore.getState().bumpCatalogVersion()
 }
 
 function assertVerifiedArtist(artistId: number): void {
@@ -61,8 +72,8 @@ export function getAlbumById(albumId: number): { album: Album; tracks: Track[] }
   const album = albums.find((a) => a.id === albumId)
   if (!album) throw new Error('Album not found')
 
-  const tracks = readTracks().filter((t) => t.album_id === albumId)
-  return { album, tracks }
+  const tracks = readTracks().filter((t) => t.album_id === albumId).map(hydrateTrack)
+  return { album: hydrateAlbum(album), tracks }
 }
 
 export function searchCatalog(query: string, sortBy: 'release_date' | 'listener_count'): CatalogItem[] {
@@ -72,8 +83,8 @@ export function searchCatalog(query: string, sortBy: 'release_date' | 'listener_
   const albums = readAlbums()
 
   let results: CatalogItem[] = [
-    ...tracks.map((t) => ({ ...t, itemType: 'track' as const })),
-    ...albums.map((a) => ({ ...a, itemType: 'album' as const })),
+    ...tracks.map((t) => ({ ...hydrateTrack(t), itemType: 'track' as const })),
+    ...albums.map((a) => ({ ...hydrateAlbum(a), itemType: 'album' as const })),
   ]
 
   // Filter 
@@ -103,19 +114,21 @@ export function searchCatalog(query: string, sortBy: 'release_date' | 'listener_
 export function getTrackById(trackId: number): Track {
   const track = readTracks().find((item) => item.id === trackId)
   if (!track) throw new Error('Track not found')
-  return track
+  return hydrateTrack(track)
 }
+
 // ---------------------------------------------------------------
 
 export function listArtistReleases(artistId: number): Track[] {
   return readTracks()
     .filter((track) => track.artist_id === artistId)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map(hydrateTrack)
 }
 
 export function getTrack(trackId: number, artistId: number): Track {
   assertVerifiedArtist(artistId)
-  return getOwnedTrack(trackId, artistId)
+  return hydrateTrack(getOwnedTrack(trackId, artistId))
 }
 
 export function getTrackStats(trackId: number, artistId: number): TrackStats {
@@ -129,11 +142,11 @@ export function getTrackStats(trackId: number, artistId: number): TrackStats {
   }
 }
 
-export function publishRelease(
+export async function publishRelease(
   artistId: number,
   stageName: string,
   payload: PublishReleasePayload,
-): Track[] {
+): Promise<Track[]> {
   assertVerifiedArtist(artistId)
 
   const trimmedTitle = payload.title.trim()
@@ -169,16 +182,21 @@ export function publishRelease(
 
   let albumId: number | null = null
   let albumName: string | null = null
+  let albumCoverRef: string | null | undefined = null
 
   if (payload.release_type === 'album') {
     albumId = getNextId(albums)
     albumName = trimmedTitle
+    albumCoverRef = await toStoredMediaRef(
+      payload.cover_art,
+      createAlbumCoverRef(albumId),
+    )
     const album: Album = {
       id: albumId,
       title: trimmedTitle,
       artist_id: artistId,
       artist_name: stageName,
-      cover_art: payload.cover_art ?? null,
+      cover_art: albumCoverRef ?? null,
       release_type: 'album',
       release_year: payload.release_year,
       genre: payload.genre,
@@ -194,17 +212,26 @@ export function publishRelease(
   let nextTrackId = getNextId(tracks)
 
   for (const trackPayload of payload.tracks) {
+    const trackId = nextTrackId
+    const trackCoverRef = await toStoredMediaRef(
+      payload.cover_art,
+      createTrackMediaRef(trackId, 'cover'),
+    )
+    const trackAudioRef = await toStoredMediaRef(
+      trackPayload.audio_file,
+      createTrackMediaRef(trackId, 'audio'),
+    )
     const track: Track = {
-      id: nextTrackId,
+      id: trackId,
       title: trackPayload.title.trim(),
       artist_id: artistId,
       artist_name: stageName,
       album_id: albumId,
       album_name: albumName,
-      cover_art: payload.cover_art ?? null,
+      cover_art: trackCoverRef ?? null,
       duration_seconds: trackPayload.duration_seconds,
       release_type: payload.release_type,
-      audio_url: trackPayload.audio_file,
+      audio_url: trackAudioRef,
       lyrics: trackPayload.lyrics?.trim() || null,
       genre: payload.genre,
       release_year: payload.release_year,
@@ -219,14 +246,14 @@ export function publishRelease(
   }
 
   writeTracks([...tracks, ...createdTracks])
-  return createdTracks
+  return createdTracks.map(hydrateTrack)
 }
 
-export function updateTrack(
+export async function updateTrack(
   trackId: number,
   artistId: number,
   payload: UpdateTrackPayload,
-): Track {
+): Promise<Track> {
   assertVerifiedArtist(artistId)
   const tracks = readTracks()
   const index = tracks.findIndex((track) => track.id === trackId)
@@ -237,6 +264,16 @@ export function updateTrack(
 
   const current = tracks[index]
   const updatedAt = nowIso()
+  const coverArt =
+    payload.cover_art !== undefined
+      ? (await toStoredMediaRef(payload.cover_art, createTrackMediaRef(trackId, 'cover'))) ??
+        null
+      : current.cover_art
+  const audioUrl =
+    payload.audio_url !== undefined
+      ? await toStoredMediaRef(payload.audio_url, createTrackMediaRef(trackId, 'audio'))
+      : current.audio_url
+
   const updated: Track = {
     ...current,
     title: payload.title?.trim() || current.title,
@@ -244,8 +281,8 @@ export function updateTrack(
     genre: payload.genre ?? current.genre,
     release_year: payload.release_year ?? current.release_year,
     co_artists: payload.co_artists ?? current.co_artists,
-    cover_art: payload.cover_art ?? current.cover_art,
-    audio_url: payload.audio_url ?? current.audio_url,
+    cover_art: coverArt,
+    audio_url: audioUrl,
     updated_at: updatedAt,
   }
 
@@ -269,10 +306,10 @@ export function updateTrack(
     }
   }
 
-  return updated
+  return hydrateTrack(updated)
 }
 
-export function deleteTrack(trackId: number, artistId: number): void {
+export async function deleteTrack(trackId: number, artistId: number): Promise<void> {
   assertVerifiedArtist(artistId)
   const tracks = readTracks()
   const track = tracks.find((item) => item.id === trackId)
@@ -281,16 +318,19 @@ export function deleteTrack(trackId: number, artistId: number): void {
     throw new Error('Track not found.')
   }
 
+  const albumIdToCleanup = track.album_id
   const remainingTracks = tracks.filter((item) => item.id !== trackId)
   writeTracks(remainingTracks)
+  await deleteMockMediaForTrack(trackId)
 
-  if (track.album_id) {
-    const albumTracks = remainingTracks.filter((item) => item.album_id === track.album_id)
+  if (albumIdToCleanup) {
+    const albumTracks = remainingTracks.filter((item) => item.album_id === albumIdToCleanup)
     if (albumTracks.length === 0) {
-      writeAlbums(readAlbums().filter((album) => album.id !== track.album_id))
+      writeAlbums(readAlbums().filter((album) => album.id !== albumIdToCleanup))
+      await deleteMockMediaForAlbum(albumIdToCleanup)
     } else {
       const albums = readAlbums()
-      const albumIndex = albums.findIndex((album) => album.id === track.album_id)
+      const albumIndex = albums.findIndex((album) => album.id === albumIdToCleanup)
       if (albumIndex !== -1) {
         const nextAlbums = [...albums]
         nextAlbums[albumIndex] = {

@@ -44,6 +44,7 @@ type ArtworkCopy = {
     actions: string
     edit: string
     delete: string
+    play: string
     single: string
     album: string
   }
@@ -58,18 +59,20 @@ type ArtworkCopy = {
     confirm: string
     cancel: string
   }
-  messages: {
-    published: string
-    updated: string
-    deleted: string
-    invalidAudio: string
-    coverReady: string
-    audioReady: string
-  }
+    messages: {
+      published: string
+      updated: string
+      deleted: string
+      invalidAudio: string
+      coverReady: string
+      audioReady: string
+      storageQuotaExceeded: string
+    }
   upload: {
     errors: {
       emptyFile: string
       invalidAudio: string
+      invalidImage: string
       fileTooLarge: string
       readFailed: string
       uploadFailed: string
@@ -122,6 +125,7 @@ const COPY: Record<AppLanguage, ArtworkCopy> = {
       actions: 'Actions',
       edit: 'Edit',
       delete: 'Delete',
+      play: 'Play',
       single: 'Single',
       album: 'Album',
     },
@@ -143,11 +147,14 @@ const COPY: Record<AppLanguage, ArtworkCopy> = {
       invalidAudio: 'Only MP3, WAV, and FLAC files are supported.',
       coverReady: 'Cover image ready.',
       audioReady: 'Audio file ready.',
+      storageQuotaExceeded:
+        'Could not save this release. Browser storage is full — try a smaller audio file or clear site data.',
     },
     upload: {
       errors: {
         emptyFile: 'The selected file is empty.',
         invalidAudio: 'Only MP3, WAV, and FLAC files are supported.',
+        invalidImage: 'Only JPG, PNG, and WebP images are supported.',
         fileTooLarge: 'Audio file must be 10 MB or smaller.',
         readFailed: 'Could not read the audio file. Please try again.',
         uploadFailed: 'Upload failed. Please try again.',
@@ -201,6 +208,7 @@ const COPY: Record<AppLanguage, ArtworkCopy> = {
       actions: 'عملیات',
       edit: 'ویرایش',
       delete: 'حذف',
+      play: 'پخش',
       single: 'تک‌آهنگ',
       album: 'آلبوم',
     },
@@ -222,11 +230,14 @@ const COPY: Record<AppLanguage, ArtworkCopy> = {
       invalidAudio: 'فقط فایل‌های MP3، WAV و FLAC پشتیبانی می‌شوند.',
       coverReady: 'تصویر کاور آماده است.',
       audioReady: 'فایل صوتی آماده است.',
+      storageQuotaExceeded:
+        'انتشار ذخیره نشد. فضای ذخیره‌سازی مرورگر پر است — فایل صوتی کوچک‌تری انتخاب کنید یا داده‌های سایت را پاک کنید.',
     },
     upload: {
       errors: {
         emptyFile: 'فایل انتخاب‌شده خالی است.',
         invalidAudio: 'فقط فایل‌های MP3، WAV و FLAC پشتیبانی می‌شوند.',
+        invalidImage: 'فقط تصاویر JPG، PNG و WebP پشتیبانی می‌شوند.',
         fileTooLarge: 'حجم فایل صوتی باید حداکثر ۱۰ مگابایت باشد.',
         readFailed: 'خواندن فایل صوتی ممکن نشد. دوباره تلاش کنید.',
         uploadFailed: 'بارگذاری ناموفق بود. دوباره تلاش کنید.',
