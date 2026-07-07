@@ -1,36 +1,210 @@
-import type { ReactNode } from 'react'
-import { AppBar, Box, Button, Stack, Toolbar, Typography } from '@mui/material'
-import { Link as RouterLink } from 'react-router-dom'
-import NotificationPanel from '../components/notifications/NotificationPanel'
-import { ROUTES } from '../lib/constants/routes'
-import { useAuthStore } from '../store/authStore'
+import {
+  AppBar,
+  Avatar,
+  Box,
+  Button,
+  Drawer,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  Toolbar,
+  Typography,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
+import { Menu } from 'lucide-react';
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import NotificationPanel from '../components/notifications/NotificationPanel';
+import PlayerBar from '../components/player/PlayerBar'; 
+import { getProfileInitials } from '../components/profile/profileUtils';
+import { getAppText } from '../lib/constants/appText';
+import { getHomePageText } from '../lib/constants/homePageText';
+import { getMainNavForRole } from '../lib/constants/navItems';
+import { ROUTES } from '../lib/constants/routes';
+import { logout } from '../lib/mock/authService';
+import { useAuthStore } from '../store/authStore';
+import { usePlayerStore } from '../store/playerStore';
+import { useAppLanguage } from '../theme/LanguageContext';
+
+const DRAWER_WIDTH = 260;
 
 export default function MainLayout({ children }: { children: ReactNode }) {
-  const user = useAuthStore((state) => state.user)
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+  // Add checking variable logic internally so standard container layout compensates 
+  const currentTrack = usePlayerStore((state) => state.currentTrack);
+
+  const { language, toggleLanguage } = useAppLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const theme = useTheme();
+  
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
+
+  const appCopy = getAppText(language);
+  const homeCopy = getHomePageText(language);
+  const navItems = user ? getMainNavForRole(user.role, user.username || '', language) : [];
+
+  function handleLogout(): void {
+    logout();
+    setUser(null);
+    navigate(ROUTES.LOGIN);
+  }
+
+  const drawerContent = (
+    <Box sx={{ pt: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Typography className="px-4 pb-4" variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
+        Spotify WP
+      </Typography>
+      <List sx={{ flexGrow: 1, px: 1 }}>
+        {navItems.map((item) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <ListItemButton
+              key={item.path}
+              component={RouterLink}
+              selected={isActive}
+              to={item.path}
+              onClick={() => {
+                if (isMobile) setSidebarOpen(false);
+              }}
+              sx={{ borderRadius: 1.5, mb: 0.5 }}
+            >
+              <ListItemText primary={item.label} primaryTypographyProps={{ fontWeight: isActive ? 700 : 500 }} />
+            </ListItemButton>
+          );
+        })}
+      </List>
+      {user && (
+         <Box sx={{ p: 2, pb: 4 }}>
+           <Button fullWidth variant="outlined" color="inherit" onClick={handleLogout} sx={{ mb: 1.5 }}>
+             {appCopy.auth.logout}
+           </Button>
+           <Button fullWidth variant="text" color="inherit" onClick={() => setSidebarOpen(false)}>
+             {homeCopy.nav.closeSidebar}
+           </Button>
+         </Box>
+      )}
+    </Box>
+  );
 
   return (
-    <Box className="min-h-screen" sx={{ bgcolor: 'background.default' }}>
-      {user ? (
-        <AppBar color="default" elevation={0} position="sticky">
-          <Toolbar className="gap-2">
-            <Typography className="flex-1" variant="h6" sx={{ fontWeight: 600 }}>
-              Spotify WP
-            </Typography>
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <NotificationPanel />
-              <Button
-                component={RouterLink}
-                size="small"
-                to={ROUTES.NOTIFICATIONS}
-                variant="outlined"
-              >
-                Notifications
-              </Button>
-            </Stack>
-          </Toolbar>
-        </AppBar>
-      ) : null}
-      <Box className="p-6">{children}</Box>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', display: 'flex' }}>
+      {user && (
+        <Drawer
+          ModalProps={{ keepMounted: true }}
+          anchor="left" 
+          open={sidebarOpen}
+          variant={isMobile ? 'temporary' : 'persistent'}
+          onClose={() => setSidebarOpen(false)}
+          sx={{
+            flexShrink: 0,
+            '& .MuiDrawer-paper': {
+              width: DRAWER_WIDTH,
+              boxSizing: 'border-box',
+              pb: currentTrack && !isMobile ? '90px' : 0, 
+            },
+          }}
+        >
+          {drawerContent}
+        </Drawer>
+      )}
+
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flexGrow: 1,
+          minHeight: '100vh',
+          minWidth: 0,
+          transition: theme.transitions.create(['margin', 'width'], {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.leavingScreen,
+          }),
+          ...(user && !isMobile && sidebarOpen
+            ? {
+                transition: theme.transitions.create(['margin', 'width'], {
+                  easing: theme.transitions.easing.easeOut,
+                  duration: theme.transitions.duration.enteringScreen,
+                }),
+                marginInlineStart: `${DRAWER_WIDTH}px`,
+              }
+            : {}),
+        }}
+      >
+        {user ? (
+          <AppBar color="transparent" elevation={0} position="sticky" sx={{ bgcolor: 'background.default' }}>
+            <Toolbar sx={{ gap: 2 }}>
+              {!sidebarOpen && (
+                <IconButton
+                  aria-label={homeCopy.nav.openSidebar}
+                  onClick={() => setSidebarOpen(true)}
+                  edge="start"
+                >
+                  <Menu size={24} />
+                </IconButton>
+              )}
+              
+              <Box sx={{ flex: 1 }} />
+
+              <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+                <Button size="small" variant="text" onClick={toggleLanguage} color="inherit">
+                  {language === 'en' ? appCopy.common.persian : appCopy.common.english}
+                </Button>
+                <NotificationPanel />
+                
+                <Stack
+                  component={RouterLink}
+                  to={`/profile/${user.username}`}
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                    ml: 1,
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    px: 1,
+                    py: 0.5,
+                    borderRadius: 8,
+                    transition: 'background-color 0.2s',
+                    '&:hover': { bgcolor: 'action.hover' }
+                  }}
+                >
+                   <Avatar
+                     alt={`Profile of ${user.display_name}`}
+                     src={user.profile_picture ?? undefined}
+                     sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.875rem' }}
+                   >
+                     {getProfileInitials(user.display_name)}
+                   </Avatar>
+                   {!isMobile && (
+                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {user.display_name}
+                     </Typography>
+                   )}
+                </Stack>
+              </Stack>
+            </Toolbar>
+          </AppBar>
+        ) : null}
+
+        {/* Adjust PB for bottom clearance when player docks into window frame permanently. Desktop requires explicit spacer */}
+        <Box component="main" sx={{ flexGrow: 1, pb: currentTrack ? { xs: '120px', md: '140px' } : 8 }}>
+          {children}
+        </Box>
+      </Box>
+
+      {/* Render persistent Global Store connected Transport Root Container. */}
+      {user && <PlayerBar />}
     </Box>
-  )
+  );
 }

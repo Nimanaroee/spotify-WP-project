@@ -8,6 +8,8 @@ export const ROUTES = {
   USER_PROFILE: '/profile/:username',
   NOTIFICATIONS: '/notifications',
   ARTIST_STUDIO: '/artist/studio',
+  PLAYLISTS: '/playlists',
+  ALBUMS: '/albums',
   ADMIN: '/admin',
   ADMIN_TICKETS: '/admin/tickets',
   ADMIN_AUDITING: '/admin/auditing',

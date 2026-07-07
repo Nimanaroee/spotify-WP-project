@@ -1,83 +1,95 @@
-import { Box, Button, Paper, Stack, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import { ROLES } from '../lib/constants/roles';
-import { ROUTES } from '../lib/constants/routes';
-import { getAppText } from '../lib/constants/appText';
-import { logout } from '../lib/mock/authService';
+import { Box } from '@mui/material';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { Disc3 } from 'lucide-react';
 import MainLayout from '../layouts/MainLayout';
-import { getArtworkManagementPageText } from '../lib/constants/artworkManagementPageText';
-import { getNotificationsPageText } from '../lib/constants/notificationsPageText';
-import { isVerifiedArtist } from '../lib/mock/artistProfileService';
+import MediaCard from '../components/home/MediaCard';
+import MediaRow from '../components/home/MediaRow';
+import { getHomePageText } from '../lib/constants/homePageText';
+import { ROUTES } from '../lib/constants/routes';
+import { ROLES } from '../lib/constants/roles';
 import { useAuthStore } from '../store/authStore';
+import { usePlayerStore } from '../store/playerStore'; // CONNECT PLAYER STORE!
 import { useAppLanguage } from '../theme/LanguageContext';
+import {
+  getEarlyAccessReleases,
+  getLatestAlbums,
+  getRecentPlaylists,
+  getTopSongs,
+} from '../lib/mock/homeService';
 
 export default function HomePage() {
   const user = useAuthStore((state) => state.user);
-  const setUser = useAuthStore((state) => state.setUser);
+  const playTrack = usePlayerStore((state) => state.playTrack); // GRAB THE ACTION HOOK
   const navigate = useNavigate();
   const { language } = useAppLanguage();
-  const copy = getAppText(language);
-  const notificationsCopy = getNotificationsPageText(language);
-  const artworkCopy = getArtworkManagementPageText(language);
-  const showArtistStudio =
-    user?.role === ROLES.ARTIST && isVerifiedArtist(user.id);
+  const copy = getHomePageText(language);
 
-  function handleLogout(): void {
-    logout();
-    setUser(null);
-    navigate(ROUTES.LOGIN);
+  if (!user) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
-  const content = (
-    <Paper className="mx-auto max-w-3xl p-6">
-      <Stack spacing={2}>
-        <Typography component="h1" variant="h4" sx={{ fontWeight: 700 }}>
-          {copy.auth.welcome} {user?.display_name ?? copy.auth.guest}
-        </Typography>
-        {user?.role === ROLES.LISTENER ? (
-          <>
-            <Button variant="contained" onClick={() => navigate(ROUTES.MANAGE)}>
-              {copy.home.manageProfile}
-            </Button>
-            <Button variant="outlined" onClick={() => navigate(ROUTES.SETTINGS)}>
-              {copy.home.settings}
-            </Button>
-          </>
-        ) : null}
-        {user?.role === ROLES.ARTIST ? (
-          <>
-            <Button variant="contained" onClick={() => navigate(ROUTES.MANAGE)}>
-              {copy.home.manageProfile}
-            </Button>
-            <Button variant="outlined" onClick={() => navigate(ROUTES.SETTINGS)}>
-              {copy.home.settings}
-            </Button>
-          </>
-        ) : null}
-        {showArtistStudio ? (
-          <Button variant="contained" onClick={() => navigate(ROUTES.ARTIST_STUDIO)}>
-            {artworkCopy.pageTitle}
-          </Button>
-        ) : null}
-        {user ? (
-          <Button variant="outlined" onClick={() => navigate(ROUTES.NOTIFICATIONS)}>
-            {notificationsCopy.pageTitle}
-          </Button>
-        ) : null}
-        <Button variant="outlined" onClick={handleLogout}>
-          {copy.auth.logout}
-        </Button>
-      </Stack>
-    </Paper>
-  );
+  const hasPremiumFeatures = user.subscription_tier === 'gold' || user.role !== ROLES.LISTENER;
 
-  if (user) {
-    return <MainLayout>{content}</MainLayout>;
-  }
+  const playlists = getRecentPlaylists();
+  const latestAlbums = getLatestAlbums();
+  const topSongs = getTopSongs();
+  const earlyAccessReleases = getEarlyAccessReleases();
 
   return (
-    <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
-      {content}
-    </Box>
+    <MainLayout>
+      <Box className="min-h-screen py-4" dir={language === 'fa' ? 'rtl' : 'ltr'}>
+        <MediaRow title={copy.showcase.recentPlaylists}>
+          {playlists.map((playlist) => (
+            <MediaCard
+              key={`pl-${playlist.id}`}
+              title={playlist.name}
+              subtitle={playlist.track_count ? copy.showcase.tracksCount(playlist.track_count) : null}
+              imageUrl={playlist.cover_art}
+              onClick={() => navigate(ROUTES.PLAYLISTS)}
+              placeholderIcon={<Disc3 size={40} color="gray" />}
+            />
+          ))}
+        </MediaRow>
+
+        <MediaRow title={copy.showcase.topSongs}>
+          {topSongs.map((track) => (
+            <MediaCard
+              key={`trk-${track.id}`}
+              title={track.title}
+              subtitle={track.artist_name}
+              imageUrl={track.cover_art}
+              onClick={() => playTrack(track, topSongs)} // BOOM: Plays current track, queues remainder automatically!
+            />
+          ))}
+        </MediaRow>
+
+        <MediaRow title={copy.showcase.latestAlbums}>
+          {latestAlbums.map((album) => (
+            <MediaCard
+              key={`alb-${album.id}`}
+              title={album.title}
+              subtitle={album.artist_name}
+              imageUrl={album.cover_art}
+              onClick={() => navigate(`${ROUTES.ALBUMS}/${album.id}`)}
+              placeholderIcon={<Disc3 size={40} color="gray" />}
+            />
+          ))}
+        </MediaRow>
+
+        <MediaRow title={copy.showcase.earlyAccess} show={hasPremiumFeatures && earlyAccessReleases.length > 0}>
+          {earlyAccessReleases.map((track) => (
+            <MediaCard
+              key={`ea-${track.id}`}
+              title={track.title}
+              subtitle={track.artist_name}
+              imageUrl={track.cover_art}
+              isEarlyAccess={true}
+              earlyAccessLabel={copy.showcase.earlyAccessBadge}
+              onClick={() => playTrack(track, earlyAccessReleases)}
+            />
+          ))}
+        </MediaRow>
+      </Box>
+    </MainLayout>
   );
 }

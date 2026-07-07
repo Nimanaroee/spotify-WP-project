@@ -18,6 +18,11 @@ import AuditingPage from '../pages/admin/AuditingPage'
 import SubscriptionAdminPage from '../pages/admin/SubscriptionAdminPage'
 import NotificationsPage from '../pages/NotificationsPage'
 import SettingsPage from '../pages/SettingsPage'
+import PlaylistsPage from '../pages/PlaylistsPage'
+
+// Phase 2 Extension Imports Addition: Section 8
+import AlbumsPage from '../pages/AlbumsPage'
+import AlbumDetailPage from '../pages/AlbumDetailPage'
 
 export default function Router() {
   return (
@@ -25,7 +30,36 @@ export default function Router() {
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path={ROUTES.FORGOT_PASSWORD} element={<ForgotPasswordPage />} />
+      
       <Route path={ROUTES.HOME} element={<HomePage />} />
+      
+      <Route
+        path={ROUTES.PLAYLISTS}
+        element={
+          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN]}>
+            <PlaylistsPage />
+          </RoleGuard>
+        }
+      />
+      
+      <Route
+        path={ROUTES.ALBUMS}
+        element={
+          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN]}>
+            <AlbumsPage />
+          </RoleGuard>
+        }
+      />
+      
+      <Route
+        path={`${ROUTES.ALBUMS}/:albumId`}
+        element={
+          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN]}>
+            <AlbumDetailPage />
+          </RoleGuard>
+        }
+      />
+      
       <Route path={ROUTES.MANAGE} element={<ManagePage />} />
       <Route
         path={ROUTES.SETTINGS}
@@ -81,6 +115,7 @@ export default function Router() {
         />
       </Route>
 
+      {/* Fallback Catch-all Route */}
       <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
     </Routes>
   )

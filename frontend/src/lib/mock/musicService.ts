@@ -12,6 +12,11 @@ import { storage } from './storage'
 const TRACKS_KEY = 'tracks'
 const ALBUMS_KEY = 'albums'
 
+// We mix and unify output type so the list page can dynamically map Albums alongside standalone Songs
+export type CatalogItem =
+  | (Track & { itemType: 'track' })
+  | (Album & { itemType: 'album' })
+
 function nowIso(): string {
   return new Date().toISOString()
 }
@@ -49,6 +54,58 @@ function getOwnedTrack(trackId: number, artistId: number): Track {
   }
   return track
 }
+
+// ---------------- NEW METHODS FOR DISCOVER PAGE ----------------
+export function getAlbumById(albumId: number): { album: Album; tracks: Track[] } {
+  const albums = readAlbums()
+  const album = albums.find((a) => a.id === albumId)
+  if (!album) throw new Error('Album not found')
+
+  const tracks = readTracks().filter((t) => t.album_id === albumId)
+  return { album, tracks }
+}
+
+export function searchCatalog(query: string, sortBy: 'release_date' | 'listener_count'): CatalogItem[] {
+  const normalizedQuery = query.trim().toLowerCase()
+
+  const tracks = readTracks()
+  const albums = readAlbums()
+
+  let results: CatalogItem[] = [
+    ...tracks.map((t) => ({ ...t, itemType: 'track' as const })),
+    ...albums.map((a) => ({ ...a, itemType: 'album' as const })),
+  ]
+
+  // Filter 
+  if (normalizedQuery) {
+    results = results.filter((item) => {
+      const titleMatch = item.title.toLowerCase().includes(normalizedQuery)
+      const artistMatch = item.artist_name.toLowerCase().includes(normalizedQuery)
+      return titleMatch || artistMatch
+    })
+  }
+
+  // Sort
+  if (sortBy === 'listener_count') {
+    results.sort((a, b) => (b.listener_count ?? 0) - (a.listener_count ?? 0))
+  } else {
+    // Newer releases first
+    results.sort((a, b) => {
+      const yearDiff = (b.release_year ?? 0) - (a.release_year ?? 0)
+      if (yearDiff !== 0) return yearDiff
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    })
+  }
+
+  return results
+}
+
+export function getTrackById(trackId: number): Track {
+  const track = readTracks().find((item) => item.id === trackId)
+  if (!track) throw new Error('Track not found')
+  return track
+}
+// ---------------------------------------------------------------
 
 export function listArtistReleases(artistId: number): Track[] {
   return readTracks()
