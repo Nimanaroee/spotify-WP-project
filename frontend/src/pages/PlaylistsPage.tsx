@@ -140,11 +140,11 @@ export default function PlaylistsPage() {
     <MainLayout>
       <Box className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto" dir={language === 'fa' ? 'rtl' : 'ltr'}>
         <Stack
-          alignItems={{ xs: 'stretch', sm: 'center' }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
           direction={{ xs: 'column', sm: 'row' }}
           justifyContent="space-between"
-          mb={4}
-          spacing={2}
+          mb={5}
+          spacing={3}
         >
           <PageHeader
             subtitle={
@@ -153,6 +153,7 @@ export default function PlaylistsPage() {
           >
             {copy.pageTitle}
           </PageHeader>
+          <Box sx={{ width: { xs: '100%', sm: 'auto' } }}> {/* Ensures the tooltip/button wrapper takes proper width */}
           {isLimitReached ? (
             <Tooltip title={copy.limits.reachedTooltip(tierName, limit)} placement="bottom-end">
               <span>{createBtn}</span>
@@ -160,6 +161,7 @@ export default function PlaylistsPage() {
           ) : (
             createBtn
           )}
+          </Box>
         </Stack>
 
         {feedback && (

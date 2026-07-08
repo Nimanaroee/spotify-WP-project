@@ -14,7 +14,7 @@ import { Disc3, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { getPlaylistsPageText } from '../../lib/constants/playlistsPageText';
 import { useAppLanguage } from '../../theme/LanguageContext';
-import { usePlayerStore } from '../../store/playerStore'; // GET PLAYER FUNCTION OVERRIDE 
+import { usePlayerStore } from '../../store/playerStore'; 
 import type { Playlist } from '../../types';
 
 interface PlaylistListCardProps {
@@ -34,29 +34,44 @@ export default function PlaylistListCard({
   const copy = getPlaylistsPageText(language);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   
-  // Use Zustand target hooks externally 
   const playTrack = usePlayerStore((state) => state.playTrack);
 
   return (
-    <Card elevation={0} sx={{ border: 1, borderColor: 'divider', mb: 3 }}>
+    <Card elevation={0} sx={{ border: 1, borderColor: 'divider', mb: 3, borderRadius: 3, overflow: 'hidden' }}>
       <Box
         sx={{
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' },
           justifyContent: 'space-between',
-          bgcolor: 'action.hover',
-          p: 2,
+          bgcolor: 'background.paper',
+          p: { xs: 2.5, sm: 3 },
+          gap: 2,
         }}
       >
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          {playlist.name}
-        </Typography>
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+          <Typography variant="h6" sx={{ fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {playlist.name}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mt: 0.5, display: 'block' }}>
+            {playlist.track_count || playlist.tracks?.length || 0} {language === 'fa' ? 'قطعه' : 'tracks'}
+          </Typography>
+        </Box>
+
+        <Stack 
+          direction="row" 
+          spacing={1.5} 
+          alignItems="center" 
+          sx={{ alignSelf: { xs: 'flex-end', sm: 'center' } }}
+        >
           <Button
-            variant="outlined"
+            variant="contained"
+            color="primary"
             size="small"
-            startIcon={<Plus size={16} />}
+            startIcon={language !== 'fa' ? <Plus size={16} /> : undefined}
+            endIcon={language === 'fa' ? <Plus size={16} /> : undefined}
             onClick={() => onOpenAddSongs(playlist)}
+            sx={{ borderRadius: 8, px: 2, fontWeight: 700, boxShadow: 'none' }}
           >
             {copy.actions.addSongs}
           </Button>
@@ -64,8 +79,9 @@ export default function PlaylistListCard({
             size="small"
             onClick={(e) => setMenuAnchor(e.currentTarget)}
             aria-label="Options"
+            sx={{ bgcolor: 'action.hover', '&:hover': { bgcolor: 'divider' } }}
           >
-            <MoreVertical size={20} />
+            <MoreVertical size={18} />
           </IconButton>
         </Stack>
 
@@ -98,10 +114,10 @@ export default function PlaylistListCard({
 
       <Divider />
 
-      <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
+      <CardContent sx={{ p: 0, '&:last-child': { pb: 0 }, bgcolor: 'action.hover' }}>
         {(!playlist.tracks || playlist.tracks.length === 0) ? (
-          <Box p={3} textAlign="center">
-            <Typography variant="body2" color="text.secondary">
+          <Box py={5} px={3} textAlign="center">
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
               {copy.list.emptyPlaylist}
             </Typography>
           </Box>
@@ -115,8 +131,11 @@ export default function PlaylistListCard({
                   display: 'flex',
                   alignItems: 'center',
                   p: 2,
+                  pl: { xs: 2.5, sm: 3 },
+                  pr: { xs: 2.5, sm: 3 },
                   cursor: 'pointer',
-                  '&:hover': { bgcolor: 'action.hover' },
+                  transition: 'background-color 0.2s',
+                  '&:hover': { bgcolor: 'background.paper' },
                 }}
               >
                 <Box
@@ -124,7 +143,7 @@ export default function PlaylistListCard({
                     width: 48,
                     height: 48,
                     bgcolor: 'divider',
-                    borderRadius: 1,
+                    borderRadius: 1.5,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -144,10 +163,10 @@ export default function PlaylistListCard({
                   )}
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>
+                  <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700 }}>
                     {track.title}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary" noWrap>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ fontWeight: 500 }}>
                     {track.artist_name} {track.album_name && `• ${track.album_name}`}
                   </Typography>
                 </Box>

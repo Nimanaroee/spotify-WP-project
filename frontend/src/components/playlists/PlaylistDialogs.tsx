@@ -115,8 +115,6 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
   const copy = getPlaylistsPageText(language);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Track[]>([]);
-  
-  // Track IDs currently inside the active playlist to render the toggle visual instantly
   const [inPlaylistIds, setInPlaylistIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
@@ -128,7 +126,6 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
   }, [open, playlist]);
 
   function fetchResults(searchQuery: string) {
-    // Only return tracks from catalog search, drop full albums
     const catalogData = searchCatalog(searchQuery, 'listener_count');
     const tracksOnly = catalogData.filter((item) => item.itemType === 'track') as Track[];
     setResults(tracksOnly);
@@ -144,18 +141,14 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
     if (!playlist || !userId) return;
 
     const newState = !isCurrentlyInList;
-
-    // Apply fast to internal state visually
     const nextSet = new Set(inPlaylistIds);
     if (newState) nextSet.add(trackId);
     else nextSet.delete(trackId);
     setInPlaylistIds(nextSet);
 
-    // Call service to write it local storage so closing and reloading works automatically
     try {
       toggleTrackInPlaylist(userId, playlist.id, trackId, newState);
     } catch (err) {
-      // Revert upon error silently in this specific UX
       if (isCurrentlyInList) nextSet.add(trackId);
       else nextSet.delete(trackId);
       setInPlaylistIds(nextSet);
@@ -164,7 +157,7 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" dir={language === 'fa' ? 'rtl' : 'ltr'}>
-      <DialogTitle>{copy.dialogs.addSongsTitle}</DialogTitle>
+      <DialogTitle sx={{ fontWeight: 800 }}>{copy.dialogs.addSongsTitle}</DialogTitle>
       <DialogContent sx={{ p: 0 }}>
         <Box sx={{ px: 3, pt: 1, pb: 2 }}>
           <TextField
@@ -177,6 +170,7 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
             slotProps={{
               input: {
                 startAdornment: <Search size={20} className="mr-2 opacity-50" />,
+                sx: { borderRadius: 3 } // Rounded search bar
               },
             }}
           />
@@ -184,9 +178,9 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
 
         <Divider />
 
-        <Box sx={{ minHeight: 300, maxHeight: 400, overflowY: 'auto' }}>
+        <Box sx={{ minHeight: 300, maxHeight: '60vh', overflowY: 'auto' }}>
           {results.length === 0 ? (
-            <Typography textAlign="center" color="text.secondary" my={4}>
+            <Typography textAlign="center" color="text.secondary" my={6} fontWeight={500}>
               {copy.dialogs.noResults}
             </Typography>
           ) : (
@@ -194,13 +188,13 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
               {results.map((track) => {
                 const inList = inPlaylistIds.has(track.id);
                 return (
-                  <Box key={track.id} sx={{ display: 'flex', alignItems: 'center', p: 2, '&:hover': { bgcolor: 'action.hover' } }}>
+                  <Box key={track.id} sx={{ display: 'flex', alignItems: 'center', p: 2, px: 3, '&:hover': { bgcolor: 'action.hover' } }}>
                     <Box
                       sx={{
                         width: 48,
                         height: 48,
                         bgcolor: 'divider',
-                        borderRadius: 1,
+                        borderRadius: 1.5,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -215,9 +209,9 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
                         <Disc3 size={24} color="gray" />
                       )}
                     </Box>
-                    <Box sx={{ flex: 1, minWidth: 0 }}>
-                      <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>{track.title}</Typography>
-                      <Typography variant="caption" color="text.secondary" noWrap>
+                    <Box sx={{ flex: 1, minWidth: 0, px: 1 }}>
+                      <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700 }}>{track.title}</Typography>
+                      <Typography variant="caption" color="text.secondary" noWrap sx={{ fontWeight: 500 }}>
                         {track.artist_name}
                       </Typography>
                     </Box>
@@ -226,9 +220,14 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
                       variant={inList ? "text" : "outlined"}
                       size="small"
                       color={inList ? "error" : "primary"}
-                      startIcon={inList ? <Minus size={16} /> : <Plus size={16} />}
                       onClick={() => handleToggleTrack(track.id, inList)}
-                      sx={{ ml: 2, borderRadius: 8 }}
+                      sx={{ 
+                        borderRadius: 8, 
+                        fontWeight: 700,
+                        minWidth: { xs: 90, sm: 110 }, // Prevents buttons from jittering in size
+                        ml: language === 'fa' ? 0 : 2,
+                        mr: language === 'fa' ? 2 : 0
+                      }}
                     >
                       {inList ? copy.actions.remove : copy.actions.add}
                     </Button>
@@ -239,11 +238,11 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
           )}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2, pt: 2, borderTop: 1, borderColor: 'divider' }}>
-        <Button onClick={onClose} variant="contained" fullWidth>
+      <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
+        <Button onClick={onClose} variant="contained" fullWidth size="large" sx={{ borderRadius: 8, fontWeight: 700 }}>
           {copy.actions.save}
         </Button>
-      </DialogActions>
+      </Box>
     </Dialog>
   );
 }
