@@ -6,6 +6,7 @@ import { recordTrackPlay } from '../lib/mock/musicService';
 import { useAuthStore } from './authStore';
 
 interface PlayerState {
+  history: Track[];
   currentTrack: Track | null;
   queue: Track[];
   isPlaying: boolean;
@@ -46,6 +47,7 @@ function shuffleArray(array: Track[]): Track[] {
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
+  history: [],
   currentTrack: null,
   queue: [],
   isPlaying: false,
@@ -59,23 +61,33 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isQueueOpen: false,
 
   playTrack: (track, contextQueue = []) => {
-    const current = get().currentTrack;
-    if (current?.id === track.id) {
+    const { currentTrack, history } = get();
+    if (currentTrack?.id === track.id) {
       set({ progressSeconds: 0, isPlaying: true });
       return;
+    }
+
+    // STACK UPDATE: Push outgoing track to history (Ensure uniqueness & latest position)
+    let nextHistory = history;
+    if (currentTrack) {
+      nextHistory = [...history.filter((t) => t.id !== currentTrack.id), currentTrack];
     }
 
     const user = useAuthStore.getState().user;
     const hydratedTrack = user
       ? recordTrackPlay(track.id, user.id)
       : hydrateTrack(track);
+      
     let finalQueue = contextQueue.length > 0
       ? contextQueue.map(hydrateTrack).filter((t) => t.id !== hydratedTrack.id)
       : get().queue;
+      
     if (get().shuffle) {
       finalQueue = shuffleArray(finalQueue);
     }
+    
     set({
+      history: nextHistory,
       currentTrack: hydratedTrack,
       queue: finalQueue,
       isPlaying: true,
@@ -91,41 +103,82 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   next: (forceSkip = false) => {
-    const { queue, repeatMode, currentTrack } = get();
-    if (!currentTrack) return;
+      const { queue, repeatMode, currentTrack, history } = get();
+      if (!currentTrack) return;
 
-    if (repeatMode === 'one' && !forceSkip) {
-      set({ progressSeconds: 0, isPlaying: true });
-      return;
-    }
-
-    if (queue.length > 0) {
-      const nextTrack = queue[0];
-      const newQueue = queue.slice(1);
-
-      if (repeatMode === 'all') {
-        newQueue.push(currentTrack);
+      // 1. Natural end with repeat-one -> loop current track
+      if (!forceSkip && repeatMode === 'one') {
+        set({ progressSeconds: 0, isPlaying: true });
+        return;
       }
 
-      set({
-        currentTrack: nextTrack,
-        queue: newQueue,
-        progressSeconds: 0,
-        durationSeconds: nextTrack.duration_seconds || 180,
-        isPlaying: true,
-      });
+      // 2. Queue has upcoming tracks -> Advance to next
+      if (queue.length > 0) {
+        const nextTrack = queue[0];
+        const newQueue = queue.slice(1);
+
+        if (repeatMode === 'all') {
+          newQueue.push(currentTrack);
+        }
+
+        // STACK UPDATE: Push outgoing track to history
+        const nextHistory = [...history.filter((t) => t.id !== currentTrack.id), currentTrack];
+
+        // DYNAMIC PLAYBACK CHECK: 
+        // If it's a natural song end AND repeat mode is 'none', pause playback.
+        // Otherwise (manual skip or repeat 'all'), continue playing automatically.
+        const shouldAutoPlay = forceSkip || repeatMode === 'all';
+
+        set({
+          currentTrack: nextTrack,
+          queue: newQueue,
+          progressSeconds: 0,
+          durationSeconds: nextTrack.duration_seconds || 180,
+          isPlaying: shouldAutoPlay,
+        });
+        return;
+      }
+
+      // 3. Queue is empty
+      if (repeatMode === 'all') {
+        // Loop the very last track if repeat 'all' is on and nothing else is queued
+        set({ progressSeconds: 0, isPlaying: true });
+      } else {
+        // End of line. Stop playback.
+        set({ progressSeconds: 0, isPlaying: false });
+      }
+    },
+
+  prev: () => {
+    const { progressSeconds, history, currentTrack, queue } = get();
+
+    // 1. Time-Based Check: If > 5 seconds, restart current song.
+    if (progressSeconds > 5) {
+      set({ progressSeconds: 0, isPlaying: true });
       return;
     }
 
-    if (repeatMode === 'all' || repeatMode === 'one') {
+    // 2. Empty History Check: Nowhere to go back to, just restart.
+    if (history.length === 0) {
       set({ progressSeconds: 0, isPlaying: true });
-    } else {
-      set({ progressSeconds: 0, isPlaying: false });
+      return;
     }
-  },
 
-  prev: () => {
-    set({ progressSeconds: 0, isPlaying: true });
+    // 3. Popping the Stack (Time <= 5s & History exists)
+    const prevTrack = history[history.length - 1]; // Peek at the top item
+    const nextHistory = history.slice(0, -1);      // Remove top item
+
+    // PUSH FORWARD: Re-inject the current track at the front of the queue
+    const nextQueue = currentTrack ? [currentTrack, ...queue] : queue;
+
+    set({
+      history: nextHistory,
+      currentTrack: prevTrack,
+      queue: nextQueue,
+      progressSeconds: 0,
+      durationSeconds: prevTrack.duration_seconds || 180,
+      isPlaying: true,
+    });
   },
 
   seek: (seconds: number) => set({ progressSeconds: seconds }),
@@ -137,7 +190,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (!isPlaying) return;
 
     if (progressSeconds >= durationSeconds) {
-      next();
+      next(); // Progresses automatically without forceSkip flag
     } else {
       set({ progressSeconds: progressSeconds + 1 });
     }
