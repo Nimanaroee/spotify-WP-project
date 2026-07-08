@@ -140,11 +140,13 @@ export default function PlaylistsPage() {
     <MainLayout>
       <Box className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto" dir={language === 'fa' ? 'rtl' : 'ltr'}>
         <Stack
-          alignItems={{ xs: 'flex-start', sm: 'center' }}
           direction={{ xs: 'column', sm: 'row' }}
-          justifyContent="space-between"
-          mb={5}
           spacing={3}
+          sx={{
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            justifyContent: 'space-between',
+            mb: { xs: 3, md: 5 },
+          }}
         >
           <PageHeader
             subtitle={

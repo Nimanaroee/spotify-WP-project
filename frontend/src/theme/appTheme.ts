@@ -9,6 +9,10 @@ export function createAppTheme(
   direction: 'ltr' | 'rtl' = 'ltr',
 ) {
   const isDark = mode === 'dark'
+  const fontFamily =
+    direction === 'rtl'
+      ? "'Noto Sans Arabic', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+      : undefined
 
   return createTheme({
     direction,
@@ -45,6 +49,7 @@ export function createAppTheme(
     shape: {
       borderRadius: 14,
     },
+    typography: fontFamily ? { fontFamily } : undefined,
     components: {
       MuiButton: {
         styleOverrides: {

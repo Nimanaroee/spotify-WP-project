@@ -35,6 +35,7 @@ export default function ProfileSummaryHeader({
         alignItems: { xs: 'flex-start', md: 'center' },
         flexDirection: { xs: 'column', md: 'row' },
         justifyContent: 'space-between',
+        maxWidth: '100%',
         width: '100%',
       }}
     >
@@ -46,6 +47,7 @@ export default function ProfileSummaryHeader({
           gap,
           maxWidth: '100%',
           minWidth: 0,
+          width: '100%',
         }}
       >
         <Avatar

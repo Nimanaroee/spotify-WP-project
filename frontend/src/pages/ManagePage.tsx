@@ -563,9 +563,7 @@ export default function ManagePage() {
                         {copy.actions.edit}
                       </Button>
                     </Box>
-                  ) : (
-                    <Box sx={{ width: '100%' }} />
-                  )
+                  ) : null
                 }
               />
 

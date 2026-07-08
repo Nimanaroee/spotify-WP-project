@@ -7,6 +7,8 @@ import {
   Divider,
   Paper,
   Stack,
+  Tab,
+  Tabs,
   Typography,
   useMediaQuery,
 } from '@mui/material'
@@ -35,6 +37,7 @@ import { useAppLanguage } from '../theme/LanguageContext'
 import type { Album, Track, UserProfileView } from '../types'
 
 type ProfileView = UserProfileView | ArtistProfileView
+type FollowListType = 'followers' | 'following'
 
 function isArtistProfile(profile: ProfileView): profile is ArtistProfileView {
   return profile.user.role === ROLES.ARTIST && 'artist_profile' in profile
@@ -50,6 +53,8 @@ export default function UserProfilePage() {
   const copy = getAppText(language)
   const [profile, setProfile] = useState<ProfileView | null>(null)
   const [error, setError] = useState('')
+  const [activeFollowList, setActiveFollowList] =
+    useState<FollowListType>('followers')
 
   useEffect(() => {
     if (!authUser || !username) {
@@ -149,58 +154,58 @@ export default function UserProfilePage() {
     refreshProfile()
   }
 
+  const activeAccounts =
+    activeFollowList === 'followers' ? profile.followers : profile.following
   const followLists = (
-    <Box
-      sx={{
-        display: 'grid',
-        gap: 2,
-        gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-      }}
-    >
-      <FollowListPanel
-        accounts={profile.followers}
-        avatarSize={listAvatarSize}
-        emptyMessage={
-          language === 'fa'
-            ? 'دنبال‌کننده‌ای وجود ندارد.'
-            : 'No followers to show.'
-        }
-        gap={listGap}
-        getAccountHref={(account) =>
-          account.id === currentAuthUser.id
-            ? ROUTES.MANAGE
-            : userProfilePath(account.username ?? String(account.id))
-        }
-        height={listHeight}
-        isCompact={isCompactMobile}
-        padding={listPadding}
-        spacing={listSpacing}
-        subtitleSize={listSubtitleSize}
-        title={`${copy.profile.followers} (${profile.followers.length})`}
-        titleSize={listTitleSize}
-      />
-      <FollowListPanel
-        accounts={profile.following}
-        avatarSize={listAvatarSize}
-        emptyMessage={
-          language === 'fa'
-            ? 'حساب دنبال‌شده‌ای وجود ندارد.'
-            : 'No following accounts to show.'
-        }
-        gap={listGap}
-        getAccountHref={(account) =>
-          account.id === currentAuthUser.id
-            ? ROUTES.MANAGE
-            : userProfilePath(account.username ?? String(account.id))
-        }
-        height={listHeight}
-        isCompact={isCompactMobile}
-        padding={listPadding}
-        spacing={listSpacing}
-        subtitleSize={listSubtitleSize}
-        title={`${copy.profile.following} (${profile.following.length})`}
-        titleSize={listTitleSize}
-      />
+    <Box>
+      <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+        {`${copy.profile.followers} / ${copy.profile.following}`}
+      </Typography>
+      <Paper variant="outlined">
+        <Tabs
+          onChange={(_event, value: FollowListType) => {
+            setActiveFollowList(value)
+          }}
+          value={activeFollowList}
+          variant="fullWidth"
+        >
+          <Tab
+            label={`${copy.profile.followers} (${profile.followers.length})`}
+            value="followers"
+          />
+          <Tab
+            label={`${copy.profile.following} (${profile.following.length})`}
+            value="following"
+          />
+        </Tabs>
+        <Divider />
+        <FollowListPanel
+          accounts={activeAccounts}
+          avatarSize={listAvatarSize}
+          emptyMessage={
+            activeFollowList === 'followers'
+              ? language === 'fa'
+                ? 'دنبال‌کننده‌ای وجود ندارد.'
+                : 'No followers to show.'
+              : language === 'fa'
+                ? 'حساب دنبال‌شده‌ای وجود ندارد.'
+                : 'No following accounts to show.'
+          }
+          gap={listGap}
+          getAccountHref={(account) =>
+            account.id === currentAuthUser.id
+              ? ROUTES.MANAGE
+              : userProfilePath(account.username ?? String(account.id))
+          }
+          height={listHeight}
+          isCompact={isCompactMobile}
+          padding={listPadding}
+          spacing={listSpacing}
+          subtitleSize={listSubtitleSize}
+          surface={false}
+          titleSize={listTitleSize}
+        />
+      </Paper>
     </Box>
   )
 
