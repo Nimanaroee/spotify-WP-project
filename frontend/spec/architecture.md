@@ -21,16 +21,15 @@
 ```
 frontend/
 ├── spec/                    # Team conventions (this folder)
-├── public/                  # Static assets (default avatar, cover)
-├── scripts/                 # verify.sh and tooling
 └── src/
     ├── main.tsx             # App entry
-    ├── App.tsx              # Root providers + router
-    ├── index.css            # Tailwind directives + global styles
-    ├── theme/               # MUI palette, theme mode, language, RTL emotion cache
+    ├── App.tsx              # Root providers, seed/bootstrap, router, global player
+    ├── index.css            # Tailwind directives, font-face, global RTL font styles
+    ├── assets/              # Bundled app assets such as local fonts
+    ├── theme/               # MUI palette, theme mode, language, RTL Emotion cache
     ├── components/          # Reusable UI
-    │   ├── common/          # EmptyState, Button, Modal, ...
-    │   ├── layout/          # Sidebar, Navbar, PlayerBar, ...
+    │   ├── common/          # EmptyState, PageHeader, ThemeToggleButton, ...
+    │   ├── player/          # Persistent PlayerBar and player UI
     │   └── <feature>/       # Feature-specific components
     ├── layouts/             # Page shells (MainLayout, AdminLayout, ...)
     ├── pages/               # Route-level screens (one folder per page if large)
@@ -47,6 +46,8 @@ frontend/
 
 Add app-wide language context alongside theme concerns in `src/theme/` so pages can read the active locale without prop drilling. For Persian (`fa`), `App.tsx` swaps Emotion cache direction via `theme/emotionCache.ts` and sets `document.documentElement.dir`.
 
+`App.tsx` also seeds Phase 1 demo data, restores the current mock user, preloads mock media, loads notifications for the signed-in user, and renders `components/player/PlayerBar` outside the router pages so playback persists across route changes.
+
 ## Layer rules
 
 ### Pages (`src/pages/`)
@@ -58,7 +59,7 @@ Add app-wide language context alongside theme concerns in `src/theme/` so pages 
 ### Components (`src/components/`)
 
 - **common/** — used across multiple features (buttons, empty states, modals).
-- **layout/** — shell pieces shared by layouts (sidebar links, player bar).
+- **player/** — persistent music player and related controls.
 - **&lt;feature&gt/** — only used by one feature area (e.g. `components/player/ProgressBar.tsx`).
 
 Do not import page components from other pages. Share via `components/` or `lib/`.
@@ -66,20 +67,22 @@ Do not import page components from other pages. Share via `components/` or `lib/
 ### Layouts (`src/layouts/`)
 
 - Wrap `<Outlet />` (React Router) or `children`.
-- **MainLayout** — listener/artist: sidebar + navbar + bottom player.
+- **MainLayout** — authenticated app shell for home, playlists, albums, manage, profiles, settings, notifications, and artist studio.
 - **AdminLayout** — support/admin dashboard with its own sidebar.
-- Layouts read auth role and render the correct navigation set.
+- Layouts read auth role and render the correct navigation set from `src/lib/constants/navItems.ts`.
+- The global `PlayerBar` is rendered by `App.tsx`, not by individual layouts.
 
 ### Internationalization
 
 - Keep all user-facing text in shared locale modules under `src/lib/constants/`.
 - The active language is app-wide state and must persist via `localStorage`.
+- Persian (`fa`) switches the app to RTL, uses the RTL Emotion cache, and applies the bundled `Noto Sans Arabic` font from `src/assets/fonts/`.
 - Components should read copy from the shared locale module, not inline strings, when the text is user-facing or reused across pages.
 - Prefer a single source of truth for translated labels so switching language updates the whole app consistently.
 
 ### Store (`src/store/`)
 
-- One Zustand store per domain: `authStore`, `playerStore`, `notificationStore`.
+- One Zustand store per shared domain: currently `authStore`, `catalogStore`, `layoutStore`, `notificationStore`, and `playerStore`.
 - Stores hold **client state** and **cached server/mock data** when shared across routes.
 - Prefer local `useState` for UI-only state (open/closed modals).
 
@@ -92,7 +95,8 @@ Do not import page components from other pages. Share via `components/` or `lib/
 
 - `storage.ts` — typed localStorage access.
 - `seed.ts` — initial demo data on first load.
-- `services/` (add as needed) — functions that mimic future API calls (`playlistService.create`).
+- Feature service files such as `authService`, `playlistService`, `musicService`, `userProfileService`, `artistProfileService`, `notificationService`, `ticketService`, `verificationService`, `auditService`, and `subscriptionAdminService`.
+- `mediaCache.ts` — caches/preloads mock media used by the player and catalog.
 
 Phase 2 replaces mock services with real API calls using the **same function signatures** where possible.
 
@@ -144,6 +148,9 @@ The app uses Material UI as the source of truth for color, radius, and component
 
 - Theme creation lives in `src/theme/appTheme.ts`.
 - Theme mode state and persistence live in `src/theme/ThemeModeContext.tsx`.
+- Language state lives in `src/theme/LanguageContext.tsx` and persists with `spotify-wp-app-language`.
+- RTL support lives in `src/theme/emotionCache.ts`; `App.tsx` switches caches when language changes.
+- Persian typography uses `Noto Sans Arabic` declared in `src/index.css`.
 - Use MUI semantic tokens such as `bgcolor: 'background.default'`, `bgcolor: 'background.paper'`, `color: 'text.primary'`, and `color: 'text.secondary'`.
 - Use `ThemeToggleButton` from `src/components/common/ThemeToggleButton.tsx` when a page needs to expose theme switching.
 - Persist the selected mode with `spotify-wp-theme-mode` in `localStorage`; do not introduce another theme storage key.
