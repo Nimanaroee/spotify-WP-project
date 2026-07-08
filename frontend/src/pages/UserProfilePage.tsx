@@ -8,10 +8,12 @@ import {
   Paper,
   Stack,
   Typography,
+  useMediaQuery,
 } from '@mui/material'
 import { BadgeCheck } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
+import MainLayout from '../layouts/MainLayout' // ADDED LAYOUT IMPORT
 import ArtistReleaseCard from '../components/profile/ArtistReleaseCard'
 import FollowListPanel from '../components/profile/FollowListPanel'
 import ProfileStatsGrid from '../components/profile/ProfileStatsGrid'
@@ -28,7 +30,6 @@ import {
   getUserProfileView,
   unfollowAccount,
 } from '../lib/mock/userProfileService'
-import { useIsMobile } from '../hooks/useIsMobile'
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 import type { UserProfileView } from '../types'
@@ -43,7 +44,7 @@ export default function UserProfilePage() {
   const { username } = useParams()
   const navigate = useNavigate()
   const authUser = useAuthStore((state) => state.user)
-  const isCompactMobile = useIsMobile()
+  const isCompactMobile = useMediaQuery('(max-width:767px)')
   const { language } = useAppLanguage()
   const copy = getAppText(language)
   const [profile, setProfile] = useState<ProfileView | null>(null)
@@ -78,13 +79,11 @@ export default function UserProfilePage() {
 
   if (error) {
     return (
-      <Box
-        className="min-h-screen p-4 md:p-8"
-        dir={language === 'fa' ? 'rtl' : 'ltr'}
-        sx={{ bgcolor: 'background.default' }}
-      >
-        <Alert severity="error">{error}</Alert>
-      </Box>
+      <MainLayout>
+        <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      </MainLayout>
     )
   }
 
@@ -132,214 +131,217 @@ export default function UserProfilePage() {
     refreshProfile()
   }
 
+  // WRAP IN MainLayout Component
   return (
-    <Box
-      className="min-h-screen p-4 md:p-8"
-      dir={language === 'fa' ? 'rtl' : 'ltr'}
-      sx={{ bgcolor: 'background.default' }}
-    >
-      <Paper className="mx-auto max-w-5xl p-5 md:p-8">
-        <Stack spacing={3}>
-          <ProfileSummaryHeader
-            language={language}
-            showSubscriptionLabel={!artistProfile}
-            user={
-              artistProfile
-                ? {
-                    ...profile.user,
-                    display_name: artistProfile.artist_profile.stage_name,
-                  }
-                : profile.user
-            }
-            action={
-              <Stack
-                spacing={1}
-                sx={{
-                  alignItems: { xs: 'stretch', md: 'flex-end' },
-                  width: { xs: '100%', md: 'auto' },
-                }}
-              >
-                {artistProfile?.artist_profile.is_verified ? (
-                  <Chip
-                    color="success"
-                    icon={<BadgeCheck size={16} />}
-                    label={copy.profile.verifiedArtist}
-                  />
-                ) : null}
-                <Button
-                  color={profile.is_following ? 'inherit' : 'primary'}
-                  onClick={handleToggleFollow}
-                  size="small"
-                  variant={profile.is_following ? 'outlined' : 'contained'}
+    <MainLayout>
+      <Box
+        className="min-h-screen p-4 md:p-8"
+        dir={language === 'fa' ? 'rtl' : 'ltr'}
+        sx={{ bgcolor: 'background.default' }}
+      >
+        <Paper className="mx-auto max-w-5xl p-5 md:p-8">
+          <Stack spacing={3}>
+            <ProfileSummaryHeader
+              language={language}
+              showSubscriptionLabel={!artistProfile}
+              user={
+                artistProfile
+                  ? {
+                      ...profile.user,
+                      display_name: artistProfile.artist_profile.stage_name,
+                    }
+                  : profile.user
+              }
+              action={
+                <Stack
+                  spacing={1}
+                  sx={{
+                    alignItems: { xs: 'stretch', md: 'flex-end' },
+                    width: { xs: '100%', md: 'auto' },
+                  }}
                 >
-                  {profile.is_following ? copy.profile.unfollow : copy.profile.follow}
-                </Button>
-              </Stack>
-            }
-          />
+                  {artistProfile?.artist_profile.is_verified ? (
+                    <Chip
+                      color="success"
+                      icon={<BadgeCheck size={16} />}
+                      label={copy.profile.verifiedArtist}
+                    />
+                  ) : null}
+                  <Button
+                    color={profile.is_following ? 'inherit' : 'primary'}
+                    onClick={handleToggleFollow}
+                    size="small"
+                    variant={profile.is_following ? 'outlined' : 'contained'}
+                  >
+                    {profile.is_following ? copy.profile.unfollow : copy.profile.follow}
+                  </Button>
+                </Stack>
+              }
+            />
 
-          {artistProfile ? (
-            <>
-              <Paper className="p-4" variant="outlined">
-                <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
-                  {copy.profile.artistBio}
-                </Typography>
-                <Typography color="text.secondary" sx={{ mt: 1 }}>
-                  {artistProfile.artist_profile.bio || copy.profile.notSet}
-                </Typography>
-              </Paper>
+            {artistProfile ? (
+              <>
+                <Paper className="p-4" variant="outlined">
+                  <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
+                    {copy.profile.artistBio}
+                  </Typography>
+                  <Typography color="text.secondary" sx={{ mt: 1 }}>
+                    {artistProfile.artist_profile.bio || copy.profile.notSet}
+                  </Typography>
+                </Paper>
 
-              {canViewPremiumAnalytics ? (
+                {canViewPremiumAnalytics ? (
+                  <ProfileStatsGrid
+                    columns="repeat(2, minmax(0, 1fr))"
+                    labelSize={statsLabelSize}
+                    padding={statsCardPadding}
+                    stats={[
+                      {
+                        label: copy.profile.totalListeners,
+                        value: artistProfile.listener_count,
+                      },
+                      {
+                        label: copy.profile.totalStreams,
+                        value: artistProfile.total_streams,
+                      },
+                    ]}
+                    valueSize={statsValueSize}
+                  />
+                ) : (
+                  <Alert severity="info">{copy.profile.goldOnlyAnalytics}</Alert>
+                )}
+
+                <Divider />
+
+                <Box>
+                  <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                    {copy.profile.albums}
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    {artistProfile.albums.length > 0 ? (
+                      artistProfile.albums.map((album) => (
+                        <ArtistReleaseCard key={album.id} release={album} />
+                      ))
+                    ) : (
+                      <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
+                    )}
+                  </Stack>
+                </Box>
+
+                <Box>
+                  <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                    {copy.profile.singles}
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    {artistProfile.singles.length > 0 ? (
+                      artistProfile.singles.map((single) => (
+                        <ArtistReleaseCard key={single.id} release={single} />
+                      ))
+                    ) : (
+                      <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
+                    )}
+                  </Stack>
+                </Box>
+              </>
+            ) : (
+              <>
                 <ProfileStatsGrid
-                  columns="repeat(2, minmax(0, 1fr))"
+                  columns={statsGridColumns}
                   labelSize={statsLabelSize}
                   padding={statsCardPadding}
                   stats={[
                     {
-                      label: copy.profile.totalListeners,
-                      value: artistProfile.listener_count,
+                      label: copy.profile.followers,
+                      value: profile.user.followers_count ?? 0,
                     },
                     {
-                      label: copy.profile.totalStreams,
-                      value: artistProfile.total_streams,
+                      label: copy.profile.following,
+                      value: profile.user.following_count ?? 0,
+                    },
+                    {
+                      label: copy.profile.streamedToday,
+                      value: profile.daily_streams_count,
                     },
                   ]}
                   valueSize={statsValueSize}
                 />
-              ) : (
-                <Alert severity="info">{copy.profile.goldOnlyAnalytics}</Alert>
-              )}
 
-              <Divider />
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: 2,
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                  }}
+                >
+                  <Paper variant="outlined" className="p-4">
+                    <Typography color="text.secondary" variant="body2">
+                      {copy.profile.birthDate}
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {profile.user.birth_date ?? copy.profile.notSet}
+                    </Typography>
+                  </Paper>
+                  <Paper variant="outlined" className="p-4">
+                    <Typography color="text.secondary" variant="body2">
+                      {copy.profile.gender}
+                    </Typography>
+                    <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                      {profile.user.gender
+                        ? profile.user.gender === 'prefer_not_to_say'
+                          ? copy.profile.genderValue.preferNotToSay
+                          : copy.profile.genderValue[profile.user.gender]
+                        : copy.profile.notSet}
+                    </Typography>
+                  </Paper>
+                </Box>
+              </>
+            )}
 
-              <Box>
-                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                  {copy.profile.albums}
-                </Typography>
-                <Stack spacing={1.5}>
-                  {artistProfile.albums.length > 0 ? (
-                    artistProfile.albums.map((album) => (
-                      <ArtistReleaseCard key={album.id} release={album} />
-                    ))
-                  ) : (
-                    <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
-                  )}
-                </Stack>
-              </Box>
-
-              <Box>
-                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                  {copy.profile.singles}
-                </Typography>
-                <Stack spacing={1.5}>
-                  {artistProfile.singles.length > 0 ? (
-                    artistProfile.singles.map((single) => (
-                      <ArtistReleaseCard key={single.id} release={single} />
-                    ))
-                  ) : (
-                    <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
-                  )}
-                </Stack>
-              </Box>
-            </>
-          ) : (
-            <>
-              <ProfileStatsGrid
-                columns={statsGridColumns}
-                labelSize={statsLabelSize}
-                padding={statsCardPadding}
-                stats={[
-                  {
-                    label: copy.profile.followers,
-                    value: profile.user.followers_count ?? 0,
-                  },
-                  {
-                    label: copy.profile.following,
-                    value: profile.user.following_count ?? 0,
-                  },
-                  {
-                    label: copy.profile.streamedToday,
-                    value: profile.daily_streams_count,
-                  },
-                ]}
-                valueSize={statsValueSize}
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+              }}
+            >
+              <FollowListPanel
+                accounts={profile.followers}
+                avatarSize={listAvatarSize}
+                emptyMessage={
+                  language === 'fa'
+                    ? 'دنبال‌کننده‌ای وجود ندارد.'
+                    : 'No followers to show.'
+                }
+                gap={listGap}
+                height={listHeight}
+                isCompact={isCompactMobile}
+                padding={listPadding}
+                spacing={listSpacing}
+                subtitleSize={listSubtitleSize}
+                title={copy.profile.followers}
+                titleSize={listTitleSize}
               />
-
-              <Box
-                sx={{
-                  display: 'grid',
-                  gap: 2,
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-                }}
-              >
-                <Paper variant="outlined" className="p-4">
-                  <Typography color="text.secondary" variant="body2">
-                    {copy.profile.birthDate}
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    {profile.user.birth_date ?? copy.profile.notSet}
-                  </Typography>
-                </Paper>
-                <Paper variant="outlined" className="p-4">
-                  <Typography color="text.secondary" variant="body2">
-                    {copy.profile.gender}
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
-                    {profile.user.gender
-                      ? profile.user.gender === 'prefer_not_to_say'
-                        ? copy.profile.genderValue.preferNotToSay
-                        : copy.profile.genderValue[profile.user.gender]
-                      : copy.profile.notSet}
-                  </Typography>
-                </Paper>
-              </Box>
-            </>
-          )}
-
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 2,
-              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-            }}
-          >
-            <FollowListPanel
-              accounts={profile.followers}
-              avatarSize={listAvatarSize}
-              emptyMessage={
-                language === 'fa'
-                  ? 'دنبال‌کننده‌ای وجود ندارد.'
-                  : 'No followers to show.'
-              }
-              gap={listGap}
-              height={listHeight}
-              isCompact={isCompactMobile}
-              padding={listPadding}
-              spacing={listSpacing}
-              subtitleSize={listSubtitleSize}
-              title={copy.profile.followers}
-              titleSize={listTitleSize}
-            />
-            <FollowListPanel
-              accounts={profile.following}
-              avatarSize={listAvatarSize}
-              emptyMessage={
-                language === 'fa'
-                  ? 'حساب دنبال‌شده‌ای وجود ندارد.'
-                  : 'No following accounts to show.'
-              }
-              gap={listGap}
-              height={listHeight}
-              isCompact={isCompactMobile}
-              padding={listPadding}
-              spacing={listSpacing}
-              subtitleSize={listSubtitleSize}
-              title={copy.profile.following}
-              titleSize={listTitleSize}
-            />
-          </Box>
-        </Stack>
-      </Paper>
-    </Box>
+              <FollowListPanel
+                accounts={profile.following}
+                avatarSize={listAvatarSize}
+                emptyMessage={
+                  language === 'fa'
+                    ? 'حساب دنبال‌شده‌ای وجود ندارد.'
+                    : 'No following accounts to show.'
+                }
+                gap={listGap}
+                height={listHeight}
+                isCompact={isCompactMobile}
+                padding={listPadding}
+                spacing={listSpacing}
+                subtitleSize={listSubtitleSize}
+                title={copy.profile.following}
+                titleSize={listTitleSize}
+              />
+            </Box>
+          </Stack>
+        </Paper>
+      </Box>
+    </MainLayout>
   )
 }

@@ -12,10 +12,12 @@ import {
   Tabs,
   TextField,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import { BadgeCheck } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
+import MainLayout from '../layouts/MainLayout'; // IMPORT ADDED HERE!
 import ArtistReleaseCard from '../components/profile/ArtistReleaseCard';
 import FollowListPanel from '../components/profile/FollowListPanel';
 import ProfileStatsGrid from '../components/profile/ProfileStatsGrid';
@@ -37,7 +39,6 @@ import {
   unfollowAccount,
   updateUserProfile,
 } from '../lib/mock/userProfileService';
-import { useIsMobile } from '../hooks/useIsMobile';
 import { useAuthStore } from '../store/authStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import type {
@@ -79,7 +80,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
   const { language } = useAppLanguage();
   const copy = getAppText(language);
   const manageCopy = getManagePageText(language);
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery('(max-width:767px)');
   const [message, setMessage] = useState<string | null>(null);
   const [artistView, setArtistView] = useState<ArtistProfileView>(() => {
     const baseProfile = getUserProfileView(authUser.id, authUser.username);
@@ -170,195 +171,197 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
       : artistView.following;
 
   return (
-    <Box
-      className="min-h-screen p-4 md:p-8"
-      dir={language === 'fa' ? 'rtl' : 'ltr'}
-      sx={{ bgcolor: 'background.default' }}
-    >
-      <Stack className="mx-auto max-w-5xl" spacing={3}>
-        <Paper className="p-5 md:p-8">
-          <Stack spacing={3}>
-            <ProfileSummaryHeader
-              avatarSize={88}
-              gap={2.5}
-              language={language}
-              showSubscriptionLabel={false}
-              titleSize={{ xs: '2.125rem', md: '2.125rem' }}
-              user={{
-                ...artistView.user,
-                display_name: artistView.artist_profile.stage_name,
-              }}
-              action={
-                artistView.artist_profile.is_verified ? (
-                  <Chip
-                    color="success"
-                    icon={<BadgeCheck size={16} />}
-                    label={copy.profile.verifiedArtist}
-                  />
-                ) : null
-              }
-            />
-
-            {message ? <Alert severity="success">{message}</Alert> : null}
-
-            <Paper className="p-4" variant="outlined">
-              <Stack spacing={2}>
-                <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
-                  {copy.profile.artistContent}
-                </Typography>
-                <TextField
-                  fullWidth
-                  label={copy.profile.artisticName}
-                  onChange={(event) =>
-                    setEditableArtistProfile((current) => ({
-                      ...current,
-                      stage_name: event.target.value,
-                    }))
-                  }
-                  value={editableArtistProfile.stage_name}
-                />
-                <Box>
-                  <Button component="label" variant="outlined">
-                    {manageCopy.form.changePhoto}
-                    <input
-                      aria-label="Profile photo upload"
-                      accept="image/*"
-                      hidden
-                      onChange={handleArtistPhotoUpload}
-                      type="file"
+    <MainLayout>
+      <Box
+        className="min-h-screen p-4 md:p-8"
+        dir={language === 'fa' ? 'rtl' : 'ltr'}
+        sx={{ bgcolor: 'background.default' }}
+      >
+        <Stack className="mx-auto max-w-5xl" spacing={3}>
+          <Paper className="p-5 md:p-8">
+            <Stack spacing={3}>
+              <ProfileSummaryHeader
+                avatarSize={88}
+                gap={2.5}
+                language={language}
+                showSubscriptionLabel={false}
+                titleSize={{ xs: '2.125rem', md: '2.125rem' }}
+                user={{
+                  ...artistView.user,
+                  display_name: artistView.artist_profile.stage_name,
+                }}
+                action={
+                  artistView.artist_profile.is_verified ? (
+                    <Chip
+                      color="success"
+                      icon={<BadgeCheck size={16} />}
+                      label={copy.profile.verifiedArtist}
                     />
-                  </Button>
-                </Box>
-                <Box>
-                  <Button onClick={handleSaveArtisticName} variant="contained">
-                    {copy.profile.saveArtistProfile}
-                  </Button>
-                </Box>
-                <Divider />
-                <TextField
-                  fullWidth
-                  label={copy.profile.artistBio}
-                  minRows={4}
-                  multiline
-                  onChange={(event) =>
-                    setEditableArtistProfile((current) => ({
-                      ...current,
-                      bio: event.target.value,
-                    }))
-                  }
-                  value={editableArtistProfile.bio}
-                />
-              </Stack>
-            </Paper>
+                  ) : null
+                }
+              />
 
-            <ProfileStatsGrid
-              columns={statsGridColumns}
-              labelSize={statsLabelSize}
-              padding={statsCardPadding}
-              stats={[
-                {
-                  label: copy.profile.totalListeners,
-                  value: artistView.listener_count,
-                },
-                {
-                  label: copy.profile.totalStreams,
-                  value: artistView.total_streams,
-                },
-              ]}
-              valueSize={statsValueSize}
-            />
+              {message ? <Alert severity="success">{message}</Alert> : null}
 
-            <Box>
-              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                {copy.profile.albums}
-              </Typography>
-              <Stack spacing={1.5}>
-                {artistView.albums.length > 0 ? (
-                  artistView.albums.map((album) => (
-                    <ArtistReleaseCard key={album.id} release={album} />
-                  ))
-                ) : (
-                  <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
-                )}
-              </Stack>
-            </Box>
-
-            <Box>
-              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                {copy.profile.singles}
-              </Typography>
-              <Stack spacing={1.5}>
-                {artistView.singles.length > 0 ? (
-                  artistView.singles.map((single) => (
-                    <ArtistReleaseCard key={single.id} release={single} />
-                  ))
-                ) : (
-                  <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
-                )}
-              </Stack>
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
-                {manageCopy.sections.followersAndFollowing}
-              </Typography>
-              <Paper variant="outlined">
-                <Tabs
-                  onChange={(_event, value: FollowListType) => {
-                    setActiveFollowList(value);
-                    setMessage(null);
-                  }}
-                  value={activeFollowList}
-                  variant="fullWidth"
-                >
-                  <Tab
-                    label={`${manageCopy.tabs.followers} (${artistView.followers.length})`}
-                    value="followers"
+              <Paper className="p-4" variant="outlined">
+                <Stack spacing={2}>
+                  <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
+                    {copy.profile.artistContent}
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    label={copy.profile.artisticName}
+                    onChange={(event) =>
+                      setEditableArtistProfile((current) => ({
+                        ...current,
+                        stage_name: event.target.value,
+                      }))
+                    }
+                    value={editableArtistProfile.stage_name}
                   />
-                  <Tab
-                    label={`${manageCopy.tabs.following} (${artistView.following.length})`}
-                    value="following"
+                  <Box>
+                    <Button component="label" variant="outlined">
+                      {manageCopy.form.changePhoto}
+                      <input
+                        aria-label="Profile photo upload"
+                        accept="image/*"
+                        hidden
+                        onChange={handleArtistPhotoUpload}
+                        type="file"
+                      />
+                    </Button>
+                  </Box>
+                  <Box>
+                    <Button onClick={handleSaveArtisticName} variant="contained">
+                      {copy.profile.saveArtistProfile}
+                    </Button>
+                  </Box>
+                  <Divider />
+                  <TextField
+                    fullWidth
+                    label={copy.profile.artistBio}
+                    minRows={4}
+                    multiline
+                    onChange={(event) =>
+                      setEditableArtistProfile((current) => ({
+                        ...current,
+                        bio: event.target.value,
+                      }))
+                    }
+                    value={editableArtistProfile.bio}
                   />
-                </Tabs>
-                <Divider />
-                <FollowListPanel
-                  accounts={activeAccounts}
-                  avatarSize={listAvatarSize}
-                  emptyStateKey="accounts"
-                  gap={listGap}
-                  getAccountAction={(account) =>
-                    activeFollowList === 'following' ? (
-                      <Button
-                        aria-label={`Unfollow ${account.display_name}`}
-                        color="inherit"
-                        onClick={() => handleRemoveFollowAccount(account)}
-                        size="small"
-                        variant="text"
-                      >
-                        {manageCopy.actions.unfollow}
-                      </Button>
-                    ) : null
-                  }
-                  getAccountHref={(account) =>
-                    userProfilePath(account.username ?? String(account.id))
-                  }
-                  height={listHeight}
-                  isCompact={isCompactMobile}
-                  language={language}
-                  padding={listPadding}
-                  spacing={listSpacing}
-                  surface={false}
-                  subtitleSize={listSubtitleSize}
-                  titleSize={listTitleSize}
-                />
+                </Stack>
               </Paper>
-            </Box>
-          </Stack>
-        </Paper>
-      </Stack>
-    </Box>
+
+              <ProfileStatsGrid
+                columns={statsGridColumns}
+                labelSize={statsLabelSize}
+                padding={statsCardPadding}
+                stats={[
+                  {
+                    label: copy.profile.totalListeners,
+                    value: artistView.listener_count,
+                  },
+                  {
+                    label: copy.profile.totalStreams,
+                    value: artistView.total_streams,
+                  },
+                ]}
+                valueSize={statsValueSize}
+              />
+
+              <Box>
+                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                  {copy.profile.albums}
+                </Typography>
+                <Stack spacing={1.5}>
+                  {artistView.albums.length > 0 ? (
+                    artistView.albums.map((album) => (
+                      <ArtistReleaseCard key={album.id} release={album} />
+                    ))
+                  ) : (
+                    <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
+                  )}
+                </Stack>
+              </Box>
+
+              <Box>
+                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 2 }}>
+                  {copy.profile.singles}
+                </Typography>
+                <Stack spacing={1.5}>
+                  {artistView.singles.length > 0 ? (
+                    artistView.singles.map((single) => (
+                      <ArtistReleaseCard key={single.id} release={single} />
+                    ))
+                  ) : (
+                    <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
+                  )}
+                </Stack>
+              </Box>
+
+              <Divider />
+
+              <Box>
+                <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  {manageCopy.sections.followersAndFollowing}
+                </Typography>
+                <Paper variant="outlined">
+                  <Tabs
+                    onChange={(_event, value: FollowListType) => {
+                      setActiveFollowList(value);
+                      setMessage(null);
+                    }}
+                    value={activeFollowList}
+                    variant="fullWidth"
+                  >
+                    <Tab
+                      label={`${manageCopy.tabs.followers} (${artistView.followers.length})`}
+                      value="followers"
+                    />
+                    <Tab
+                      label={`${manageCopy.tabs.following} (${artistView.following.length})`}
+                      value="following"
+                    />
+                  </Tabs>
+                  <Divider />
+                  <FollowListPanel
+                    accounts={activeAccounts}
+                    avatarSize={listAvatarSize}
+                    emptyStateKey="accounts"
+                    gap={listGap}
+                    getAccountAction={(account) =>
+                      activeFollowList === 'following' ? (
+                        <Button
+                          aria-label={`Unfollow ${account.display_name}`}
+                          color="inherit"
+                          onClick={() => handleRemoveFollowAccount(account)}
+                          size="small"
+                          variant="text"
+                        >
+                          {manageCopy.actions.unfollow}
+                        </Button>
+                      ) : null
+                    }
+                    getAccountHref={(account) =>
+                      userProfilePath(account.username ?? String(account.id))
+                    }
+                    height={listHeight}
+                    isCompact={isCompactMobile}
+                    language={language}
+                    padding={listPadding}
+                    spacing={listSpacing}
+                    surface={false}
+                    subtitleSize={listSubtitleSize}
+                    titleSize={listTitleSize}
+                  />
+                </Paper>
+              </Box>
+            </Stack>
+          </Paper>
+        </Stack>
+      </Box>
+    </MainLayout>
   );
 }
 
@@ -373,7 +376,7 @@ export default function ManagePage() {
   const [profile, setProfile] = useState<ManageProfile | null>(() =>
     authUser ? getManageProfile(authUser.id) : null
   );
-  const isMobile = useIsMobile();
+  const isMobile = useMediaQuery('(max-width:767px)');
   const [editableProfile, setEditableProfile] = useState<EditableProfile>(() =>
     profile
       ? createEditableProfile(profile)
@@ -394,23 +397,21 @@ export default function ManagePage() {
     return <ArtistManagementPage authUser={authUser} />;
   }
 
-  if (
-    authUser.role !== ROLES.LISTENER &&
-    authUser.role !== ROLES.SUPPORT &&
-    authUser.role !== ROLES.ADMIN
-  ) {
+  if (authUser.role !== ROLES.LISTENER) {
     return <Navigate to={ROUTES.HOME} replace />;
   }
 
   if (!profile) {
     return (
-      <Box
-        className="min-h-screen p-4 md:p-8"
-        dir={language === 'fa' ? 'rtl' : 'ltr'}
-        sx={{ bgcolor: 'background.default' }}
-      >
-        <Alert severity="error">{copy.messages.profileNotFound}</Alert>
-      </Box>
+      <MainLayout>
+        <Box
+          className="min-h-screen p-6"
+          dir={language === 'fa' ? 'rtl' : 'ltr'}
+          sx={{ bgcolor: 'background.default' }}
+        >
+          <Alert severity="error">{copy.messages.profileNotFound}</Alert>
+        </Box>
+      </MainLayout>
     );
   }
 
@@ -506,264 +507,266 @@ export default function ManagePage() {
     activeFollowList === 'followers' ? profile.followers : profile.following;
 
   return (
-    <Box
-      className="min-h-screen p-4 md:p-8"
-      dir={language === 'fa' ? 'rtl' : 'ltr'}
-      sx={{ bgcolor: 'background.default' }}
-    >
-      <Stack className="mx-auto max-w-5xl" spacing={3}>
-        <Paper className="p-5 md:p-8">
-          <Stack spacing={3}>
-            <ProfileSummaryHeader
-              avatarSize={88}
-              gap={2.5}
-              language={language}
-              titleSize={{ xs: '2.125rem', md: '2.125rem' }}
-              user={profile.user}
-              action={
-                !isMobile && !isEditing ? (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexShrink: 0,
-                      justifyContent: 'flex-end',
-                      width: { xs: '100%', md: 'auto' },
-                    }}
-                  >
-                    <Button
-                      onClick={handleStartEdit}
-                      size="large"
-                      variant="outlined"
+    <MainLayout>
+      <Box
+        className="min-h-screen p-4 md:p-8"
+        dir={language === 'fa' ? 'rtl' : 'ltr'}
+        sx={{ bgcolor: 'background.default' }}
+      >
+        <Stack className="mx-auto max-w-5xl" spacing={3}>
+          <Paper className="p-5 md:p-8">
+            <Stack spacing={3}>
+              <ProfileSummaryHeader
+                avatarSize={88}
+                gap={2.5}
+                language={language}
+                titleSize={{ xs: '2.125rem', md: '2.125rem' }}
+                user={profile.user}
+                action={
+                  !isMobile && !isEditing ? (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexShrink: 0,
+                        justifyContent: 'flex-end',
+                        width: { xs: '100%', md: 'auto' },
+                      }}
                     >
+                      <Button
+                        onClick={handleStartEdit}
+                        size="large"
+                        variant="outlined"
+                      >
+                        {copy.actions.edit}
+                      </Button>
+                    </Box>
+                  ) : (
+                    <Box sx={{ width: '100%' }} />
+                  )
+                }
+              />
+
+              {message ? <Alert severity="success">{message}</Alert> : null}
+
+              <ProfileStatsGrid
+                columns={statsGridColumns}
+                language={language}
+                labelSize={statsLabelSize}
+                padding={statsCardPadding}
+                stats={[
+                  {
+                    key: 'followers',
+                    value: profile.user.followers_count ?? 0,
+                  },
+                  {
+                    key: 'following',
+                    value: profile.user.following_count ?? 0,
+                  },
+                  {
+                    key: 'streamedToday',
+                    value: profile.daily_streams_count,
+                  },
+                ]}
+                valueSize={statsValueSize}
+              />
+
+              <Divider />
+
+              <Box>
+                <Typography
+                  component="h2"
+                  variant="h6"
+                  sx={{ fontWeight: 700, mb: 1 }}
+                >
+                  {copy.sections.followersAndFollowing}
+                </Typography>
+                <Paper variant="outlined">
+                  <Tabs
+                    onChange={(_event, value: FollowListType) => {
+                      setActiveFollowList(value);
+                      setMessage(null);
+                    }}
+                    value={activeFollowList}
+                    variant="fullWidth"
+                  >
+                    <Tab
+                      label={`${copy.tabs.followers} (${profile.followers.length})`}
+                      value="followers"
+                    />
+                    <Tab
+                      label={`${copy.tabs.following} (${profile.following.length})`}
+                      value="following"
+                    />
+                  </Tabs>
+                  <Divider />
+                  <FollowListPanel
+                    accounts={activeAccounts}
+                    avatarSize={listAvatarSize}
+                    emptyStateKey="accounts"
+                    gap={listGap}
+                    getAccountAction={(account) =>
+                      activeFollowList === 'following' ? (
+                        <Button
+                          aria-label={`Unfollow ${account.display_name}`}
+                          color="inherit"
+                          onClick={() => handleRemoveFollowAccount(account)}
+                          size="small"
+                          variant="text"
+                        >
+                          {copy.actions.unfollow}
+                        </Button>
+                      ) : null
+                    }
+                    getAccountHref={(account) =>
+                      userProfilePath(account.username ?? String(account.id))
+                    }
+                    height={listHeight}
+                    isCompact={isCompactMobile}
+                    language={language}
+                    padding={listPadding}
+                    spacing={listSpacing}
+                    surface={false}
+                    subtitleSize={listSubtitleSize}
+                    titleSize={listTitleSize}
+                  />
+                </Paper>
+              </Box>
+
+              <Divider />
+
+              <Box>
+                <Typography
+                  component="h2"
+                  variant="h6"
+                  sx={{ fontWeight: 700, mb: 2 }}
+                >
+                  {copy.sections.personalInformation}
+                </Typography>
+                {isMobile && !isEditing ? (
+                  <Box
+                    sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}
+                  >
+                    <Button onClick={handleStartEdit} variant="outlined">
                       {copy.actions.edit}
                     </Button>
                   </Box>
-                ) : (
-                  <Box sx={{ width: '100%' }} />
-                )
-              }
-            />
-
-            {message ? <Alert severity="success">{message}</Alert> : null}
-
-            <ProfileStatsGrid
-              columns={statsGridColumns}
-              language={language}
-              labelSize={statsLabelSize}
-              padding={statsCardPadding}
-              stats={[
-                {
-                  key: 'followers',
-                  value: profile.user.followers_count ?? 0,
-                },
-                {
-                  key: 'following',
-                  value: profile.user.following_count ?? 0,
-                },
-                {
-                  key: 'streamedToday',
-                  value: profile.daily_streams_count,
-                },
-              ]}
-              valueSize={statsValueSize}
-            />
-
-            <Divider />
-
-            <Box>
-              <Typography
-                component="h2"
-                variant="h6"
-                sx={{ fontWeight: 700, mb: 1.5 }}
-              >
-                {copy.sections.followersAndFollowing}
-              </Typography>
-              <Paper variant="outlined">
-                <Tabs
-                  onChange={(_event, value: FollowListType) => {
-                    setActiveFollowList(value);
-                    setMessage(null);
-                  }}
-                  value={activeFollowList}
-                  variant="fullWidth"
-                >
-                  <Tab
-                    label={`${copy.tabs.followers} (${profile.followers.length})`}
-                    value="followers"
-                  />
-                  <Tab
-                    label={`${copy.tabs.following} (${profile.following.length})`}
-                    value="following"
-                  />
-                </Tabs>
-                <Divider />
-                <FollowListPanel
-                  accounts={activeAccounts}
-                  avatarSize={listAvatarSize}
-                  emptyStateKey="accounts"
-                  gap={listGap}
-                  getAccountAction={(account) =>
-                    activeFollowList === 'following' ? (
-                      <Button
-                        aria-label={`Unfollow ${account.display_name}`}
-                        color="inherit"
-                        onClick={() => handleRemoveFollowAccount(account)}
-                        size="small"
-                        variant="text"
-                      >
-                        {copy.actions.unfollow}
-                      </Button>
-                    ) : null
-                  }
-                  getAccountHref={(account) =>
-                    userProfilePath(account.username ?? String(account.id))
-                  }
-                  height={listHeight}
-                  isCompact={isCompactMobile}
-                  language={language}
-                  padding={listPadding}
-                  spacing={listSpacing}
-                  surface={false}
-                  subtitleSize={listSubtitleSize}
-                  titleSize={listTitleSize}
-                />
-              </Paper>
-            </Box>
-
-            <Divider />
-
-            <Box>
-              <Typography
-                component="h2"
-                variant="h6"
-                sx={{ fontWeight: 700, mb: 1.5 }}
-              >
-                {copy.sections.personalInformation}
-              </Typography>
-              {isMobile && !isEditing ? (
+                ) : null}
                 <Box
-                  sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}
+                  sx={{
+                    display: 'grid',
+                    gap: 2,
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                  }}
                 >
-                  <Button onClick={handleStartEdit} variant="outlined">
-                    {copy.actions.edit}
-                  </Button>
+                  <Box>
+                    <TextField
+                      fullWidth
+                      label={copy.form.displayName}
+                      onChange={(event) =>
+                        handleEditableChange('display_name', event.target.value)
+                      }
+                      value={
+                        isEditing
+                          ? editableProfile.display_name
+                          : profile.user.display_name
+                      }
+                      disabled={!isEditing}
+                    />
+                  </Box>
+                  <Box>
+                    <TextField
+                      fullWidth
+                      label={copy.form.systemUsername}
+                      value={profile.user.username}
+                      disabled
+                    />
+                  </Box>
+                  <Box>
+                    <TextField
+                      fullWidth
+                      label={copy.form.birthDate}
+                      onChange={(event) =>
+                        handleEditableChange('birth_date', event.target.value)
+                      }
+                      type="date"
+                      value={
+                        isEditing
+                          ? editableProfile.birth_date
+                          : profile.user.birth_date ?? ''
+                      }
+                      disabled={!isEditing}
+                      slotProps={{ inputLabel: { shrink: true } }}
+                    />
+                  </Box>
+                  <Box>
+                    <TextField
+                      fullWidth
+                      label={copy.form.gender}
+                      onChange={(event) =>
+                        handleEditableChange('gender', event.target.value)
+                      }
+                      select
+                      value={
+                        isEditing
+                          ? editableProfile.gender
+                          : profile.user.gender ?? ''
+                      }
+                      disabled={!isEditing}
+                    >
+                      <MenuItem value="male">
+                        {copy.form.genderOptions.male}
+                      </MenuItem>
+                      <MenuItem value="female">
+                        {copy.form.genderOptions.female}
+                      </MenuItem>
+                      <MenuItem value="other">
+                        {copy.form.genderOptions.other}
+                      </MenuItem>
+                      <MenuItem value="prefer_not_to_say">
+                        {copy.form.genderOptions.preferNotToSay}
+                      </MenuItem>
+                    </TextField>
+                  </Box>
+                  {isEditing && canEditProfilePicture ? (
+                    <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
+                      <Button component="label" variant="outlined">
+                        {copy.form.changePhoto}
+                        <input
+                          aria-label="Profile photo upload"
+                          accept="image/*"
+                          hidden
+                          onChange={handleProfilePhotoUpload}
+                          type="file"
+                        />
+                      </Button>
+                    </Box>
+                  ) : null}
                 </Box>
-              ) : null}
-              <Box
-                sx={{
-                  display: 'grid',
-                  gap: 2,
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-                }}
-              >
-                <Box>
-                  <TextField
-                    fullWidth
-                    label={copy.form.displayName}
-                    onChange={(event) =>
-                      handleEditableChange('display_name', event.target.value)
-                    }
-                    value={
-                      isEditing
-                        ? editableProfile.display_name
-                        : profile.user.display_name
-                    }
-                    disabled={!isEditing}
-                  />
-                </Box>
-                <Box>
-                  <TextField
-                    fullWidth
-                    label={copy.form.systemUsername}
-                    value={profile.user.username}
-                    disabled
-                  />
-                </Box>
-                <Box>
-                  <TextField
-                    fullWidth
-                    label={copy.form.birthDate}
-                    onChange={(event) =>
-                      handleEditableChange('birth_date', event.target.value)
-                    }
-                    type="date"
-                    value={
-                      isEditing
-                        ? editableProfile.birth_date
-                        : profile.user.birth_date ?? ''
-                    }
-                    disabled={!isEditing}
-                    slotProps={{ inputLabel: { shrink: true } }}
-                  />
-                </Box>
-                <Box>
-                  <TextField
-                    fullWidth
-                    label={copy.form.gender}
-                    onChange={(event) =>
-                      handleEditableChange('gender', event.target.value)
-                    }
-                    select
-                    value={
-                      isEditing
-                        ? editableProfile.gender
-                        : profile.user.gender ?? ''
-                    }
-                    disabled={!isEditing}
+
+                {isEditing ? (
+                  <Box
+                    sx={{
+                      alignItems: 'center',
+                      display: 'flex',
+                      flexDirection: 'row',
+                      gap: 1.5,
+                      justifyContent: 'flex-start',
+                      mt: 3,
+                    }}
                   >
-                    <MenuItem value="male">
-                      {copy.form.genderOptions.male}
-                    </MenuItem>
-                    <MenuItem value="female">
-                      {copy.form.genderOptions.female}
-                    </MenuItem>
-                    <MenuItem value="other">
-                      {copy.form.genderOptions.other}
-                    </MenuItem>
-                    <MenuItem value="prefer_not_to_say">
-                      {copy.form.genderOptions.preferNotToSay}
-                    </MenuItem>
-                  </TextField>
-                </Box>
-                {isEditing && canEditProfilePicture ? (
-                  <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
-                    <Button component="label" variant="outlined">
-                      {copy.form.changePhoto}
-                      <input
-                        aria-label="Profile photo upload"
-                        accept="image/*"
-                        hidden
-                        onChange={handleProfilePhotoUpload}
-                        type="file"
-                      />
+                    <Button onClick={handleSaveProfile} variant="contained">
+                      {copy.actions.save}
+                    </Button>
+                    <Button onClick={handleCancelEdit} variant="outlined">
+                      {copy.actions.cancel}
                     </Button>
                   </Box>
                 ) : null}
               </Box>
-
-              {isEditing ? (
-                <Box
-                  sx={{
-                    alignItems: 'center',
-                    display: 'flex',
-                    flexDirection: 'row',
-                    gap: 1.5,
-                    justifyContent: 'flex-start',
-                    mt: 3,
-                  }}
-                >
-                  <Button onClick={handleSaveProfile} variant="contained">
-                    {copy.actions.save}
-                  </Button>
-                  <Button onClick={handleCancelEdit} variant="outlined">
-                    {copy.actions.cancel}
-                  </Button>
-                </Box>
-              ) : null}
-            </Box>
-          </Stack>
-        </Paper>
-      </Stack>
-    </Box>
+            </Stack>
+          </Paper>
+        </Stack>
+      </Box>
+    </MainLayout>
   );
 }

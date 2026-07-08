@@ -37,7 +37,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { getPlayerText } from '../../lib/constants/playerText';
 import { ROUTES } from '../../lib/constants/routes';
-import { isPlayableMediaUrl } from '../../lib/mock/mediaCache';
 import { getTrackStats } from '../../lib/mock/musicService';
 import { useAuthStore } from '../../store/authStore';
 import { usePlayerStore } from '../../store/playerStore';
@@ -45,6 +44,7 @@ import { useAppLanguage } from '../../theme/LanguageContext';
 import { emotionCacheLtr } from '../../theme/emotionCache';
 
 function formatTime(seconds: number): string {
+  if (isNaN(seconds) || seconds < 0) return '0:00';
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, '0')}`;
@@ -58,6 +58,8 @@ export default function PlayerBar() {
   const copy = getPlayerText(language);
   const user = useAuthStore((state) => state.user);
   const isRtlTheme = language === 'fa';
+
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const ltrTheme = useMemo(
     () => ({
@@ -86,83 +88,68 @@ export default function PlayerBar() {
     next,
     prev,
     seek,
-    setDurationSeconds,
+    setDuration,
     setVolume,
     toggleShuffle,
     toggleRepeat,
     toggleQueue,
     toggleLyrics,
     removeFromQueue,
+    tick,
   } = usePlayerStore();
 
   const [goldStats, setGoldStats] = useState<{ streams: number; listeners: number } | null>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const loadedTrackIdRef = useRef<number | null>(null);
-  const usesNativeAudio = isPlayableMediaUrl(currentTrack?.audio_url);
+
+  const hasRealAudio = Boolean(currentTrack?.audio_url && currentTrack.audio_url.length > 5);
+
+  // Sync internal progress resetting the audio component natively when Zustand commands 0
+  useEffect(() => {
+     if (progressSeconds === 0 && hasRealAudio && audioRef.current) {
+         audioRef.current.currentTime = 0;
+         if (isPlaying) {
+             audioRef.current.play().catch(e => console.error(e));
+         }
+     }
+  }, [progressSeconds, isPlaying, hasRealAudio]);
 
   useEffect(() => {
-    if (isPlaying && usesNativeAudio) {
-      return;
-    }
-    if (isPlaying && !usesNativeAudio) {
-      pause();
-    }
-  }, [isPlaying, usesNativeAudio, pause]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentTrack?.audio_url || !isPlayableMediaUrl(currentTrack.audio_url)) {
-      return;
-    }
-
-    if (loadedTrackIdRef.current !== currentTrack.id) {
-      audio.src = currentTrack.audio_url;
-      audio.load();
-      loadedTrackIdRef.current = currentTrack.id;
-    }
-
-    if (isPlaying) {
-      void audio.play().catch(() => pause());
-    } else {
-      audio.pause();
-    }
-  }, [currentTrack, isPlaying, pause]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !usesNativeAudio) {
-      return;
-    }
-
-    const handleTimeUpdate = () => {
-      seek(Math.floor(audio.currentTime));
-    };
-    const handleLoadedMetadata = () => {
-      if (Number.isFinite(audio.duration) && audio.duration > 0) {
-        setDurationSeconds(Math.floor(audio.duration));
+    if (audioRef.current && hasRealAudio) {
+      if (isPlaying) {
+        audioRef.current.play().catch((e) => console.log('Autoplay prevented: ', e));
+      } else {
+        audioRef.current.pause();
       }
-    };
-    const handleEnded = () => {
-      next();
-    };
-
-    audio.addEventListener('timeupdate', handleTimeUpdate);
-    audio.addEventListener('loadedmetadata', handleLoadedMetadata);
-    audio.addEventListener('ended', handleEnded);
-
-    return () => {
-      audio.removeEventListener('timeupdate', handleTimeUpdate);
-      audio.removeEventListener('loadedmetadata', handleLoadedMetadata);
-      audio.removeEventListener('ended', handleEnded);
-    };
-  }, [usesNativeAudio, seek, setDurationSeconds, next]);
-
-  function handleSeek(seconds: number): void {
-    seek(seconds);
-    if (audioRef.current) {
-      audioRef.current.currentTime = seconds;
     }
-  }
+  }, [isPlaying, hasRealAudio, currentTrack?.id]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
+    }
+  }, [volume]);
+
+  const handleSeek = (val: number) => {
+    seek(val);
+    if (hasRealAudio && audioRef.current) {
+      audioRef.current.currentTime = val;
+    }
+  };
+
+  const handlePrev = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    prev();
+    if (audioRef.current && hasRealAudio) {
+      audioRef.current.currentTime = 0;
+    }
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying && !hasRealAudio) {
+      interval = setInterval(() => tick(), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, tick, hasRealAudio]);
 
   useEffect(() => {
     if (user?.subscription_tier === 'gold' && currentTrack) {
@@ -232,11 +219,6 @@ export default function PlayerBar() {
             {copy.stats.streams(goldStats.streams)} • {copy.stats.listeners(goldStats.listeners)}
           </Typography>
         )}
-        {!usesNativeAudio && (
-          <Typography variant="caption" display="block" color="error.main" noWrap mt={0.5}>
-            {copy.audioUnavailable}
-          </Typography>
-        )}
       </Box>
     </Stack>
   );
@@ -247,19 +229,18 @@ export default function PlayerBar() {
         <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleShuffle(); }} color={shuffle ? "primary" : "default"}>
           <Shuffle size={18} />
         </IconButton>
-        <IconButton size="small" onClick={(e) => { e.stopPropagation(); prev(); }}>
+        <IconButton size="small" onClick={handlePrev}>
           <SkipBack size={20} />
         </IconButton>
         
         <IconButton
           onClick={(e) => { e.stopPropagation(); isPlaying ? pause() : resume(); }}
-          disabled={!usesNativeAudio}
           sx={{ bgcolor: 'text.primary', color: 'background.paper', '&:hover': { bgcolor: 'text.secondary' } }}
         >
           {isPlaying ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
         </IconButton>
         
-        <IconButton size="small" onClick={(e) => { e.stopPropagation(); next(); }}>
+        <IconButton size="small" onClick={(e) => { e.stopPropagation(); next(true); }}>
           <SkipForward size={20} />
         </IconButton>
         <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleRepeat(); }} color={repeatMode !== 'none' ? "primary" : "default"}>
@@ -298,17 +279,11 @@ export default function PlayerBar() {
       sx={{ '& .MuiDrawer-paper': { width: { xs: '100%', sm: 320 }, mt: isMobile ? 0 : 8, pb: 12 } }}
     >
       <Box p={3} sx={{ height: '100%', overflowY: 'auto', direction: 'ltr', textAlign: 'left' }} dir="ltr">
-       <Stack direction="row" alignItems="center" mb={3} sx={{ width: '100%' }}>
+        <Stack direction="row" alignItems="center" justifyContent="space-between" mb={3} sx={{ width: '100%' }}>
           <Typography variant="h6" sx={{ fontWeight: 800, m: 0 }}>
-            {isQueueOpen ? copy.queue : copy.lyrics}
+             {isQueueOpen ? copy.queue : copy.lyrics}
           </Typography>
-          
-          {/* ml: 'auto' pushes this item to the far right edge */}
-          <IconButton 
-            onClick={handleCloseSubPanel} 
-            aria-label={copy.actions.collapse} 
-            sx={{ ml: 'auto' }}
-          >
+          <IconButton onClick={handleCloseSubPanel} aria-label={copy.actions.collapse}>
             <X size={24} />
           </IconButton>
         </Stack>
@@ -451,7 +426,13 @@ export default function PlayerBar() {
           </IconButton>
           <Stack direction="row" spacing={1} alignItems="center" sx={{ width: 100 }}>
              <Volume2 size={18} />
-             <Slider size="small" value={volume} min={0} max={100} onChange={(e, val) => setVolume(val as number)} sx={{ transform: isRtlTheme ? 'rotate(180deg)' : 'none' }} />
+             <Slider 
+               size="small" 
+               value={volume} 
+               min={0} max={100} 
+               onChange={(e, val) => setVolume(val as number)} 
+               sx={{ transform: isRtlTheme ? 'rotate(180deg)' : 'none' }} 
+             />
           </Stack>
         </Stack>
       </Paper>
@@ -463,7 +444,30 @@ export default function PlayerBar() {
   return (
     <CacheProvider value={emotionCacheLtr}>
       <ThemeProvider theme={ltrTheme}>
-        <audio ref={audioRef} hidden preload="metadata" />
+        <audio
+          ref={audioRef}
+          src={hasRealAudio ? currentTrack.audio_url : undefined}
+          autoPlay={isPlaying && hasRealAudio}
+          onLoadedMetadata={(e) => {
+            if (hasRealAudio && isFinite(e.currentTarget.duration)) {
+              setDuration(Math.round(e.currentTarget.duration));
+            }
+          }}
+          onTimeUpdate={(e) => {
+            if (hasRealAudio) seek(e.currentTarget.currentTime);
+          }}
+          onEnded={() => {
+            if (hasRealAudio) {
+              if (repeatMode === 'one' && audioRef.current) {
+                 audioRef.current.currentTime = 0;
+                 audioRef.current.play().catch(e => console.error(e));
+              } else {
+                 next();
+              }
+            }
+          }}
+          hidden
+        />
         {innerUI}
       </ThemeProvider>
     </CacheProvider>
