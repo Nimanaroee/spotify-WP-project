@@ -104,6 +104,16 @@ describe('SettingsPage', () => {
     expect(localStorage.getItem(APP_LANGUAGE_STORAGE_KEY)).toBe('fa')
   })
 
+  it('does not show the settings subtitle under the page title', () => {
+    renderSettingsPage()
+
+    expect(
+      screen.queryByText(
+        'Control notifications, system preferences, account access, and subscription status.',
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it('updates the local subscription tier', async () => {
     const user = userEvent.setup()
     renderSettingsPage()

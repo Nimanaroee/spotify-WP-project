@@ -119,7 +119,12 @@ export function getUserProfileView(
   username: string,
 ): UserProfileView {
   const users = readUsers()
-  const user = users.find((candidate) => candidate.username === username)
+  const userId = Number(username)
+  const user = users.find((candidate) =>
+    Number.isInteger(userId) && String(userId) === username
+      ? candidate.id === userId
+      : candidate.username === username,
+  )
 
   if (!user) {
     throw new Error('Profile not found.')

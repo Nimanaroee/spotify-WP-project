@@ -18,7 +18,7 @@ import ProfileStatsGrid from '../components/profile/ProfileStatsGrid'
 import ProfileSummaryHeader from '../components/profile/ProfileSummaryHeader'
 import { getAppText } from '../lib/constants/appText'
 import { ROLES } from '../lib/constants/roles'
-import { ROUTES } from '../lib/constants/routes'
+import { ROUTES, userProfilePath } from '../lib/constants/routes'
 import {
   getArtistProfileView,
   type ArtistProfileView,
@@ -30,8 +30,9 @@ import {
 } from '../lib/mock/userProfileService'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useAuthStore } from '../store/authStore'
+import { usePlayerStore } from '../store/playerStore'
 import { useAppLanguage } from '../theme/LanguageContext'
-import type { UserProfileView } from '../types'
+import type { Album, Track, UserProfileView } from '../types'
 
 type ProfileView = UserProfileView | ArtistProfileView
 
@@ -43,6 +44,7 @@ export default function UserProfilePage() {
   const { username } = useParams()
   const navigate = useNavigate()
   const authUser = useAuthStore((state) => state.user)
+  const playTrack = usePlayerStore((state) => state.playTrack)
   const isCompactMobile = useIsMobile()
   const { language } = useAppLanguage()
   const copy = getAppText(language)
@@ -54,7 +56,10 @@ export default function UserProfilePage() {
       return
     }
 
-    if (authUser.username === username) {
+    if (
+      authUser.username === username &&
+      (authUser.role === ROLES.LISTENER || authUser.role === ROLES.ARTIST)
+    ) {
       navigate(ROUTES.MANAGE, { replace: true })
       return
     }
@@ -109,6 +114,7 @@ export default function UserProfilePage() {
   const listAvatarSize = isCompactMobile ? 30 : 40
   const listTitleSize = isCompactMobile ? '0.82rem' : '1rem'
   const listSubtitleSize = isCompactMobile ? '0.68rem' : '0.875rem'
+  const releaseListHeight = isCompactMobile ? 240 : 260
 
   function refreshProfile(): void {
     const baseProfile = getUserProfileView(
@@ -131,6 +137,72 @@ export default function UserProfilePage() {
 
     refreshProfile()
   }
+
+  function handleReleaseSelect(release: Album | Track): void {
+    if (release.release_type === 'album') {
+      navigate(`${ROUTES.ALBUMS}/${release.id}`)
+      return
+    }
+
+    const track = release as Track
+    playTrack(track, artistProfile?.singles ?? [track])
+    refreshProfile()
+  }
+
+  const followLists = (
+    <Box
+      sx={{
+        display: 'grid',
+        gap: 2,
+        gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+      }}
+    >
+      <FollowListPanel
+        accounts={profile.followers}
+        avatarSize={listAvatarSize}
+        emptyMessage={
+          language === 'fa'
+            ? 'دنبال‌کننده‌ای وجود ندارد.'
+            : 'No followers to show.'
+        }
+        gap={listGap}
+        getAccountHref={(account) =>
+          account.id === currentAuthUser.id
+            ? ROUTES.MANAGE
+            : userProfilePath(account.username ?? String(account.id))
+        }
+        height={listHeight}
+        isCompact={isCompactMobile}
+        padding={listPadding}
+        spacing={listSpacing}
+        subtitleSize={listSubtitleSize}
+        title={`${copy.profile.followers} (${profile.followers.length})`}
+        titleSize={listTitleSize}
+      />
+      <FollowListPanel
+        accounts={profile.following}
+        avatarSize={listAvatarSize}
+        emptyMessage={
+          language === 'fa'
+            ? 'حساب دنبال‌شده‌ای وجود ندارد.'
+            : 'No following accounts to show.'
+        }
+        gap={listGap}
+        getAccountHref={(account) =>
+          account.id === currentAuthUser.id
+            ? ROUTES.MANAGE
+            : userProfilePath(account.username ?? String(account.id))
+        }
+        height={listHeight}
+        isCompact={isCompactMobile}
+        padding={listPadding}
+        spacing={listSpacing}
+        subtitleSize={listSubtitleSize}
+        title={`${copy.profile.following} (${profile.following.length})`}
+        titleSize={listTitleSize}
+      />
+    </Box>
+  )
 
   return (
     <Box
@@ -210,36 +282,50 @@ export default function UserProfilePage() {
                 <Alert severity="info">{copy.profile.goldOnlyAnalytics}</Alert>
               )}
 
+              {followLists}
+
               <Divider />
 
               <Box>
                 <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                   {copy.profile.albums}
                 </Typography>
+                <Paper
+                  aria-label={copy.profile.albums}
+                  variant="outlined"
+                  sx={{ height: releaseListHeight, maxHeight: releaseListHeight, overflowY: 'auto', p: 2 }}
+                >
                 <Stack spacing={1.5}>
                   {artistProfile.albums.length > 0 ? (
                     artistProfile.albums.map((album) => (
-                      <ArtistReleaseCard key={album.id} release={album} />
+                      <ArtistReleaseCard key={album.id} release={album} onSelect={handleReleaseSelect} />
                     ))
                   ) : (
                     <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
                   )}
                 </Stack>
+                </Paper>
               </Box>
 
               <Box>
                 <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                   {copy.profile.singles}
                 </Typography>
+                <Paper
+                  aria-label={copy.profile.singles}
+                  variant="outlined"
+                  sx={{ height: releaseListHeight, maxHeight: releaseListHeight, overflowY: 'auto', p: 2 }}
+                >
                 <Stack spacing={1.5}>
                   {artistProfile.singles.length > 0 ? (
                     artistProfile.singles.map((single) => (
-                      <ArtistReleaseCard key={single.id} release={single} />
+                      <ArtistReleaseCard key={single.id} release={single} onSelect={handleReleaseSelect} />
                     ))
                   ) : (
                     <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
                   )}
                 </Stack>
+                </Paper>
               </Box>
             </>
           ) : (
@@ -296,48 +382,7 @@ export default function UserProfilePage() {
             </>
           )}
 
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 2,
-              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-            }}
-          >
-            <FollowListPanel
-              accounts={profile.followers}
-              avatarSize={listAvatarSize}
-              emptyMessage={
-                language === 'fa'
-                  ? 'دنبال‌کننده‌ای وجود ندارد.'
-                  : 'No followers to show.'
-              }
-              gap={listGap}
-              height={listHeight}
-              isCompact={isCompactMobile}
-              padding={listPadding}
-              spacing={listSpacing}
-              subtitleSize={listSubtitleSize}
-              title={copy.profile.followers}
-              titleSize={listTitleSize}
-            />
-            <FollowListPanel
-              accounts={profile.following}
-              avatarSize={listAvatarSize}
-              emptyMessage={
-                language === 'fa'
-                  ? 'حساب دنبال‌شده‌ای وجود ندارد.'
-                  : 'No following accounts to show.'
-              }
-              gap={listGap}
-              height={listHeight}
-              isCompact={isCompactMobile}
-              padding={listPadding}
-              spacing={listSpacing}
-              subtitleSize={listSubtitleSize}
-              title={copy.profile.following}
-              titleSize={listTitleSize}
-            />
-          </Box>
+          {artistProfile ? null : followLists}
         </Stack>
       </Paper>
     </Box>

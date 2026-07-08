@@ -70,4 +70,27 @@ describe('RoleGuard', () => {
 
     expect(screen.getByText('Protected content')).toBeInTheDocument()
   })
+
+  it('redirects support staff away from listener and artist management routes', () => {
+    useAuthStore.setState({ user: supportUser })
+
+    render(
+      <MemoryRouter initialEntries={['/manage']}>
+        <Routes>
+          <Route
+            path="/manage"
+            element={
+              <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST]}>
+                <TestChild />
+              </RoleGuard>
+            }
+          />
+          <Route path="/" element={<div>Home page</div>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Home page')).toBeInTheDocument()
+    expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
+  })
 })

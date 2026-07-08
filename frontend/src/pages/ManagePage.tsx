@@ -14,7 +14,7 @@ import {
   Typography,
 } from '@mui/material';
 import { BadgeCheck } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 import ArtistReleaseCard from '../components/profile/ArtistReleaseCard';
 import FollowListPanel from '../components/profile/FollowListPanel';
@@ -39,10 +39,13 @@ import {
 } from '../lib/mock/userProfileService';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { useAuthStore } from '../store/authStore';
+import { usePlayerStore } from '../store/playerStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import type {
+  Album,
   Gender,
   ManageProfile,
+  Track,
   UpdateUserProfilePayload,
   User,
   UserSummary,
@@ -76,6 +79,8 @@ function createEditableProfile(
 
 function ArtistManagementPage({ authUser }: { authUser: User }) {
   const setUser = useAuthStore((state) => state.setUser);
+  const playTrack = usePlayerStore((state) => state.playTrack);
+  const navigate = useNavigate();
   const { language } = useAppLanguage();
   const copy = getAppText(language);
   const manageCopy = getManagePageText(language);
@@ -107,6 +112,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
   const listAvatarSize = isCompactMobile ? 30 : 40;
   const listTitleSize = isCompactMobile ? '0.82rem' : '1rem';
   const listSubtitleSize = isCompactMobile ? '0.68rem' : '0.875rem';
+  const releaseListHeight = isCompactMobile ? 240 : 260;
 
   function refreshArtistView(): void {
     const baseProfile = getUserProfileView(authUser.id, authUser.username);
@@ -148,6 +154,17 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
       }
     };
     reader.readAsDataURL(file);
+  }
+
+  function handleReleaseSelect(release: Album | Track): void {
+    if (release.release_type === 'album') {
+      navigate(`${ROUTES.ALBUMS}/${release.id}`);
+      return;
+    }
+
+    const track = release as Track;
+    playTrack(track, artistView.singles);
+    refreshArtistView();
   }
 
   function handleRemoveFollowAccount(account: UserSummary): void {
@@ -272,30 +289,42 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
               <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                 {copy.profile.albums}
               </Typography>
+              <Paper
+                aria-label={copy.profile.albums}
+                variant="outlined"
+                sx={{ height: releaseListHeight, maxHeight: releaseListHeight, overflowY: 'auto', p: 2 }}
+              >
               <Stack spacing={1.5}>
                 {artistView.albums.length > 0 ? (
                   artistView.albums.map((album) => (
-                    <ArtistReleaseCard key={album.id} release={album} />
+                    <ArtistReleaseCard key={album.id} release={album} onSelect={handleReleaseSelect} />
                   ))
                 ) : (
                   <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
                 )}
               </Stack>
+              </Paper>
             </Box>
 
             <Box>
               <Typography component="h2" variant="h6" sx={{ fontWeight: 700, mb: 1.5 }}>
                 {copy.profile.singles}
               </Typography>
+              <Paper
+                aria-label={copy.profile.singles}
+                variant="outlined"
+                sx={{ height: releaseListHeight, maxHeight: releaseListHeight, overflowY: 'auto', p: 2 }}
+              >
               <Stack spacing={1.5}>
                 {artistView.singles.length > 0 ? (
                   artistView.singles.map((single) => (
-                    <ArtistReleaseCard key={single.id} release={single} />
+                    <ArtistReleaseCard key={single.id} release={single} onSelect={handleReleaseSelect} />
                   ))
                 ) : (
                   <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
                 )}
               </Stack>
+              </Paper>
             </Box>
 
             <Divider />
@@ -395,9 +424,7 @@ export default function ManagePage() {
   }
 
   if (
-    authUser.role !== ROLES.LISTENER &&
-    authUser.role !== ROLES.SUPPORT &&
-    authUser.role !== ROLES.ADMIN
+    authUser.role !== ROLES.LISTENER
   ) {
     return <Navigate to={ROUTES.HOME} replace />;
   }

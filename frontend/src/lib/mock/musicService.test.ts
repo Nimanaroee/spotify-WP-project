@@ -4,6 +4,7 @@ import {
   getTrackStats,
   listArtistReleases,
   publishRelease,
+  recordTrackPlay,
   updateTrack,
 } from './musicService'
 import { clearMockMediaCacheForTests, getMockMedia } from './mediaCache'
@@ -145,6 +146,33 @@ describe('musicService', () => {
     const stats = getTrackStats(1, 2)
     expect(stats.stream_count).toBe(100)
     expect(stats.revenue).toBe(5)
+  })
+
+  it('records stream starts and keeps listeners distinct per track and artist', () => {
+    storageState.set('tracks', [
+      {
+        id: 1,
+        title: 'Seeded',
+        artist_id: 2,
+        artist_name: 'Demo Artist',
+        release_type: 'single',
+        stream_count: 100,
+        listener_count: 40,
+        created_at: createdAt,
+        updated_at: createdAt,
+      },
+    ] as Track[])
+
+    recordTrackPlay(1, 7)
+    recordTrackPlay(1, 7)
+    recordTrackPlay(1, 8)
+
+    const [track] = storageState.get('tracks') as Track[]
+    expect(track.stream_count).toBe(103)
+    expect(track.listener_count).toBe(2)
+    expect(storageState.get('daily_streams')).toEqual({ 7: 2, 8: 1 })
+    expect(storageState.get('track_listeners')).toEqual({ 1: [7, 8] })
+    expect(storageState.get('artist_listeners')).toEqual({ 2: [7, 8] })
   })
 
   it('blocks publish for unverified artists', async () => {

@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import type { Track } from '../types';
 import type { RepeatMode } from '../types/player';
 import { hydrateTrack } from '../lib/mock/hydrateMedia';
+import { recordTrackPlay } from '../lib/mock/musicService';
+import { useAuthStore } from './authStore';
 
 interface PlayerState {
   currentTrack: Track | null;
@@ -57,7 +59,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isQueueOpen: false,
 
   playTrack: (track, contextQueue = []) => {
-    const hydratedTrack = hydrateTrack(track);
+    const user = useAuthStore.getState().user;
+    const hydratedTrack = user ? recordTrackPlay(track.id, user.id) : hydrateTrack(track);
     let finalQueue = contextQueue.length > 0
       ? contextQueue.map(hydrateTrack).filter((t) => t.id !== hydratedTrack.id)
       : get().queue;
