@@ -61,15 +61,18 @@ export default function AlbumsPage() {
   return (
     <MainLayout>
       <Box className="min-h-screen p-4 md:p-8" dir={language === 'fa' ? 'rtl' : 'ltr'}>
+        <Box sx={{ mb: { xs: 2.5, md: 4 } }}>
+          <PageHeader>{copy.pageTitle}</PageHeader>
+        </Box>
+
         <Stack
           direction={{ xs: 'column', md: 'row' }}
-          spacing={3}
-          mb={4}
-          alignItems={{ xs: 'stretch', md: 'center' }}
-          justifyContent="space-between"
+          sx={{
+            alignItems: { xs: 'stretch', md: 'center' },
+            justifyContent: 'flex-end',
+            mb: { xs: 3, md: 5 },
+          }}
         >
-          <PageHeader>{copy.pageTitle}</PageHeader>
-
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ flex: 1, maxWidth: { md: 500 }}}>
             <TextField
               size="small"
