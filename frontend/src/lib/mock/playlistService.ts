@@ -1,6 +1,7 @@
 import { storage } from './storage';
 import { hydrateTrack, resolveDisplayUrl } from './hydrateMedia';
 import { SUBSCRIPTION_LIMITS } from '../constants/subscriptionLimits';
+import { useCatalogStore } from '../../store/catalogStore';
 import type { Playlist, PlaylistTrack, Track, User } from '../../types';
 
 const PLAYLISTS_KEY = 'playlists';
@@ -13,6 +14,16 @@ function nowIso(): string {
 
 function getNextId(items: Array<{ id: number }>): number {
   return items.reduce((max, item) => Math.max(max, item.id), 0) + 1;
+}
+
+function savePlaylists(playlists: Playlist[]): void {
+  storage.set(PLAYLISTS_KEY, playlists);
+  useCatalogStore.getState().bumpCatalogVersion();
+}
+
+function savePlaylistTracks(playlistTracks: PlaylistTrack[]): void {
+  storage.set(PLAYLIST_TRACKS_KEY, playlistTracks);
+  useCatalogStore.getState().bumpCatalogVersion();
 }
 
 export function getUserPlaylists(userId: number): Playlist[] {
@@ -71,7 +82,7 @@ export function toggleTrackInPlaylist(userId: number, playlistId: number, trackI
     playlistTracks = playlistTracks.filter(pt => pt.id !== existingMapping.id);
   }
 
-  storage.set(PLAYLIST_TRACKS_KEY, playlistTracks);
+  savePlaylistTracks(playlistTracks);
 }
 // ---------------------------------------------------------------
 
@@ -97,7 +108,7 @@ export function createPlaylist(user: User, name: string): Playlist {
     cover_art: null,
   };
 
-  storage.set(PLAYLISTS_KEY, [...playlists, newPlaylist]);
+  savePlaylists([...playlists, newPlaylist]);
   return { ...newPlaylist, tracks: [], track_count: 0 };
 }
 
@@ -116,7 +127,7 @@ export function renamePlaylist(userId: number, playlistId: number, name: string)
   };
 
   playlists[idx] = updatedPlaylist;
-  storage.set(PLAYLISTS_KEY, playlists);
+  savePlaylists(playlists);
   return updatedPlaylist;
 }
 
@@ -128,9 +139,9 @@ export function deletePlaylist(userId: number, playlistId: number): void {
     throw new Error('Playlist not found or permission denied.');
   }
 
-  storage.set(PLAYLISTS_KEY, filtered);
+  savePlaylists(filtered);
 
   const ptMappings = storage.get<PlaylistTrack[]>(PLAYLIST_TRACKS_KEY) ?? [];
   const activeMappings = ptMappings.filter((pt) => pt.playlist_id !== playlistId);
-  storage.set(PLAYLIST_TRACKS_KEY, activeMappings);
+  savePlaylistTracks(activeMappings);
 }

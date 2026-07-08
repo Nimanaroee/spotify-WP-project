@@ -4,19 +4,10 @@ import type { Album, Track, PlaylistSummary } from '../../types';
 
 export function getRecentPlaylists(): PlaylistSummary[] {
   const playlists = storage.get<PlaylistSummary[]>('playlists') ?? [];
-  if (playlists.length > 0) {
-    return playlists.slice(0, 10).map((playlist) => ({
-      ...playlist,
-      cover_art: resolveDisplayUrl(playlist.cover_art),
-    }));
-  }
-  
-  return [
-    { id: 9001, name: 'Late Night Drives', cover_art: null, track_count: 12 },
-    { id: 9002, name: 'Deep Focus Work', cover_art: null, track_count: 34 },
-    { id: 9003, name: '90s Pop Mix', cover_art: null, track_count: 22 },
-    { id: 9004, name: 'Classical Studying', cover_art: null, track_count: 14 }
-  ];
+  return playlists.slice(0, 10).map((playlist) => ({
+    ...playlist,
+    cover_art: resolveDisplayUrl(playlist.cover_art),
+  }));
 }
 
 export function getLatestAlbums(): Album[] {

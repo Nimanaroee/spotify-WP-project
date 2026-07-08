@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { clearMockMediaCacheForTests, saveMockMedia } from './mediaCache'
-import { getTopSongs } from './homeService'
+import { getRecentPlaylists, getTopSongs } from './homeService'
 import { storage } from './storage'
 import type { Track } from '../../types/music'
 
@@ -9,7 +9,12 @@ const createdAt = '2026-01-01T00:00:00.000Z'
 describe('homeService', () => {
   beforeEach(() => {
     storage.set('tracks', [])
+    storage.set('playlists', [])
     clearMockMediaCacheForTests()
+  })
+
+  it('does not invent recent playlists when storage is empty', () => {
+    expect(getRecentPlaylists()).toEqual([])
   })
 
   it('returns hydrated cover URLs instead of mock-media refs', async () => {

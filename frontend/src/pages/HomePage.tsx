@@ -78,7 +78,7 @@ export default function HomePage() {
           </Paper>
         )}
 
-        <MediaRow title={copy.showcase.recentPlaylists}>
+        <MediaRow title={copy.showcase.recentPlaylists} show={playlists.length > 0}>
           {playlists.map((playlist) => (
             <MediaCard
               key={`pl-${playlist.id}`}

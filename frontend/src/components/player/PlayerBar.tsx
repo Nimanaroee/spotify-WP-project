@@ -171,7 +171,8 @@ export default function PlayerBar() {
   };
 
   const trackInfoContent = (
-    <Stack direction="row" spacing={2} alignItems="center" dir="ltr" sx={{ direction: 'ltr' }}>
+    // Added width 100% and minWidth 0 here
+    <Stack direction="row" spacing={2} alignItems="center" dir="ltr" sx={{ direction: 'ltr', width: '100%', minWidth: 0 }}>
       <Box
         sx={{
           width: { xs: 48, md: 56 },
@@ -191,7 +192,8 @@ export default function PlayerBar() {
           <Disc3 size={32} color="gray" />
         )}
       </Box>
-      <Box sx={{ minWidth: 0, textAlign: 'left' }}>
+      {/* Added flex: 1, overflow: 'hidden' here */}
+      <Box sx={{ minWidth: 0, flex: 1, textAlign: 'left', overflow: 'hidden' }}>
         <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700 }}>
           {currentTrack.title}
         </Typography>
@@ -423,7 +425,7 @@ export default function PlayerBar() {
         sx={{
           direction: 'ltr',
           position: 'fixed',
-          bottom: 60, 
+          bottom: 0,
           left: 8,
           right: 8,
           height: 72, 
@@ -440,18 +442,18 @@ export default function PlayerBar() {
         onClick={toggleExpanded}
       >
         {/* Track Info */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, maxWidth: '40%' }}> 
+        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, pr: 1 }}> 
           {trackInfoContent}
         </Box>
 
         {/* Playback Controls */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, justifyContent: 'center', ml: 1, mr: 1 }}> 
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, justifyContent: 'center' }}> 
           <IconButton size="small" onClick={(e) => { e.stopPropagation(); handlePrev(); }}>
             <SkipBack size={20} />
           </IconButton>
           <IconButton
             onClick={(e) => { e.stopPropagation(); isPlaying ? pause() : resume(); }}
-            sx={{ bgcolor: 'text.primary', color: 'background.paper', '&:hover': { bgcolor: 'text.secondary' }, width: 40, height: 40, mx: 1 }} 
+            sx={{ bgcolor: 'text.primary', color: 'background.paper', '&:hover': { bgcolor: 'text.secondary' }, width: 40, height: 40, mx: 0.5 }} 
           >
             {isPlaying ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-[2px]" />}
           </IconButton>
@@ -461,8 +463,7 @@ export default function PlayerBar() {
         </Box>
 
         {/* Sub Menu & Progress */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          {/* ADDED stopPropagation and Mic icon to mini-player */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, pl: 0.5 }}>
           <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleLyrics(); }} color={isLyricsOpen ? 'primary' : 'default'}>
             <Mic2 size={18} />
           </IconButton>
