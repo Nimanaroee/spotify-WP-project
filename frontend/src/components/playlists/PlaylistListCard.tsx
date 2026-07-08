@@ -15,7 +15,7 @@ import { useState } from 'react';
 import { getPlaylistsPageText } from '../../lib/constants/playlistsPageText';
 import { useAppLanguage } from '../../theme/LanguageContext';
 import { usePlayerStore } from '../../store/playerStore'; // GET PLAYER FUNCTION OVERRIDE 
-import type { Playlist, Track } from '../../types';
+import type { Playlist } from '../../types';
 
 interface PlaylistListCardProps {
   playlist: Playlist;

@@ -54,7 +54,9 @@ function writeCurrentUser(user: User | null): void {
 }
 
 function withoutPassword(user: StoredUser): User {
-  const { password: _password, account_status: _accountStatus, ...publicUser } = user
+  const { password, account_status: accountStatus, ...publicUser } = user
+  void password
+  void accountStatus
   return publicUser
 }
 

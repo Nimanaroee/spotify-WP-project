@@ -9,6 +9,7 @@ const ARTIST_PROFILES_KEY = 'artist_profiles'
 const USERS_KEY = 'users'
 const TRACKS_KEY = 'tracks'
 const ALBUMS_KEY = 'albums'
+const ARTIST_LISTENERS_KEY = 'artist_listeners'
 
 interface ArtistProfileView extends UserProfileView {
   artist_profile: ArtistProfile
@@ -50,8 +51,13 @@ function readAlbums(): Album[] {
   return storage.get<Album[]>(ALBUMS_KEY) ?? []
 }
 
+function readArtistListeners(): Record<number, number[]> {
+  return storage.get<Record<number, number[]>>(ARTIST_LISTENERS_KEY) ?? {}
+}
+
 function stripPassword(user: StoredUser): User {
-  const { password: _password, ...publicUser } = user
+  const { password, ...publicUser } = user
+  void password
   return publicUser
 }
 
@@ -121,12 +127,9 @@ export function getArtistProfileView(
   const singles = tracks
     .filter((track) => track.release_type === 'single')
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
-  const listenerCount =
-    artistProfile.listener_count ??
-    tracks.reduce((total, track) => total + (track.listener_count ?? 0), 0)
-  const totalStreams =
-    artistProfile.total_streams ??
-    tracks.reduce((total, track) => total + (track.stream_count ?? 0), 0)
+  const artistListeners = readArtistListeners()
+  const listenerCount = artistListeners[artistUser.id]?.length ?? 0
+  const totalStreams = tracks.reduce((total, track) => total + (track.stream_count ?? 0), 0)
 
   return {
     ...baseProfile,

@@ -166,19 +166,14 @@ export default function AdminLayout() {
               </Button>
               <NotificationPanel />
               {!isMobile && user ? (
-                <>
-                  <Button component={RouterLink} size="small" to={ROUTES.MANAGE} variant="text">
-                    {accountNavItems[0]?.label}
-                  </Button>
-                  <Button component={RouterLink} size="small" to={ROUTES.SETTINGS} variant="text">
-                    {accountNavItems[1]?.label}
-                  </Button>
-                </>
+                <Button component={RouterLink} size="small" to={ROUTES.SETTINGS} variant="text">
+                  {accountNavItems[0]?.label}
+                </Button>
               ) : null}
               {user ? (
                 <Stack
                   component={RouterLink}
-                  to={ROUTES.MANAGE}
+                  to={ROUTES.SETTINGS}
                   direction="row"
                   spacing={1}
                   sx={{
@@ -221,7 +216,7 @@ export default function AdminLayout() {
                       to={ROUTES.SETTINGS}
                       onClick={() => setMoreAnchor(null)}
                     >
-                      {accountNavItems[1]?.label}
+                      {accountNavItems[0]?.label}
                     </MenuItem>
                     <MenuItem
                       component={RouterLink}

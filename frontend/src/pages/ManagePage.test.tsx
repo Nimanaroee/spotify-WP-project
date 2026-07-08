@@ -12,6 +12,7 @@ import { ROUTES } from '../lib/constants/routes';
 import { getManageProfile } from '../lib/mock/userProfileService';
 import { storage } from '../lib/mock/storage';
 import { useAuthStore } from '../store/authStore';
+import { usePlayerStore } from '../store/playerStore';
 import {
   APP_LANGUAGE_STORAGE_KEY,
   LanguageContext,
@@ -59,6 +60,7 @@ function renderManagePage(initialPath = ROUTES.MANAGE) {
             <Route path={ROUTES.HOME} element={<HomePage />} />
             <Route path={ROUTES.LOGIN} element={<LoginPage />} />
             <Route path={ROUTES.MANAGE} element={<ManagePage />} />
+            <Route path="/albums/:albumId" element={<div>Album detail page</div>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -174,7 +176,19 @@ describe('ManagePage', () => {
         updated_at: '2026-01-02T00:00:00.000Z',
       },
     ]);
-    storage.set('albums', []);
+    storage.set('albums', [
+      {
+        id: 1,
+        title: 'Artist Album',
+        artist_id: 4,
+        artist_name: 'Demo Artist',
+        release_type: 'album',
+        release_year: 2026,
+        track_count: 2,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
     storage.set('daily_streams', { 1: 12 });
     storage.set('follows', [
       {
@@ -206,6 +220,12 @@ describe('ManagePage', () => {
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
       },
+    });
+    usePlayerStore.setState({
+      currentTrack: null,
+      queue: [],
+      isPlaying: false,
+      progressSeconds: 0,
     });
   });
 
@@ -382,6 +402,8 @@ describe('ManagePage', () => {
 
     expect(screen.getByLabelText(/artistic name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/biography/i)).toHaveValue('Artist biography.');
+    expect(screen.getByLabelText('Albums')).toHaveStyle({ height: '260px', overflowY: 'auto' });
+    expect(screen.getByLabelText('Singles')).toHaveStyle({ height: '260px', overflowY: 'auto' });
     expect(screen.getByText('Artist Single')).toBeInTheDocument();
     expect(screen.queryByText('Verified Artist')).not.toBeInTheDocument();
 
@@ -409,5 +431,32 @@ describe('ManagePage', () => {
         .get<Array<{ id: number; profile_picture?: string | null }>>('users')
         ?.find((storedUser) => storedUser.id === 4)?.profile_picture
     ).toMatch(/^data:image\/png;base64,/);
+  });
+
+  it('opens artist albums and plays artist songs from the management page', async () => {
+    const user = userEvent.setup();
+    setDesktopViewport();
+    useAuthStore.setState({
+      user: {
+        id: 4,
+        username: 'demo_artist',
+        email: 'artist@example.com',
+        display_name: 'Demo Artist',
+        role: ROLES.ARTIST,
+        subscription_tier: 'basic',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    });
+
+    renderManagePage();
+    await user.click(screen.getByRole('button', { name: /artist album/i }));
+    expect(screen.getByText('Album detail page')).toBeInTheDocument();
+
+    renderManagePage();
+    await user.click(screen.getByRole('button', { name: /artist single/i }));
+
+    expect(usePlayerStore.getState().currentTrack?.title).toBe('Artist Single');
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
   });
 });

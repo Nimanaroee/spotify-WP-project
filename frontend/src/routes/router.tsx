@@ -60,7 +60,16 @@ export default function Router() {
         }
       />
       
-      <Route path={ROUTES.MANAGE} element={<ManagePage />} />
+      <Route
+        path={ROUTES.MANAGE}
+        element={
+          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST]}>
+            <MainLayout>
+              <ManagePage />
+            </MainLayout>
+          </RoleGuard>
+        }
+      />
       <Route
         path={ROUTES.SETTINGS}
         element={
@@ -71,7 +80,16 @@ export default function Router() {
           </RoleGuard>
         }
       />
-      <Route path={ROUTES.USER_PROFILE} element={<UserProfilePage />} />
+      <Route
+        path={ROUTES.USER_PROFILE}
+        element={
+          <RoleGuard allowedRoles={[ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN]}>
+            <MainLayout>
+              <UserProfilePage />
+            </MainLayout>
+          </RoleGuard>
+        }
+      />
       <Route
         path={ROUTES.ARTIST_STUDIO}
         element={

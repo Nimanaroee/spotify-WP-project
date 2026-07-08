@@ -35,10 +35,6 @@ export default function AlbumsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [managingTrack, setManagingTrack] = useState<Track | null>(null);
 
-  if (!user) {
-    return <Navigate to={ROUTES.LOGIN} replace />;
-  }
-
   useEffect(() => {
     try {
       const fetchResults = searchCatalog(query, sortBy);
@@ -47,6 +43,10 @@ export default function AlbumsPage() {
        setResults([]);
     }
   }, [query, sortBy]);
+
+  if (!user) {
+    return <Navigate to={ROUTES.LOGIN} replace />;
+  }
 
   const handleOpenPlaylistManager = (track: Track) => {
     setManagingTrack(track);

@@ -34,7 +34,7 @@ export function getMainNavForRole(role: Role, username: string, language: AppLan
       path: ROUTES.ADMIN_TICKETS,
       roles: [ROLES.SUPPORT, ROLES.ADMIN],
     },
-    { label: copy.nav.profile, path: userProfilePath(username), roles: [ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN] },
+    { label: copy.nav.profile, path: userProfilePath(username), roles: [ROLES.LISTENER, ROLES.ARTIST] },
     { label: copy.nav.settings, path: ROUTES.SETTINGS, roles: [ROLES.LISTENER, ROLES.ARTIST, ROLES.SUPPORT, ROLES.ADMIN] },
   ]
 
@@ -69,7 +69,6 @@ export function getAdminAccountNav(language: AppLanguage): AccountNavItem[] {
   const copy = getHomePageText(language)
 
   return [
-    { label: copy.nav.profile, path: ROUTES.MANAGE },
     { label: copy.nav.settings, path: ROUTES.SETTINGS },
   ]
 }

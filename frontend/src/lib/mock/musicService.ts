@@ -20,6 +20,9 @@ import { storage } from './storage'
 
 const TRACKS_KEY = 'tracks'
 const ALBUMS_KEY = 'albums'
+const DAILY_STREAMS_KEY = 'daily_streams'
+const TRACK_LISTENERS_KEY = 'track_listeners'
+const ARTIST_LISTENERS_KEY = 'artist_listeners'
 
 // We mix and unify output type so the list page can dynamically map Albums alongside standalone Songs
 export type CatalogItem =
@@ -50,6 +53,27 @@ function readAlbums(): Album[] {
 function writeAlbums(albums: Album[]): void {
   storage.set(ALBUMS_KEY, albums)
   useCatalogStore.getState().bumpCatalogVersion()
+}
+
+function readListenerMap(key: string): Record<number, number[]> {
+  return storage.get<Record<number, number[]>>(key) ?? {}
+}
+
+function addDistinctListener(
+  listenersByOwner: Record<number, number[]>,
+  ownerId: number,
+  listenerId: number,
+): Record<number, number[]> {
+  const currentListeners = listenersByOwner[ownerId] ?? []
+
+  if (currentListeners.includes(listenerId)) {
+    return listenersByOwner
+  }
+
+  return {
+    ...listenersByOwner,
+    [ownerId]: [...currentListeners, listenerId],
+  }
 }
 
 function assertVerifiedArtist(artistId: number): void {
@@ -133,13 +157,77 @@ export function getTrack(trackId: number, artistId: number): Track {
 
 export function getTrackStats(trackId: number, artistId: number): TrackStats {
   const track = getOwnedTrack(trackId, artistId)
+  const trackListeners = readListenerMap(TRACK_LISTENERS_KEY)
   const streamCount = track.stream_count ?? 0
   return {
     track_id: track.id,
-    listener_count: track.listener_count ?? 0,
+    listener_count: trackListeners[track.id]?.length ?? track.listener_count ?? 0,
     stream_count: streamCount,
     revenue: streamCount * REVENUE_PER_STREAM,
   }
+}
+
+export function recordTrackPlay(trackId: number, listenerId: number): Track {
+  const tracks = readTracks()
+  const track = tracks.find((item) => item.id === trackId)
+
+  if (!track) {
+    throw new Error('Track not found')
+  }
+
+  const trackListeners = addDistinctListener(
+    readListenerMap(TRACK_LISTENERS_KEY),
+    track.id,
+    listenerId,
+  )
+  const artistListeners = addDistinctListener(
+    readListenerMap(ARTIST_LISTENERS_KEY),
+    track.artist_id,
+    listenerId,
+  )
+  const nextTrack: Track = {
+    ...track,
+    stream_count: (track.stream_count ?? 0) + 1,
+    listener_count: trackListeners[track.id]?.length ?? 0,
+  }
+
+  storage.set(TRACK_LISTENERS_KEY, trackListeners)
+  storage.set(ARTIST_LISTENERS_KEY, artistListeners)
+  writeTracks(tracks.map((item) => (item.id === trackId ? nextTrack : item)))
+
+  const albums = readAlbums()
+  if (track.album_id) {
+    const albumTracks = tracks.map((item) => (item.id === trackId ? nextTrack : item))
+    writeAlbums(
+      albums.map((album) => {
+        if (album.id !== track.album_id) {
+          return album
+        }
+
+        const tracksForAlbum = albumTracks.filter((item) => item.album_id === album.id)
+        const albumListenerIds = new Set<number>()
+        const latestTrackListeners = readListenerMap(TRACK_LISTENERS_KEY)
+        tracksForAlbum.forEach((albumTrack) => {
+          const trackListeners = latestTrackListeners[albumTrack.id] ?? []
+          trackListeners.forEach((id) => albumListenerIds.add(id))
+        })
+
+        return {
+          ...album,
+          stream_count: tracksForAlbum.reduce((total, item) => total + (item.stream_count ?? 0), 0),
+          listener_count: albumListenerIds.size,
+        }
+      }),
+    )
+  }
+
+  const dailyStreams = storage.get<Record<number, number>>(DAILY_STREAMS_KEY) ?? {}
+  storage.set(DAILY_STREAMS_KEY, {
+    ...dailyStreams,
+    [listenerId]: (dailyStreams[listenerId] ?? 0) + 1,
+  })
+
+  return hydrateTrack(nextTrack)
 }
 
 export async function publishRelease(

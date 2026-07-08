@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import type { Track } from '../types';
 import type { RepeatMode } from '../types/player';
+import { hydrateTrack } from '../lib/mock/hydrateMedia';
+import { recordTrackPlay } from '../lib/mock/musicService';
+import { useAuthStore } from './authStore';
 
 interface PlayerState {
   currentTrack: Track | null;
@@ -47,7 +50,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   queue: [],
   isPlaying: false,
   progressSeconds: 0,
-  durationSeconds: 180, 
+  durationSeconds: 180,
   volume: 80,
   repeatMode: 'none',
   shuffle: false,
@@ -56,29 +59,33 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isQueueOpen: false,
 
   playTrack: (track, contextQueue = []) => {
-    // Check if the user clicked the song that is ALREADY playing!
-    // If they did, force a reset to 0 to simulate restarting the track immediately.
     const current = get().currentTrack;
     if (current?.id === track.id) {
-       set({ progressSeconds: 0, isPlaying: true });
-       return;
+      set({ progressSeconds: 0, isPlaying: true });
+      return;
     }
 
-    let finalQueue = contextQueue.length > 0 ? contextQueue.filter(t => t.id !== track.id) : get().queue;
+    const user = useAuthStore.getState().user;
+    const hydratedTrack = user
+      ? recordTrackPlay(track.id, user.id)
+      : hydrateTrack(track);
+    let finalQueue = contextQueue.length > 0
+      ? contextQueue.map(hydrateTrack).filter((t) => t.id !== hydratedTrack.id)
+      : get().queue;
     if (get().shuffle) {
       finalQueue = shuffleArray(finalQueue);
     }
     set({
-      currentTrack: track,
+      currentTrack: hydratedTrack,
       queue: finalQueue,
       isPlaying: true,
       progressSeconds: 0,
-      durationSeconds: track.duration_seconds || 180,
+      durationSeconds: hydratedTrack.duration_seconds || 180,
     });
   },
-  
+
   pause: () => set({ isPlaying: false }),
-  
+
   resume: () => {
     if (get().currentTrack) set({ isPlaying: true });
   },
@@ -86,7 +93,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   next: (forceSkip = false) => {
     const { queue, repeatMode, currentTrack } = get();
     if (!currentTrack) return;
-    
+
     if (repeatMode === 'one' && !forceSkip) {
       set({ progressSeconds: 0, isPlaying: true });
       return;
@@ -95,11 +102,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (queue.length > 0) {
       const nextTrack = queue[0];
       const newQueue = queue.slice(1);
-      
+
       if (repeatMode === 'all') {
         newQueue.push(currentTrack);
       }
-      
+
       set({
         currentTrack: nextTrack,
         queue: newQueue,
@@ -108,7 +115,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         isPlaying: true,
       });
       return;
-    } 
+    }
 
     if (repeatMode === 'all' || repeatMode === 'one') {
       set({ progressSeconds: 0, isPlaying: true });
@@ -122,15 +129,15 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   seek: (seconds: number) => set({ progressSeconds: seconds }),
-  
-  setDuration: (seconds: number) => set({ durationSeconds: seconds }), 
+
+  setDuration: (seconds: number) => set({ durationSeconds: seconds }),
 
   tick: () => {
     const { isPlaying, progressSeconds, durationSeconds, next } = get();
     if (!isPlaying) return;
 
     if (progressSeconds >= durationSeconds) {
-      next(); 
+      next();
     } else {
       set({ progressSeconds: progressSeconds + 1 });
     }

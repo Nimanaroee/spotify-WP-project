@@ -20,7 +20,6 @@ import {
   ChevronDown,
   Disc3,
   ListMusic,
-  Maximize2,
   Mic2,
   Pause,
   Play,
@@ -34,10 +33,11 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getPlayerText } from '../../lib/constants/playerText';
-import { ROUTES } from '../../lib/constants/routes';
+import { userProfilePath } from '../../lib/constants/routes';
 import { getTrackStats } from '../../lib/mock/musicService';
+import { getUserById } from '../../lib/mock/userProfileService';
 import { useAuthStore } from '../../store/authStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAppLanguage } from '../../theme/LanguageContext';
@@ -82,7 +82,6 @@ export default function PlayerBar() {
     isQueueOpen,
     isLyricsOpen,
     toggleExpanded,
-    playTrack,
     pause,
     resume,
     next,
@@ -207,7 +206,8 @@ export default function PlayerBar() {
           }}
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`${ROUTES.USER_PROFILE.replace(':username', currentTrack.artist_id.toString())}`);
+            const artist = getUserById(currentTrack.artist_id);
+            navigate(userProfilePath(artist?.username ?? String(currentTrack.artist_id)));
             if (isExpanded) toggleExpanded();
           }}
         >

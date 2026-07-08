@@ -14,7 +14,8 @@ import { Disc3, MoreVertical, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAlbumsPageText } from '../../lib/constants/albumsPageText';
-import { ROUTES } from '../../lib/constants/routes';
+import { ROUTES, userProfilePath } from '../../lib/constants/routes';
+import { getUserById } from '../../lib/mock/userProfileService';
 import { useAuthStore } from '../../store/authStore';
 import { useAppLanguage } from '../../theme/LanguageContext';
 import type { CatalogItem } from '../../lib/mock/musicService';
@@ -57,10 +58,8 @@ export default function MusicCard({ item, onTriggerPlayer, onManagePlaylists }: 
 
   const goToArtist = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Assuming artist handles navigation dynamically matching routes config userProfilePath logic
-    // Using simple display_name logic as proxy since we do not natively retain 'username' alongside 'artist_name' statically on generic mocks
-    // Note for Phase 2: backend returns `artist_username` explicitly alongside. For now we use the id or generic link 
-    navigate(`${ROUTES.USER_PROFILE.replace(':username', item.artist_id.toString())}`);
+    const artist = getUserById(item.artist_id);
+    navigate(userProfilePath(artist?.username ?? String(item.artist_id)));
   };
 
   const goToAlbum = (e: React.MouseEvent, targetAlbumId: number) => {
@@ -110,7 +109,7 @@ export default function MusicCard({ item, onTriggerPlayer, onManagePlaylists }: 
       <Menu
         anchorEl={menuAnchor}
         open={Boolean(menuAnchor)}
-        onClose={(e: any) => { e.stopPropagation(); setMenuAnchor(null); }}
+        onClose={() => setMenuAnchor(null)}
       >
         <MenuItem onClick={handleAddToPlaylistClick}>
           <Plus size={16} className="mx-2" /> {copy.menu.addToPlaylist}

@@ -131,9 +131,7 @@ export default function SettingsPage() {
       sx={{ bgcolor: 'background.default' }}
     >
       <Stack className="mx-auto max-w-5xl" spacing={3}>
-        <PageHeader subtitle={copy.settings.subtitle}>
-          {copy.settings.pageTitle}
-        </PageHeader>
+        <PageHeader>{copy.settings.pageTitle}</PageHeader>
 
         {message ? (
           <Alert severity={message.severity}>{message.text}</Alert>

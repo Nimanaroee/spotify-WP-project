@@ -104,6 +104,13 @@ describe('userProfileService', () => {
     expect(profile.following).toHaveLength(1)
   })
 
+  it('loads read-only profile details by numeric user id route value', () => {
+    const profile = getUserProfileView(1, '2')
+
+    expect(profile.user.username).toBe('follower')
+    expect(profile.user.id).toBe(2)
+  })
+
   it('removes a follower relationship', () => {
     const profile = removeFollower(1, 2)
 

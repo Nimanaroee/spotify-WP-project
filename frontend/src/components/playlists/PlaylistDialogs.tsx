@@ -14,7 +14,7 @@ import { Search, Plus, Minus, Disc3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAppLanguage } from '../../theme/LanguageContext';
 import { getPlaylistsPageText } from '../../lib/constants/playlistsPageText';
-import { searchCatalog, type CatalogItem } from '../../lib/mock/musicService';
+import { searchCatalog } from '../../lib/mock/musicService';
 import { toggleTrackInPlaylist } from '../../lib/mock/playlistService';
 import type { Playlist, Track } from '../../types';
 

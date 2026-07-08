@@ -12,11 +12,45 @@ function formatDuration(seconds?: number): string {
   return `${minutes}:${String(remainingSeconds).padStart(2, '0')}`
 }
 
-export default function ArtistReleaseCard({ release }: { release: Album | Track }) {
+export default function ArtistReleaseCard({
+  release,
+  onSelect,
+}: {
+  release: Album | Track
+  onSelect?: (release: Album | Track) => void
+}) {
   const isAlbum = release.release_type === 'album'
+  const isClickable = Boolean(onSelect)
 
   return (
-    <Paper className="p-4" variant="outlined">
+    <Paper
+      className="p-4"
+      onClick={() => onSelect?.(release)}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      variant="outlined"
+      onKeyDown={(event) => {
+        if (!isClickable) {
+          return
+        }
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onSelect?.(release)
+        }
+      }}
+      sx={{
+        cursor: isClickable ? 'pointer' : 'default',
+        transition: 'background-color 0.2s, border-color 0.2s',
+        ...(isClickable
+          ? {
+              '&:hover': {
+                bgcolor: 'action.hover',
+                borderColor: 'primary.main',
+              },
+            }
+          : {}),
+      }}
+    >
       <Stack direction="row" spacing={2}>
         <Box
           sx={{
