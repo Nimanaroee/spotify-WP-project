@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="390" height="844" viewBox="0 0 390 844">
+  <rect width="390" height="844" fill="#121212"/>
+  <rect x="20" y="28" width="350" height="788" rx="28" fill="#181818"/>
+  <text x="44" y="86" fill="#ffffff" font-family="Arial, sans-serif" font-size="30" font-weight="700">Music App</text>
+  <text x="44" y="122" fill="#b3b3b3" font-family="Arial, sans-serif" font-size="16">Your music anywhere</text>
+  <rect x="44" y="164" width="302" height="302" rx="24" fill="#1db954"/>
+  <circle cx="195" cy="315" r="92" fill="#121212"/>
+  <path fill="#1db954" d="M170 366c-18 0-32-11-32-25s14-25 32-25c6 0 12 1 17 4v-91h112v41h-71v73c0 14-14 25-32 25-7 0-13-1-18-4-3 1-6 2-8 2Z"/>
+  <rect x="44" y="508" width="302" height="46" rx="12" fill="#282828"/>
+  <rect x="44" y="574" width="258" height="46" rx="12" fill="#282828"/>
+  <rect x="44" y="640" width="286" height="46" rx="12" fill="#282828"/>
+  <rect x="44" y="728" width="302" height="56" rx="18" fill="#282828"/>
+  <circle cx="78" cy="756" r="16" fill="#1db954"/>
+  <rect x="112" y="748" width="174" height="16" rx="8" fill="#535353"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">Music App</title>
+  <rect width="512" height="512" rx="112" fill="#121212"/>
+  <circle cx="256" cy="256" r="176" fill="#1db954"/>
+  <path fill="#121212" d="M207 348c-24 0-43-15-43-34s19-34 43-34c8 0 16 2 23 5V160h150v55H285v99c0 19-19 34-43 34-9 0-17-2-24-5-4 3-8 5-11 5Z"/>
+</svg>
