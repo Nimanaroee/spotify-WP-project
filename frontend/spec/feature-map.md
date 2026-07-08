@@ -8,15 +8,15 @@ Maps course project sections to frontend locations. Update the **Status** column
 
 | Spec | Feature | Primary paths | Status |
 |------|---------|---------------|--------|
-| §2.1 | Login & registration | `pages/LoginPage`, `pages/RegisterPage`, `store/authStore` | TODO |
-| §2.2 | Home page | `pages/HomePage`, `layouts/MainLayout` | WIP |
-| §2.3 | User profile | `pages/UserProfilePage`, `pages/ManagePage` | WIP |
-| §2.4 | Artist profile | `pages/ArtistProfilePage`, `types/artist.ts` | TODO |
-| §2.5 | App settings | `pages/SettingsPage`, `types/settings.ts` | TODO |
+| §2.1 | Login & registration | `pages/LoginPage`, `pages/RegisterPage`, `pages/ForgotPasswordPage`, `store/authStore`, `lib/mock/authService` | DONE |
+| §2.2 | Home page | `pages/HomePage`, `components/home/*`, `layouts/MainLayout`, `lib/mock/homeService` | DONE |
+| §2.3 | User profile | `pages/UserProfilePage`, `pages/ManagePage`, `components/profile/*`, `lib/mock/userProfileService` | DONE |
+| §2.4 | Artist profile | `pages/UserProfilePage`, `components/profile/*`, `lib/mock/artistProfileService`, `types/artist.ts` | DONE |
+| §2.5 | App settings | `pages/SettingsPage`, `types/settings.ts`, `lib/mock/settingsService` | DONE |
 | §2.6 | Notifications | `pages/NotificationsPage`, `components/notifications/*`, `store/notificationStore`, `lib/mock/notificationService` | DONE |
-| §2.7 | Playlists | `pages/PlaylistsPage`, `types/playlist.ts` | TODO |
-| §2.8 | Albums & singles | `pages/AlbumsPage`, `pages/AlbumDetailPage`, `types/music.ts` | TODO |
-| §2.9 | Music player | `components/layout/PlayerBar`, `store/playerStore`, `types/player.ts` | TODO |
+| §2.7 | Playlists | `pages/PlaylistsPage`, `components/playlists/*`, `lib/mock/playlistService`, `types/playlist.ts` | DONE |
+| §2.8 | Albums & singles | `pages/AlbumsPage`, `pages/AlbumDetailPage`, `components/music/*`, `lib/mock/musicService`, `types/music.ts` | DONE |
+| §2.9 | Music player | `components/player/PlayerBar`, `store/playerStore`, `types/player.ts` | DONE |
 | §2.10 | Artwork management | `pages/ArtworkManagementPage`, `components/artwork/*`, `lib/mock/musicService`, `lib/artwork/fileUpload` | DONE |
 | §2.11 | Admin dashboard | `layouts/AdminLayout`, `pages/admin/*` | DONE |
 | §2.11.1 | Tickets & verification | `pages/admin/TicketsPage`, `pages/admin/VerificationDetailPage` | DONE |
@@ -34,15 +34,17 @@ Maps course project sections to frontend locations. Update the **Status** column
 | Notification bell + panel | `components/notifications/NotificationPanel.tsx`, layouts | §2.6 |
 | Locale copy modules | `lib/constants/*PageText.ts`, `theme/LanguageContext` | Cross-cutting |
 | Theme mode toggle | `components/common/ThemeToggleButton.tsx`, `theme/*` | Cross-cutting |
-| Verified artist badge | `components/common/VerifiedBadge.tsx` (create) | §2.4 |
-| Follow/unfollow | `lib/mock/followService.ts` (create), profile pages | §2.3, §2.4 |
-| Gold-only stats | conditional UI using `SUBSCRIPTION_LIMITS` | §2.4, §2.9 |
+| Verified artist badge | `BadgeCheck` badge usage in profile and artist surfaces | §2.4 |
+| Follow/unfollow | `lib/mock/userProfileService.ts`, `pages/UserProfilePage`, `pages/ManagePage` | §2.3, §2.4 |
+| Gold-only stats | conditional UI using `SUBSCRIPTION_LIMITS` and `subscription_tier` | §2.4, §2.9 |
+| Catalog refresh | `store/catalogStore.ts`, mock music/home services | §2.2, §2.8, §2.10 |
+| Global player | `App.tsx`, `components/player/PlayerBar.tsx`, `store/playerStore.ts` | §2.9 |
 
 ## User roles
 
 | Role | Constant | Dashboard entry |
 |------|----------|-----------------|
-| Listener | `ROLES.LISTENER` | `/` Home |
+| Listener | `ROLES.LISTENER` | `/` Home, `/playlists`, `/albums`, `/manage` |
 | Artist | `ROLES.ARTIST` | `/` + `/artist/studio` when verified |
 | Support | `ROLES.SUPPORT` | `/admin/tickets` |
 | Admin | `ROLES.ADMIN` | `/admin` full access |
@@ -52,8 +54,8 @@ Maps course project sections to frontend locations. Update the **Status** column
 | Tier | Constant | Key limits |
 |------|----------|------------|
 | Basic | `basic` | 60 streams/day, 6 playlists, no avatar upload |
-| Silver | `silver` | 100 playlists, downloads, avatar |
-| Gold | `gold` | unlimited playlists, early access, stats |
+| Silver | `silver` | unlimited streams/day, 100 playlists, downloads, avatar |
+| Gold | `gold` | unlimited streams/day, unlimited playlists, downloads, early access, stats |
 
 Source: `SUBSCRIPTION_LIMITS` in `src/lib/constants/subscriptionLimits.ts`.
 
