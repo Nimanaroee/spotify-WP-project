@@ -14,10 +14,9 @@ import {
   useTheme,
 } from '@mui/material';
 import { Menu } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import NotificationPanel from '../components/notifications/NotificationPanel';
-import PlayerBar from '../components/player/PlayerBar'; 
 import { getProfileInitials } from '../components/profile/profileUtils';
 import { useIsMobile } from '../hooks/useIsMobile';
 import { getAppText } from '../lib/constants/appText';
@@ -27,6 +26,7 @@ import { ROUTES } from '../lib/constants/routes';
 import { logout } from '../lib/mock/authService';
 import { useAuthStore } from '../store/authStore';
 import { usePlayerStore } from '../store/playerStore';
+import { useLayoutStore } from '../store/layoutStore'; // <--- NEW IMPORT
 import { useAppLanguage } from '../theme/LanguageContext';
 
 const DRAWER_WIDTH = 260;
@@ -34,20 +34,29 @@ const DRAWER_WIDTH = 260;
 export default function MainLayout({ children }: { children: ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
-  // Add checking variable logic internally so standard container layout compensates 
+  
   const currentTrack = usePlayerStore((state) => state.currentTrack);
+  
+  // Use Global State so navigation keeps menu opened/closed exactly as left
+  const { sidebarOpen, setSidebarOpen, initialize } = useLayoutStore();
 
   const { language, toggleLanguage } = useAppLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
   const isMobile = useIsMobile();
-  
-  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
+  const prevIsMobileRef = useRef(isMobile);
 
   useEffect(() => {
-    setSidebarOpen(!isMobile);
-  }, [isMobile]);
+    // Determine default opened/closed state on first load based on screen size
+    initialize(isMobile);
+    
+    // Automatically hide the sidebar if the user shrinks their browser down to mobile size dynamically
+    if (isMobile && !prevIsMobileRef.current) {
+      setSidebarOpen(false);
+    }
+    prevIsMobileRef.current = isMobile;
+  }, [isMobile, initialize, setSidebarOpen]);
 
   const appCopy = getAppText(language);
   const homeCopy = getHomePageText(language);
@@ -77,6 +86,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
               selected={isActive}
               to={item.path}
               onClick={() => {
+                // If on mobile, closing upon clicking a link saves screen space
                 if (isMobile) setSidebarOpen(false);
               }}
               sx={{ borderRadius: 1.5, mb: 0.5 }}
@@ -212,14 +222,11 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           </AppBar>
         ) : null}
 
-        {/* Adjust PB for bottom clearance when player docks into window frame permanently. Desktop requires explicit spacer */}
         <Box component="main" sx={{ flexGrow: 1, minWidth: 0, pb: currentTrack ? { xs: '120px', md: '140px' } : 8 }}>
           {children}
         </Box>
       </Box>
 
-      {/* Render persistent Global Store connected Transport Root Container. */}
-      {user && <PlayerBar />}
     </Box>
   );
 }

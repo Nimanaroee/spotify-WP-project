@@ -56,7 +56,8 @@ function readArtistListeners(): Record<number, number[]> {
 }
 
 function stripPassword(user: StoredUser): User {
-  const { password: _password, ...publicUser } = user
+  const { password, ...publicUser } = user
+  void password
   return publicUser
 }
 

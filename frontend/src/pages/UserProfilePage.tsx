@@ -8,6 +8,7 @@ import {
   Paper,
   Stack,
   Typography,
+  useMediaQuery,
 } from '@mui/material'
 import { BadgeCheck } from 'lucide-react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
@@ -28,7 +29,6 @@ import {
   getUserProfileView,
   unfollowAccount,
 } from '../lib/mock/userProfileService'
-import { useIsMobile } from '../hooks/useIsMobile'
 import { useAuthStore } from '../store/authStore'
 import { usePlayerStore } from '../store/playerStore'
 import { useAppLanguage } from '../theme/LanguageContext'
@@ -45,7 +45,7 @@ export default function UserProfilePage() {
   const navigate = useNavigate()
   const authUser = useAuthStore((state) => state.user)
   const playTrack = usePlayerStore((state) => state.playTrack)
-  const isCompactMobile = useIsMobile()
+  const isCompactMobile = useMediaQuery('(max-width:767px)')
   const { language } = useAppLanguage()
   const copy = getAppText(language)
   const [profile, setProfile] = useState<ProfileView | null>(null)
@@ -295,15 +295,15 @@ export default function UserProfilePage() {
                   variant="outlined"
                   sx={{ height: releaseListHeight, maxHeight: releaseListHeight, overflowY: 'auto', p: 2 }}
                 >
-                <Stack spacing={1.5}>
-                  {artistProfile.albums.length > 0 ? (
-                    artistProfile.albums.map((album) => (
-                      <ArtistReleaseCard key={album.id} release={album} onSelect={handleReleaseSelect} />
-                    ))
-                  ) : (
-                    <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
-                  )}
-                </Stack>
+                  <Stack spacing={1.5}>
+                    {artistProfile.albums.length > 0 ? (
+                      artistProfile.albums.map((album) => (
+                        <ArtistReleaseCard key={album.id} release={album} onSelect={handleReleaseSelect} />
+                      ))
+                    ) : (
+                      <Typography color="text.secondary">{copy.profile.noAlbums}</Typography>
+                    )}
+                  </Stack>
                 </Paper>
               </Box>
 
@@ -316,15 +316,15 @@ export default function UserProfilePage() {
                   variant="outlined"
                   sx={{ height: releaseListHeight, maxHeight: releaseListHeight, overflowY: 'auto', p: 2 }}
                 >
-                <Stack spacing={1.5}>
-                  {artistProfile.singles.length > 0 ? (
-                    artistProfile.singles.map((single) => (
-                      <ArtistReleaseCard key={single.id} release={single} onSelect={handleReleaseSelect} />
-                    ))
-                  ) : (
-                    <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
-                  )}
-                </Stack>
+                  <Stack spacing={1.5}>
+                    {artistProfile.singles.length > 0 ? (
+                      artistProfile.singles.map((single) => (
+                        <ArtistReleaseCard key={single.id} release={single} onSelect={handleReleaseSelect} />
+                      ))
+                    ) : (
+                      <Typography color="text.secondary">{copy.profile.noSingles}</Typography>
+                    )}
+                  </Stack>
                 </Paper>
               </Box>
             </>
@@ -379,10 +379,10 @@ export default function UserProfilePage() {
                   </Typography>
                 </Paper>
               </Box>
+
+              {followLists}
             </>
           )}
-
-          {artistProfile ? null : followLists}
         </Stack>
       </Paper>
     </Box>

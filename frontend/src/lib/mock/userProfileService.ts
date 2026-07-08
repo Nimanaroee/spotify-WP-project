@@ -39,8 +39,15 @@ function writeFollows(follows: Follow[]): void {
 }
 
 function stripPassword(user: StoredUser): User {
-  const { password: _password, ...publicUser } = user
+  const { password, ...publicUser } = user
+  void password
   return publicUser
+}
+
+export function getUserById(userId: EntityId): User | null {
+  const user = readUsers().find((candidate) => candidate.id === userId)
+
+  return user ? stripPassword(user) : null
 }
 
 function toUserSummary(user: StoredUser): UserSummary {

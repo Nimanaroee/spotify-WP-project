@@ -21,10 +21,10 @@ interface PlayerState {
   playTrack: (track: Track, contextQueue?: Track[]) => void;
   pause: () => void;
   resume: () => void;
-  next: () => void;
+  next: (forceSkip?: boolean) => void;
   prev: () => void;
   seek: (seconds: number) => void;
-  setDurationSeconds: (seconds: number) => void;
+  setDuration: (seconds: number) => void;
   tick: () => void;
   setVolume: (volume: number) => void;
   toggleShuffle: () => void;
@@ -50,7 +50,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   queue: [],
   isPlaying: false,
   progressSeconds: 0,
-  durationSeconds: 180, // Fallback if track duration is undefined
+  durationSeconds: 180,
   volume: 80,
   repeatMode: 'none',
   shuffle: false,
@@ -59,8 +59,16 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   isQueueOpen: false,
 
   playTrack: (track, contextQueue = []) => {
+    const current = get().currentTrack;
+    if (current?.id === track.id) {
+      set({ progressSeconds: 0, isPlaying: true });
+      return;
+    }
+
     const user = useAuthStore.getState().user;
-    const hydratedTrack = user ? recordTrackPlay(track.id, user.id) : hydrateTrack(track);
+    const hydratedTrack = user
+      ? recordTrackPlay(track.id, user.id)
+      : hydrateTrack(track);
     let finalQueue = contextQueue.length > 0
       ? contextQueue.map(hydrateTrack).filter((t) => t.id !== hydratedTrack.id)
       : get().queue;
@@ -75,18 +83,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       durationSeconds: hydratedTrack.duration_seconds || 180,
     });
   },
-  
+
   pause: () => set({ isPlaying: false }),
-  
+
   resume: () => {
     if (get().currentTrack) set({ isPlaying: true });
   },
 
-  next: () => {
+  next: (forceSkip = false) => {
     const { queue, repeatMode, currentTrack } = get();
     if (!currentTrack) return;
-    
-    if (repeatMode === 'one') {
+
+    if (repeatMode === 'one' && !forceSkip) {
       set({ progressSeconds: 0, isPlaying: true });
       return;
     }
@@ -94,35 +102,35 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     if (queue.length > 0) {
       const nextTrack = queue[0];
       const newQueue = queue.slice(1);
-      if (repeatMode === 'all') newQueue.push(currentTrack); // cycle it back
+
+      if (repeatMode === 'all') {
+        newQueue.push(currentTrack);
+      }
+
       set({
         currentTrack: nextTrack,
         queue: newQueue,
         progressSeconds: 0,
         durationSeconds: nextTrack.duration_seconds || 180,
+        isPlaying: true,
       });
+      return;
+    }
+
+    if (repeatMode === 'all' || repeatMode === 'one') {
+      set({ progressSeconds: 0, isPlaying: true });
     } else {
-      if (repeatMode === 'all') {
-        set({ progressSeconds: 0, isPlaying: true });
-      } else {
-        set({ isPlaying: false, progressSeconds: 0 });
-      }
+      set({ progressSeconds: 0, isPlaying: false });
     }
   },
 
   prev: () => {
-    // Basic logic: restart song if past 3 seconds, else go back (in real app, we'd keep history)
-    if (get().progressSeconds > 3 || get().queue.length === 0) {
-      set({ progressSeconds: 0, isPlaying: true });
-    } else {
-       // Without history logic built out, we simulate just restarting it. 
-       set({ progressSeconds: 0 });
-    }
+    set({ progressSeconds: 0, isPlaying: true });
   },
 
   seek: (seconds: number) => set({ progressSeconds: seconds }),
 
-  setDurationSeconds: (durationSeconds: number) => set({ durationSeconds }),
+  setDuration: (seconds: number) => set({ durationSeconds: seconds }),
 
   tick: () => {
     const { isPlaying, progressSeconds, durationSeconds, next } = get();
@@ -147,8 +155,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   toggleRepeat: () => {
     const current = get().repeatMode;
-    const next: RepeatMode = current === 'none' ? 'all' : current === 'all' ? 'one' : 'none';
-    set({ repeatMode: next });
+    const nextMode: RepeatMode = current === 'none' ? 'all' : current === 'all' ? 'one' : 'none';
+    set({ repeatMode: nextMode });
   },
 
   toggleExpanded: () => set((state) => ({ isExpanded: !state.isExpanded })),

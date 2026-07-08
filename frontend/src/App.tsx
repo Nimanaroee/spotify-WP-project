@@ -20,6 +20,7 @@ import {
 import { emotionCacheLtr, emotionCacheRtl } from './theme/emotionCache';
 import { ThemeModeContext } from './theme/ThemeModeContext';
 import type { AppLanguage } from './types';
+import PlayerBar from './components/player/PlayerBar'; // <--- NEW IMPORT ADDED HERE
 
 function getStoredThemeMode(): AppThemeMode {
   const storedMode = localStorage.getItem(THEME_MODE_STORAGE_KEY);
@@ -44,11 +45,14 @@ export default function App() {
   const [language, setLanguage] = useState<AppLanguage>(getStoredLanguage);
   const [mediaReady, setMediaReady] = useState(false);
   const isRtl = language === 'fa';
+  
   const theme = useMemo(
     () => createAppTheme(mode, isRtl ? 'rtl' : 'ltr'),
     [mode, isRtl],
   );
+  
   const emotionCache = isRtl ? emotionCacheRtl : emotionCacheLtr;
+  
   const themeModeContextValue = useMemo(
     () => ({
       mode,
@@ -63,6 +67,7 @@ export default function App() {
     }),
     [mode]
   );
+  
   const languageContextValue = useMemo(
     () => ({
       language,
@@ -107,8 +112,14 @@ export default function App() {
         <LanguageContext.Provider value={languageContextValue}>
           <ThemeProvider theme={theme}>
             <CssBaseline />
+            {/* The Player Bar is now outside the individual routes, so it persists! */}
             <BrowserRouter>
-              {mediaReady ? <Router /> : null}
+              {mediaReady ? (
+                <>
+                  <Router />
+                  {user ? <PlayerBar /> : null}
+                </>
+              ) : null}
             </BrowserRouter>
           </ThemeProvider>
         </LanguageContext.Provider>

@@ -208,7 +208,8 @@ export function recordTrackPlay(trackId: number, listenerId: number): Track {
         const albumListenerIds = new Set<number>()
         const latestTrackListeners = readListenerMap(TRACK_LISTENERS_KEY)
         tracksForAlbum.forEach((albumTrack) => {
-          ;(latestTrackListeners[albumTrack.id] ?? []).forEach((id) => albumListenerIds.add(id))
+          const trackListeners = latestTrackListeners[albumTrack.id] ?? []
+          trackListeners.forEach((id) => albumListenerIds.add(id))
         })
 
         return {
