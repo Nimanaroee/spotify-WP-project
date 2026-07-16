@@ -1,11 +1,18 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider, createTheme } from '@mui/material'
 import RegisterPage from './RegisterPage'
-import { storage } from '../lib/mock/storage'
+import { registerArtist, registerListener, setCurrentUser } from '../lib/api/authService'
 import { useAuthStore } from '../store/authStore'
+
+vi.mock('../lib/api/authService', () => ({
+  getCurrentUser: vi.fn(() => null),
+  registerArtist: vi.fn(),
+  registerListener: vi.fn(),
+  setCurrentUser: vi.fn(),
+}))
 
 function renderRegisterPage() {
   return render(
@@ -21,7 +28,9 @@ describe('RegisterPage', () => {
   beforeEach(() => {
     localStorage.clear()
     useAuthStore.setState({ user: null })
-    storage.set('users', [])
+    vi.mocked(registerArtist).mockReset()
+    vi.mocked(registerListener).mockReset()
+    vi.mocked(setCurrentUser).mockReset()
   })
 
   it('opens the privacy policy dialog', async () => {
@@ -38,6 +47,10 @@ describe('RegisterPage', () => {
 
   it('submits artist registration as pending approval', async () => {
     const user = userEvent.setup()
+    vi.mocked(registerArtist).mockResolvedValue({
+      status: 'pending_approval',
+      message: 'Your artist account request is pending approval.',
+    })
     renderRegisterPage()
 
     await user.click(screen.getByRole('tab', { name: /artist/i }))
@@ -52,7 +65,13 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /^register$/i }))
 
     expect(await screen.findByText(/pending approval/i)).toBeInTheDocument()
-    expect(storage.get<unknown[]>('verification_requests')).toHaveLength(1)
+    expect(registerArtist).toHaveBeenCalledWith({
+      email: 'artist@example.com',
+      password: 'password123',
+      password_confirmation: 'password123',
+      stage_name: 'The Artist',
+      portfolio_links: ['https://example.com/music'],
+    })
     expect(useAuthStore.getState().user).toBeNull()
   })
 })

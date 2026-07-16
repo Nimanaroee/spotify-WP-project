@@ -14,7 +14,7 @@ import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { getAppText } from '../lib/constants/appText';
-import { login } from '../lib/mock/authService';
+import { login } from '../lib/api/authService';
 import { useAuthStore } from '../store/authStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import { loginSchema, type LoginFormValues } from './authSchemas';
@@ -34,10 +34,10 @@ export default function LoginPage() {
     defaultValues: { email: '', password: '' },
   });
 
-  function onSubmit(values: LoginFormValues): void {
+  async function onSubmit(values: LoginFormValues): Promise<void> {
     setFormError('');
     try {
-      const result = login(values.email, values.password);
+      const result = await login(values.email, values.password);
       setUser(result.user);
       navigate(result.redirectPath);
     } catch (error) {

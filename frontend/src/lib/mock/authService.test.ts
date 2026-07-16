@@ -88,7 +88,7 @@ describe('authService', () => {
       password: 'password123',
       password_confirmation: 'password123',
       birth_date: '2000-01-01',
-      gender: 'prefer_not_to_say',
+      gender: 'male',
       privacy_policy_accepted: true,
     })
 

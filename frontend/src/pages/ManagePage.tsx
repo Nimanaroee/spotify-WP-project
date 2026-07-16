@@ -72,7 +72,7 @@ function createEditableProfile(
   return {
     display_name: profile.user.display_name,
     birth_date: profile.user.birth_date ?? '',
-    gender: profile.user.gender ?? 'prefer_not_to_say',
+    gender: profile.user.gender ?? 'male',
     profile_picture: profile.user.profile_picture ?? '',
   };
 }
@@ -409,7 +409,7 @@ export default function ManagePage() {
       : {
           display_name: '',
           birth_date: '',
-          gender: 'prefer_not_to_say',
+          gender: 'male',
           profile_picture: '',
         }
   );
@@ -739,12 +739,6 @@ export default function ManagePage() {
                       </MenuItem>
                       <MenuItem value="female">
                         {copy.form.genderOptions.female}
-                      </MenuItem>
-                      <MenuItem value="other">
-                        {copy.form.genderOptions.other}
-                      </MenuItem>
-                      <MenuItem value="prefer_not_to_say">
-                        {copy.form.genderOptions.preferNotToSay}
                       </MenuItem>
                     </TextField>
                   </Box>

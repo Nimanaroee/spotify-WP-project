@@ -13,7 +13,7 @@ describe('authSchemas', () => {
       password: 'password123',
       password_confirmation: 'password456',
       birth_date: '2000-01-01',
-      gender: 'prefer_not_to_say',
+      gender: 'male',
       privacy_policy_accepted: true,
     })
 
@@ -27,20 +27,20 @@ describe('authSchemas', () => {
       password: 'password123',
       password_confirmation: 'password123',
       birth_date: '2000-01-01',
-      gender: 'prefer_not_to_say',
+      gender: 'male',
       privacy_policy_accepted: false,
     })
 
     expect(result.success).toBe(false)
   })
 
-  it('accepts artist registration data with portfolio links', () => {
+  it('accepts artist registration data with non-empty portfolio links', () => {
     const result = artistRegistrationSchema.safeParse({
       email: 'artist@example.com',
       password: 'password123',
       password_confirmation: 'password123',
       stage_name: 'The Artist',
-      portfolio_links: 'https://example.com',
+      portfolio_links: 'my portfolio handle',
     })
 
     expect(result.success).toBe(true)

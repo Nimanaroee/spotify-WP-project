@@ -24,7 +24,7 @@ import { useIsMobile } from '../hooks/useIsMobile'
 import { getAdminPageText } from '../lib/constants/adminPageText'
 import { getAdminAccountNav, getAdminNavForRole } from '../lib/constants/navItems'
 import { ROUTES } from '../lib/constants/routes'
-import { logout } from '../lib/mock/authService'
+import { logout } from '../lib/api/authService'
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 

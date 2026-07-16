@@ -17,8 +17,6 @@ type ManageCopy = {
     genderOptions: {
       female: string;
       male: string;
-      other: string;
-      preferNotToSay: string;
     };
     systemUsername: string;
   };
@@ -68,8 +66,6 @@ export const MANAGE_PAGE_TEXT: Record<AppLanguage, ManageCopy> = {
       genderOptions: {
         female: 'Female',
         male: 'Male',
-        other: 'Other',
-        preferNotToSay: 'Prefer not to say',
       },
       systemUsername: 'System username',
     },
@@ -117,8 +113,6 @@ export const MANAGE_PAGE_TEXT: Record<AppLanguage, ManageCopy> = {
       genderOptions: {
         female: 'زن',
         male: 'مرد',
-        other: 'سایر',
-        preferNotToSay: 'ترجیح می‌دهم نگویم',
       },
       systemUsername: 'نام کاربری سیستم',
     },
