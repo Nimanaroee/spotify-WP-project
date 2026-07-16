@@ -23,7 +23,7 @@ import { getAppText } from '../lib/constants/appText';
 import { getHomePageText } from '../lib/constants/homePageText';
 import { getMainNavForRole } from '../lib/constants/navItems';
 import { ROUTES } from '../lib/constants/routes';
-import { logout } from '../lib/mock/authService';
+import { logout } from '../lib/api/authService';
 import { useAuthStore } from '../store/authStore';
 import { usePlayerStore } from '../store/playerStore';
 import { useLayoutStore } from '../store/layoutStore'; // <--- NEW IMPORT

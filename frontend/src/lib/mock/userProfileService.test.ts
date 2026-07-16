@@ -21,7 +21,7 @@ describe('userProfileService', () => {
         display_name: 'Listener',
         role: ROLES.LISTENER,
         birth_date: '2000-01-01',
-        gender: 'prefer_not_to_say',
+        gender: 'male',
         profile_picture: null,
         subscription_tier: 'basic',
         created_at: '2026-01-01T00:00:00.000Z',
@@ -129,12 +129,12 @@ describe('userProfileService', () => {
     const updatedUser = updateUserProfile(1, {
       display_name: 'Updated Listener',
       birth_date: '1999-09-09',
-      gender: 'other',
+      gender: 'female',
     })
 
     expect(updatedUser.display_name).toBe('Updated Listener')
     expect(updatedUser.birth_date).toBe('1999-09-09')
-    expect(updatedUser.gender).toBe('other')
+    expect(updatedUser.gender).toBe('female')
   })
 
   it('prevents Basic subscribers from changing profile pictures', () => {

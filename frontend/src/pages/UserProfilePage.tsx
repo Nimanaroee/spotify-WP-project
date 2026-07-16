@@ -377,9 +377,7 @@ export default function UserProfilePage() {
                   </Typography>
                   <Typography variant="h6" sx={{ fontWeight: 700 }}>
                     {profile.user.gender
-                      ? profile.user.gender === 'prefer_not_to_say'
-                        ? copy.profile.genderValue.preferNotToSay
-                        : copy.profile.genderValue[profile.user.gender]
+                      ? copy.profile.genderValue[profile.user.gender]
                       : copy.profile.notSet}
                   </Typography>
                 </Paper>

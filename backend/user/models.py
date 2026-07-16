@@ -1,0 +1,92 @@
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+
+class User(AbstractUser):
+    class Role(models.TextChoices):
+        LISTENER = "listener", "Listener"
+        ARTIST = "artist", "Artist"
+        SUPPORT = "support", "Support"
+        ADMIN = "admin", "Admin"
+
+    class Gender(models.TextChoices):
+        MALE = "male", "Male"
+        FEMALE = "female", "Female"
+
+    class SubscriptionTier(models.TextChoices):
+        BASIC = "basic", "Basic"
+        SILVER = "silver", "Silver"
+        GOLD = "gold", "Gold"
+
+        
+    email = models.EmailField(unique=True)
+    display_name = models.CharField(max_length=150)
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.LISTENER)
+    birth_date = models.DateField(null=True, blank=True)
+    gender = models.CharField(
+        max_length=20,
+        choices=Gender.choices,
+        null=True,
+        blank=True,
+    )
+    profile_picture = models.ImageField(upload_to="profile-pictures/", null=True, blank=True)
+    subscription_tier = models.CharField(
+        max_length=20,
+        choices=SubscriptionTier.choices,
+        default=SubscriptionTier.BASIC,
+    )
+    followers_count = models.PositiveIntegerField(default=0)
+    following_count = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
+
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.strip().lower()
+        if not self.display_name:
+            self.display_name = self.get_full_name() or self.username or self.email
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.email
+
+
+class Artist(User):
+    class VerificationStatus(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    stage_name = models.CharField(max_length=150)
+    bio = models.TextField(blank=True)
+    portfolio_links = models.JSONField(default=list, blank=True)
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatus.choices,
+        default=VerificationStatus.PENDING,
+    )
+    listener_count = models.PositiveIntegerField(default=0)
+    total_streams = models.PositiveIntegerField(default=0)
+    rejection_reason = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "artist"
+        verbose_name_plural = "artists"
+
+    def save(self, *args, **kwargs):
+        self.role = self.Role.ARTIST
+        if self.stage_name:
+            self.display_name = self.stage_name
+        if self.is_approved():
+            self.is_active = True
+        super().save(*args, **kwargs)
+
+    def is_approved(self):
+        return self.verification_status == self.VerificationStatus.APPROVED
+
+    is_approved.boolean = True
+    is_approved.short_description = "approved"

@@ -26,7 +26,7 @@ import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { getAppText } from '../lib/constants/appText';
-import { registerArtist, registerListener } from '../lib/mock/authService';
+import { registerArtist, registerListener } from '../lib/api/authService';
 import { useAuthStore } from '../store/authStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import {
@@ -57,7 +57,7 @@ export default function RegisterPage() {
       password: '',
       password_confirmation: '',
       birth_date: '',
-      gender: 'prefer_not_to_say',
+      gender: 'male',
       privacy_policy_accepted: false,
     },
   });
@@ -73,10 +73,10 @@ export default function RegisterPage() {
     },
   });
 
-  function submitListener(values: ListenerRegistrationFormValues): void {
+  async function submitListener(values: ListenerRegistrationFormValues): Promise<void> {
     setFormError('');
     try {
-      const user = registerListener(values);
+      const user = await registerListener(values);
       setUser(user);
       navigate('/');
     } catch (error) {
@@ -86,11 +86,11 @@ export default function RegisterPage() {
     }
   }
 
-  function submitArtist(values: ArtistRegistrationFormValues): void {
+  async function submitArtist(values: ArtistRegistrationFormValues): Promise<void> {
     setFormError('');
     setArtistMessage('');
     try {
-      const result = registerArtist({
+      const result = await registerArtist({
         email: values.email,
         password: values.password,
         password_confirmation: values.password_confirmation,
@@ -214,14 +214,6 @@ export default function RegisterPage() {
                         </MenuItem>
                         <MenuItem value="female">
                           {language === 'fa' ? 'زن' : 'Female'}
-                        </MenuItem>
-                        <MenuItem value="other">
-                          {language === 'fa' ? 'سایر' : 'Other'}
-                        </MenuItem>
-                        <MenuItem value="prefer_not_to_say">
-                          {language === 'fa'
-                            ? 'ترجیح می‌دهم نگویم'
-                            : 'Prefer not to say'}
                         </MenuItem>
                       </Select>
                       <FormHelperText>

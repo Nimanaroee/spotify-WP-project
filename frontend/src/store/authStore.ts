@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { User } from '../types/user'
-import { getCurrentUser, setCurrentUser } from '../lib/mock/authService'
+import { getCurrentUser, setCurrentUser } from '../lib/api/authService'
 
 interface AuthState {
   user: User | null

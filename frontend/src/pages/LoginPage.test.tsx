@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -6,9 +6,17 @@ import { ThemeProvider, createTheme } from '@mui/material'
 import LoginPage from './LoginPage'
 import HomePage from './HomePage'
 import { ROLES } from '../lib/constants/roles'
-import { storage } from '../lib/mock/storage'
+import { ROUTES } from '../lib/constants/routes'
+import { login, setCurrentUser } from '../lib/api/authService'
 import { useAuthStore } from '../store/authStore'
 import { ThemeModeContext } from '../theme/ThemeModeContext'
+
+vi.mock('../lib/api/authService', () => ({
+  getCurrentUser: vi.fn(() => null),
+  login: vi.fn(),
+  logout: vi.fn(),
+  setCurrentUser: vi.fn(),
+}))
 
 function renderLoginPage() {
   return render(
@@ -29,29 +37,8 @@ describe('LoginPage', () => {
   beforeEach(() => {
     localStorage.clear()
     useAuthStore.setState({ user: null })
-    storage.set('users', [
-      {
-        id: 1,
-        username: 'listener',
-        email: 'listener@example.com',
-        password: 'password123',
-        display_name: 'Listener',
-        role: ROLES.LISTENER,
-        created_at: '2026-01-01T00:00:00.000Z',
-        updated_at: '2026-01-01T00:00:00.000Z',
-      },
-      {
-        id: 2,
-        username: 'pending_artist',
-        email: 'pending@example.com',
-        password: 'password123',
-        display_name: 'Pending Artist',
-        role: ROLES.ARTIST,
-        account_status: 'pending_approval',
-        created_at: '2026-01-01T00:00:00.000Z',
-        updated_at: '2026-01-01T00:00:00.000Z',
-      },
-    ])
+    vi.mocked(login).mockReset()
+    vi.mocked(setCurrentUser).mockReset()
   })
 
   it('shows validation messages for empty fields', async () => {
@@ -66,6 +53,18 @@ describe('LoginPage', () => {
 
   it('logs in with valid credentials', async () => {
     const user = userEvent.setup()
+    vi.mocked(login).mockResolvedValue({
+      redirectPath: ROUTES.HOME,
+      user: {
+        id: 1,
+        username: 'listener',
+        email: 'listener@example.com',
+        display_name: 'Listener',
+        role: ROLES.LISTENER,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    })
     renderLoginPage()
 
     await user.type(screen.getByLabelText(/email/i), 'listener@example.com')
@@ -73,13 +72,25 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: /log in/i }))
 
     expect(
-      await screen.findByRole('heading', { name: /recently listened playlists/i }),
+      await screen.findByRole('heading', { name: /most-listened songs/i }),
     ).toBeInTheDocument()
     expect(useAuthStore.getState().user?.email).toBe('listener@example.com')
   })
 
   it('logs in unapproved artists without blocking the session', async () => {
     const user = userEvent.setup()
+    vi.mocked(login).mockResolvedValue({
+      redirectPath: ROUTES.HOME,
+      user: {
+        id: 2,
+        username: 'pending_artist',
+        email: 'pending@example.com',
+        display_name: 'Pending Artist',
+        role: ROLES.ARTIST,
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      },
+    })
     renderLoginPage()
 
     await user.type(screen.getByLabelText(/email/i), 'pending@example.com')
@@ -87,7 +98,7 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: /log in/i }))
 
     expect(
-      await screen.findByRole('heading', { name: /recently listened playlists/i }),
+      await screen.findByRole('heading', { name: /most-listened songs/i }),
     ).toBeInTheDocument()
     expect(useAuthStore.getState().user?.email).toBe('pending@example.com')
   })

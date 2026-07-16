@@ -21,15 +21,10 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
-    'apps.core',
-    'apps.users',
-    'apps.artists',
-    'apps.subscriptions',
-    'apps.music',
-    'apps.playlists',
-    'apps.notifications',
-    'apps.tickets',
-    'apps.audits',
+    'user',
+    'music',
+    'payment',
+    'management',
 ]
 
 MIDDLEWARE = [
@@ -63,7 +58,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = 'user.User'
 
 DATABASES = {
     'default': env.db('DATABASE_URL', default=f'sqlite:///{os.path.join(BASE_DIR, "db.sqlite3")}')
@@ -87,7 +82,9 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
-    'DEFAULT_PAGINATION_CLASS': 'apps.core.pagination.DefaultPagination',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'EXCEPTION_HANDLER': 'user.exceptions.custom_exception_handler',
+    'PAGE_SIZE': 20,
 }
 
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:5173'])

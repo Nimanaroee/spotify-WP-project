@@ -32,8 +32,6 @@ type SharedCopy = {
     genderValue: {
       female: string;
       male: string;
-      other: string;
-      preferNotToSay: string;
     };
     notSet: string;
     streamedToday: string;
@@ -160,8 +158,6 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       genderValue: {
         female: 'Female',
         male: 'Male',
-        other: 'Other',
-        preferNotToSay: 'Prefer not to say',
       },
       notSet: 'Not set',
       streamedToday: 'Streamed today',
@@ -286,8 +282,6 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       genderValue: {
         female: 'زن',
         male: 'مرد',
-        other: 'سایر',
-        preferNotToSay: 'ترجیح می‌دهم نگویم',
       },
       notSet: 'ثبت نشده',
       streamedToday: 'پخش امروز',

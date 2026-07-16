@@ -2,7 +2,7 @@ import type { Role } from '../lib/constants/roles'
 import type { SubscriptionTier } from '../lib/constants/subscriptionLimits'
 import type { EntityId, Timestamps } from './common'
 
-export type Gender = 'male' | 'female' | 'other' | 'prefer_not_to_say'
+export type Gender = 'male' | 'female'
 
 export interface User extends Timestamps {
   id: EntityId

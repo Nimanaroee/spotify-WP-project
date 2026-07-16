@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Router from './routes/router';
 import { seedDemoData } from './lib/mock/seed';
 import { preloadMockMediaCache } from './lib/mock/mediaCache';
-import { getCurrentUser } from './lib/mock/authService';
+import { getCurrentUser } from './lib/api/authService';
 import { useAuthStore } from './store/authStore';
 import { useNotificationStore } from './store/notificationStore';
 import {

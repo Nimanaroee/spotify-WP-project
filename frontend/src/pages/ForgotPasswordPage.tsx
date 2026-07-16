@@ -14,7 +14,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { getAppText } from '../lib/constants/appText';
-import { requestPasswordRecovery } from '../lib/mock/authService';
+import { requestPasswordRecovery } from '../lib/api/authService';
 import { useAppLanguage } from '../theme/LanguageContext';
 import {
   forgotPasswordSchema,
@@ -34,8 +34,8 @@ export default function ForgotPasswordPage() {
     defaultValues: { email: '' },
   });
 
-  function onSubmit(values: ForgotPasswordFormValues): void {
-    requestPasswordRecovery(values);
+  async function onSubmit(values: ForgotPasswordFormValues): Promise<void> {
+    await requestPasswordRecovery(values);
     setSubmitted(true);
   }
 
