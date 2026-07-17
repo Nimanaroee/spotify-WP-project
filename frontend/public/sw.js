@@ -1,4 +1,4 @@
-const CACHE_NAME = 'music-app-v2'
+const CACHE_NAME = 'music-app-v3'
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -51,26 +51,29 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
+  if (['script', 'style', 'worker'].includes(event.request.destination)) {
+    event.respondWith(fetch(event.request))
+    return
+  }
+
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse
-      }
+    caches.match(event.request).then(
+      (cachedResponse) =>
+        cachedResponse ??
+        fetch(event.request).then((networkResponse) => {
+          const isCacheable =
+            networkResponse.ok &&
+            ['image', 'font'].includes(event.request.destination)
 
-      return fetch(event.request).then((networkResponse) => {
-        const isCacheable =
-          networkResponse.ok &&
-          ['style', 'script', 'image', 'font'].includes(event.request.destination)
+          if (isCacheable) {
+            const responseToCache = networkResponse.clone()
+            caches
+              .open(CACHE_NAME)
+              .then((cache) => cache.put(event.request, responseToCache))
+          }
 
-        if (isCacheable) {
-          const responseToCache = networkResponse.clone()
-          caches
-            .open(CACHE_NAME)
-            .then((cache) => cache.put(event.request, responseToCache))
-        }
-
-        return networkResponse
-      })
-    }),
+          return networkResponse
+        }),
+    ),
   )
 })

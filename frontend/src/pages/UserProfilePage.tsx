@@ -1,9 +1,18 @@
+/**
+ * UserProfilePage — read another user's public profile
+ * Spec reference: §2.3 / §2.4
+ *
+ * Responsibilities:
+ *  - [x] Load listener and artist profile data by username
+ *  - [x] Render follow state, relationships, analytics, and releases
+ */
 import { useEffect, useState } from 'react'
 import {
   Alert,
   Box,
   Button,
   Chip,
+  CircularProgress,
   Divider,
   Paper,
   Stack,
@@ -19,6 +28,13 @@ import ArtistReleaseCard from '../components/profile/ArtistReleaseCard'
 import FollowListPanel from '../components/profile/FollowListPanel'
 import ProfileStatsGrid from '../components/profile/ProfileStatsGrid'
 import ProfileSummaryHeader from '../components/profile/ProfileSummaryHeader'
+import {
+  followUsername,
+  getPublicProfileFromApi,
+  hasProfileApiSession,
+  type PublicProfileView,
+  unfollowUsername,
+} from '../lib/api/profileService'
 import { getAppText } from '../lib/constants/appText'
 import { ROLES } from '../lib/constants/roles'
 import { ROUTES, userProfilePath } from '../lib/constants/routes'
@@ -36,7 +52,7 @@ import { usePlayerStore } from '../store/playerStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 import type { Album, Track, UserProfileView } from '../types'
 
-type ProfileView = UserProfileView | ArtistProfileView
+type ProfileView = UserProfileView | ArtistProfileView | PublicProfileView
 type FollowListType = 'followers' | 'following'
 
 function isArtistProfile(profile: ProfileView): profile is ArtistProfileView {
@@ -53,6 +69,9 @@ export default function UserProfilePage() {
   const copy = getAppText(language)
   const [profile, setProfile] = useState<ProfileView | null>(null)
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [isUpdatingFollow, setIsUpdatingFollow] = useState(false)
+  const usesProfileApi = hasProfileApiSession()
   const [activeFollowList, setActiveFollowList] =
     useState<FollowListType>('followers')
 
@@ -69,18 +88,52 @@ export default function UserProfilePage() {
       return
     }
 
-    try {
-      const baseProfile = getUserProfileView(authUser.id, username)
-      setProfile(
-        baseProfile.user.role === ROLES.ARTIST
-          ? getArtistProfileView(authUser.id, username, baseProfile)
-          : baseProfile,
-      )
-      setError('')
-    } catch (exception) {
-      setError(exception instanceof Error ? exception.message : copy.common.notFound)
+    let isActive = true
+    setIsLoading(true)
+
+    const loadProfile = async (): Promise<void> => {
+      try {
+        const nextProfile = usesProfileApi
+          ? await getPublicProfileFromApi(username)
+          : (() => {
+              const baseProfile = getUserProfileView(authUser.id, username)
+              return baseProfile.user.role === ROLES.ARTIST
+                ? getArtistProfileView(authUser.id, username, baseProfile)
+                : baseProfile
+            })()
+        if (isActive) {
+          setProfile(nextProfile)
+          setError('')
+        }
+      } catch (exception) {
+        if (isActive) {
+          setError(
+            exception instanceof Error
+              ? exception.message
+              : copy.common.notFound,
+          )
+        }
+      } finally {
+        if (isActive) {
+          setIsLoading(false)
+        }
+      }
     }
-  }, [authUser, copy.common.notFound, navigate, username])
+
+    void loadProfile()
+
+    return () => {
+      isActive = false
+    }
+  }, [
+    authUser?.id,
+    authUser?.role,
+    authUser?.username,
+    copy.common.notFound,
+    navigate,
+    username,
+    usesProfileApi,
+  ])
 
   if (!authUser) {
     return <Navigate to={ROUTES.LOGIN} replace />
@@ -94,6 +147,26 @@ export default function UserProfilePage() {
         sx={{ bgcolor: 'background.default' }}
       >
         <Alert severity="error">{error}</Alert>
+      </Box>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <Box
+        className="min-h-screen p-4 md:p-8"
+        dir={language === 'fa' ? 'rtl' : 'ltr'}
+        sx={{
+          alignItems: 'center',
+          bgcolor: 'background.default',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        <Stack spacing={2} sx={{ alignItems: 'center' }}>
+          <CircularProgress />
+          <Typography color="text.secondary">{copy.common.loading}</Typography>
+        </Stack>
       </Box>
     )
   }
@@ -122,6 +195,22 @@ export default function UserProfilePage() {
   const releaseListHeight = isCompactMobile ? 240 : 260
 
   function refreshProfile(): void {
+    if (usesProfileApi) {
+      void getPublicProfileFromApi(currentProfile.user.username)
+        .then((nextProfile) => {
+          setProfile(nextProfile)
+          setError('')
+        })
+        .catch((exception: unknown) => {
+          setError(
+            exception instanceof Error
+              ? exception.message
+              : copy.common.notFound,
+          )
+        })
+      return
+    }
+
     const baseProfile = getUserProfileView(
       currentAuthUser.id,
       currentProfile.user.username,
@@ -133,14 +222,41 @@ export default function UserProfilePage() {
     )
   }
 
-  function handleToggleFollow(): void {
-    if (currentProfile.is_following) {
-      unfollowAccount(currentAuthUser.id, currentProfile.user.id)
-    } else {
-      followAccount(currentAuthUser.id, currentProfile.user.id)
+  async function handleToggleFollow(): Promise<void> {
+    if (isUpdatingFollow) {
+      return
     }
 
-    refreshProfile()
+    setIsUpdatingFollow(true)
+    setError('')
+    try {
+      if (usesProfileApi) {
+        if (currentProfile.is_following) {
+          await unfollowUsername(currentProfile.user.username)
+        } else {
+          await followUsername(currentProfile.user.username)
+        }
+        const nextProfile = await getPublicProfileFromApi(
+          currentProfile.user.username,
+        )
+        setProfile(nextProfile)
+        return
+      }
+
+      if (currentProfile.is_following) {
+        unfollowAccount(currentAuthUser.id, currentProfile.user.id)
+      } else {
+        followAccount(currentAuthUser.id, currentProfile.user.id)
+      }
+
+      refreshProfile()
+    } catch (exception) {
+      setError(
+        exception instanceof Error ? exception.message : copy.common.notFound,
+      )
+    } finally {
+      setIsUpdatingFollow(false)
+    }
   }
 
   function handleReleaseSelect(release: Album | Track): void {
@@ -193,7 +309,7 @@ export default function UserProfilePage() {
           }
           gap={listGap}
           getAccountHref={(account) =>
-            account.id === currentAuthUser.id
+            account.username === currentAuthUser.username
               ? ROUTES.MANAGE
               : userProfilePath(account.username ?? String(account.id))
           }
@@ -245,7 +361,8 @@ export default function UserProfilePage() {
                 ) : null}
                 <Button
                   color={profile.is_following ? 'inherit' : 'primary'}
-                  onClick={handleToggleFollow}
+                  disabled={isUpdatingFollow}
+                  onClick={() => void handleToggleFollow()}
                   size="small"
                   variant={profile.is_following ? 'outlined' : 'contained'}
                 >

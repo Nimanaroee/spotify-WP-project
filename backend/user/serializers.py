@@ -5,8 +5,10 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
+from drf_spectacular.utils import extend_schema_field
 
 from .models import Artist
+from .services import update_profile
 
 User = get_user_model()
 
@@ -26,10 +28,216 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "subscription_tier",
             "followers_count",
             "following_count",
+            "streamed_today",
             "created_at",
             "updated_at",
         )
         read_only_fields = fields
+
+
+class UserShortInfoSerializer(serializers.ModelSerializer):
+    avatar = serializers.ImageField(source="profile_picture", read_only=True)
+
+    class Meta:
+        model = User
+        fields = ("display_name", "username", "avatar")
+        read_only_fields = fields
+
+
+class ProfileReadSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="username", read_only=True)
+    bearth_date = serializers.DateField(source="birth_date", read_only=True)
+    num_following = serializers.IntegerField(source="following_count", read_only=True)
+    num_follower = serializers.IntegerField(source="followers_count", read_only=True)
+    subscription = serializers.CharField(source="subscription_tier", read_only=True)
+    profile_photo = serializers.ImageField(source="profile_picture", read_only=True)
+    followers = serializers.SerializerMethodField()
+    followings = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = (
+            "user_name",
+            "display_name",
+            "bearth_date",
+            "gender",
+            "num_following",
+            "num_follower",
+            "streamed_today",
+            "subscription",
+            "profile_photo",
+            "followings",
+            "followers",
+        )
+        read_only_fields = fields
+
+    @extend_schema_field(UserShortInfoSerializer(many=True))
+    def get_followers(self, user):
+        followers = user.followers.order_by("display_name", "username")
+        return UserShortInfoSerializer(
+            followers,
+            many=True,
+            context=self.context,
+        ).data
+
+    @extend_schema_field(UserShortInfoSerializer(many=True))
+    def get_followings(self, user):
+        followings = user.following.order_by("display_name", "username")
+        return UserShortInfoSerializer(
+            followings,
+            many=True,
+            context=self.context,
+        ).data
+
+
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    bearth_date = serializers.DateField(
+        source="birth_date",
+        required=False,
+        allow_null=True,
+    )
+    profile_photo = serializers.ImageField(
+        source="profile_picture",
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = User
+        fields = (
+            "display_name",
+            "gender",
+            "bearth_date",
+            "profile_photo",
+        )
+        extra_kwargs = {
+            "display_name": {"required": False},
+            "gender": {"required": False, "allow_null": True},
+        }
+
+    def validate_display_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Display name cannot be blank.")
+        return value
+
+    def validate(self, attrs):
+        relationship_fields = {
+            field
+            for field in ("followers", "followings", "following")
+            if field in self.initial_data
+        }
+        if relationship_fields:
+            raise serializers.ValidationError(
+                {
+                    field: "Follow relationships must use the follow API."
+                    for field in relationship_fields
+                }
+            )
+        return attrs
+
+    def update(self, instance, validated_data):
+        return update_profile(instance, validated_data)
+
+
+class FollowStatusSerializer(serializers.Serializer):
+    user = UserShortInfoSerializer(read_only=True)
+    is_following = serializers.BooleanField(read_only=True)
+
+
+class PublicArtistProfileSerializer(serializers.ModelSerializer):
+    is_verified = serializers.BooleanField(source="is_approved", read_only=True)
+
+    class Meta:
+        model = Artist
+        fields = (
+            "stage_name",
+            "bio",
+            "verification_status",
+            "is_verified",
+            "listener_count",
+            "total_streams",
+        )
+        read_only_fields = fields
+
+
+class ProfileAlbumSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    title = serializers.CharField(read_only=True)
+    artist_id = serializers.IntegerField(read_only=True)
+    artist_name = serializers.CharField(read_only=True)
+    cover_art = serializers.URLField(read_only=True, allow_null=True)
+    release_type = serializers.CharField(read_only=True)
+    release_year = serializers.IntegerField(read_only=True, allow_null=True)
+    track_count = serializers.IntegerField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+
+class ProfileTrackSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    title = serializers.CharField(read_only=True)
+    artist_id = serializers.IntegerField(read_only=True)
+    artist_name = serializers.CharField(read_only=True)
+    album_id = serializers.IntegerField(read_only=True, allow_null=True)
+    album_name = serializers.CharField(read_only=True, allow_null=True)
+    cover_art = serializers.URLField(read_only=True, allow_null=True)
+    duration_seconds = serializers.IntegerField(read_only=True, allow_null=True)
+    release_type = serializers.CharField(read_only=True)
+    audio_url = serializers.URLField(read_only=True, allow_null=True)
+    lyrics = serializers.CharField(read_only=True, allow_null=True)
+    genre = serializers.CharField(read_only=True, allow_null=True)
+    release_year = serializers.IntegerField(read_only=True, allow_null=True)
+    listener_count = serializers.IntegerField(read_only=True, allow_null=True)
+    stream_count = serializers.IntegerField(read_only=True, allow_null=True)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True, allow_null=True)
+
+
+class PublicProfileReadSerializer(ProfileReadSerializer):
+    role = serializers.CharField(read_only=True)
+    is_following = serializers.SerializerMethodField()
+    artist_profile = serializers.SerializerMethodField()
+    albums = serializers.SerializerMethodField()
+    singles = serializers.SerializerMethodField()
+
+    class Meta(ProfileReadSerializer.Meta):
+        fields = ProfileReadSerializer.Meta.fields + (
+            "role",
+            "is_following",
+            "artist_profile",
+            "albums",
+            "singles",
+        )
+        read_only_fields = fields
+
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_following(self, user):
+        request = self.context.get("request")
+        return bool(
+            request
+            and request.user.is_authenticated
+            and request.user.following.filter(pk=user.pk).exists()
+        )
+
+    @extend_schema_field(PublicArtistProfileSerializer(allow_null=True))
+    def get_artist_profile(self, user):
+        try:
+            artist = user.artist
+        except Artist.DoesNotExist:
+            return None
+        return PublicArtistProfileSerializer(
+            artist,
+            context=self.context,
+        ).data
+
+    @extend_schema_field(ProfileAlbumSerializer(many=True))
+    def get_albums(self, user):
+        return []
+
+    @extend_schema_field(ProfileTrackSerializer(many=True))
+    def get_singles(self, user):
+        return []
 
 
 class LoginSerializer(TokenObtainPairSerializer):

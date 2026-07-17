@@ -261,7 +261,7 @@ describe('ManagePage', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('hides profile photo upload for Basic subscribers', async () => {
+  it('shows profile photo upload for Basic subscribers while editing', async () => {
     const user = userEvent.setup();
     setMobileViewport();
     renderManagePage();
@@ -271,11 +271,11 @@ describe('ManagePage', () => {
     );
 
     expect(
-      screen.queryByRole('button', { name: /change profile photo/i })
-    ).not.toBeInTheDocument();
+      screen.getByRole('button', { name: /change profile photo/i })
+    ).toBeInTheDocument();
     expect(
-      screen.queryByLabelText(/profile photo upload/i)
-    ).not.toBeInTheDocument();
+      screen.getByLabelText(/profile photo upload/i)
+    ).toBeInTheDocument();
   });
 
   it('uploads and saves a profile photo for non-Basic subscribers', async () => {

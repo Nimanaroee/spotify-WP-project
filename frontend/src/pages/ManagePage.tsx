@@ -1,9 +1,18 @@
-import { useState, type ChangeEvent } from 'react';
+/**
+ * ManagePage — view and edit the authenticated user's profile
+ * Spec reference: §2.3
+ *
+ * Responsibilities:
+ *  - [x] Load profile details, statistics, followers, and following
+ *  - [x] Update editable profile fields and follow relationships
+ */
+import { useEffect, useState, type ChangeEvent } from 'react';
 import {
   Alert,
   Box,
   Button,
   Chip,
+  CircularProgress,
   Divider,
   MenuItem,
   Paper,
@@ -25,7 +34,12 @@ import { getAppText } from '../lib/constants/appText';
 import { getManagePageText } from '../lib/constants/managePageText';
 import { ROLES } from '../lib/constants/roles';
 import { ROUTES, userProfilePath } from '../lib/constants/routes';
-import { SUBSCRIPTION_LIMITS } from '../lib/constants/subscriptionLimits';
+import {
+  getManageProfileFromApi,
+  hasProfileApiSession,
+  unfollowUsername,
+  updateManageProfileFromApi,
+} from '../lib/api/profileService';
 import {
   getOwnArtistProfileView,
   type ArtistProfileView,
@@ -399,9 +413,15 @@ export default function ManagePage() {
   const [message, setMessage] = useState<string | null>(null);
   const [activeFollowList, setActiveFollowList] =
     useState<FollowListType>('followers');
+  const usesProfileApi = hasProfileApiSession();
   const [profile, setProfile] = useState<ManageProfile | null>(() =>
-    authUser ? getManageProfile(authUser.id) : null
+    authUser && !usesProfileApi ? getManageProfile(authUser.id) : null
   );
+  const [isLoading, setIsLoading] = useState(
+    Boolean(authUser && authUser.role === ROLES.LISTENER && usesProfileApi)
+  );
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width:767px)');
   const [editableProfile, setEditableProfile] = useState<EditableProfile>(() =>
     profile
@@ -415,6 +435,45 @@ export default function ManagePage() {
   );
   const copy = getManagePageText(language);
 
+  useEffect(() => {
+    if (
+      !authUser ||
+      authUser.role !== ROLES.LISTENER ||
+      !usesProfileApi
+    ) {
+      return;
+    }
+
+    let isActive = true;
+    setIsLoading(true);
+    setErrorMessage(null);
+    getManageProfileFromApi(authUser)
+      .then((nextProfile) => {
+        if (!isActive) {
+          return;
+        }
+        setProfile(nextProfile);
+        setEditableProfile(createEditableProfile(nextProfile));
+        setUser(nextProfile.user);
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setErrorMessage(
+            error instanceof Error ? error.message : copy.messages.apiError
+          );
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [authUser?.id, copy.messages.apiError, setUser, usesProfileApi]);
+
   if (!authUser) {
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
@@ -427,6 +486,28 @@ export default function ManagePage() {
     return <Navigate to={ROUTES.HOME} replace />;
   }
 
+  if (isLoading) {
+    return (
+      <Box
+        className="min-h-screen p-6"
+        dir={language === 'fa' ? 'rtl' : 'ltr'}
+        sx={{
+          alignItems: 'center',
+          bgcolor: 'background.default',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        <Stack spacing={2} sx={{ alignItems: 'center' }}>
+          <CircularProgress />
+          <Typography color="text.secondary">
+            {copy.messages.loading}
+          </Typography>
+        </Stack>
+      </Box>
+    );
+  }
+
   if (!profile) {
     return (
         <Box
@@ -434,15 +515,15 @@ export default function ManagePage() {
           dir={language === 'fa' ? 'rtl' : 'ltr'}
           sx={{ bgcolor: 'background.default' }}
         >
-          <Alert severity="error">{copy.messages.profileNotFound}</Alert>
+          <Alert severity="error">
+            {errorMessage ?? copy.messages.profileNotFound}
+          </Alert>
         </Box>
     );
   }
 
-  const subscriptionTier = profile.user.subscription_tier ?? 'basic';
-  const canEditProfilePicture =
-    SUBSCRIPTION_LIMITS[subscriptionTier].profilePicture;
   const currentProfile = profile;
+  const currentAuthUser = authUser;
   const isCompactMobile = isMobile;
   const statsGridColumns = isCompactMobile
     ? 'repeat(3, minmax(0, 1fr))'
@@ -465,17 +546,36 @@ export default function ManagePage() {
     setEditableProfile((current) => ({ ...current, [field]: value }));
   }
 
-  function handleRemoveFollowAccount(account: UserSummary): void {
-    const nextProfile =
-      activeFollowList === 'followers'
-        ? removeFollower(currentProfile.user.id, account.id)
-        : unfollowAccount(currentProfile.user.id, account.id);
-    setProfile(nextProfile);
-    setMessage(
-      activeFollowList === 'followers'
-        ? copy.messages.removedFollower(account.display_name)
-        : copy.messages.unfollowed(account.display_name)
-    );
+  async function handleRemoveFollowAccount(
+    account: UserSummary
+  ): Promise<void> {
+    setErrorMessage(null);
+    try {
+      if (usesProfileApi) {
+        if (!account.username) {
+          throw new Error(copy.messages.apiError);
+        }
+        await unfollowUsername(account.username);
+        const nextProfile = await getManageProfileFromApi(currentAuthUser);
+        setProfile(nextProfile);
+        setUser(nextProfile.user);
+      } else {
+        const nextProfile =
+          activeFollowList === 'followers'
+            ? removeFollower(currentProfile.user.id, account.id)
+            : unfollowAccount(currentProfile.user.id, account.id);
+        setProfile(nextProfile);
+      }
+      setMessage(
+        activeFollowList === 'followers'
+          ? copy.messages.removedFollower(account.display_name)
+          : copy.messages.unfollowed(account.display_name)
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : copy.messages.apiError
+      );
+    }
   }
 
   function handleStartEdit(): void {
@@ -486,23 +586,43 @@ export default function ManagePage() {
 
   function handleCancelEdit(): void {
     setEditableProfile(createEditableProfile(currentProfile));
+    setProfilePhotoFile(null);
     setIsEditing(false);
   }
 
-  function handleSaveProfile(): void {
+  async function handleSaveProfile(): Promise<void> {
     const payload: UpdateUserProfilePayload = {
       display_name: editableProfile.display_name,
       birth_date: editableProfile.birth_date || undefined,
       gender: editableProfile.gender as Gender,
       profile_picture: editableProfile.profile_picture || null,
     };
-    const updatedUser = updateUserProfile(currentProfile.user.id, payload);
-    const nextProfile = getManageProfile(currentProfile.user.id);
-    setUser(updatedUser);
-    setProfile(nextProfile);
-    setEditableProfile(createEditableProfile(nextProfile));
-    setIsEditing(false);
-    setMessage(copy.messages.profileUpdated);
+    setErrorMessage(null);
+    try {
+      const nextProfile = usesProfileApi
+        ? await updateManageProfileFromApi(
+            currentAuthUser,
+            payload,
+            profilePhotoFile
+          )
+        : {
+            ...getManageProfile(currentProfile.user.id),
+            user: updateUserProfile(currentProfile.user.id, payload),
+          };
+      const refreshedProfile = usesProfileApi
+        ? nextProfile
+        : getManageProfile(currentProfile.user.id);
+      setUser(refreshedProfile.user);
+      setProfile(refreshedProfile);
+      setEditableProfile(createEditableProfile(refreshedProfile));
+      setProfilePhotoFile(null);
+      setIsEditing(false);
+      setMessage(copy.messages.profileUpdated);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : copy.messages.apiError
+      );
+    }
   }
 
   function handleProfilePhotoUpload(
@@ -514,6 +634,7 @@ export default function ManagePage() {
       return;
     }
 
+    setProfilePhotoFile(file);
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
@@ -568,6 +689,9 @@ export default function ManagePage() {
               />
 
               {message ? <Alert severity="success">{message}</Alert> : null}
+              {errorMessage ? (
+                <Alert severity="error">{errorMessage}</Alert>
+              ) : null}
 
               <ProfileStatsGrid
                 columns={statsGridColumns}
@@ -630,7 +754,7 @@ export default function ManagePage() {
                         <Button
                           aria-label={`Unfollow ${account.display_name}`}
                           color="inherit"
-                          onClick={() => handleRemoveFollowAccount(account)}
+                          onClick={() => void handleRemoveFollowAccount(account)}
                           size="small"
                           variant="text"
                         >
@@ -742,7 +866,7 @@ export default function ManagePage() {
                       </MenuItem>
                     </TextField>
                   </Box>
-                  {isEditing && canEditProfilePicture ? (
+                  {isEditing ? (
                     <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
                       <Button component="label" variant="outlined">
                         {copy.form.changePhoto}
@@ -769,7 +893,10 @@ export default function ManagePage() {
                       mt: 3,
                     }}
                   >
-                    <Button onClick={handleSaveProfile} variant="contained">
+                    <Button
+                      onClick={() => void handleSaveProfile()}
+                      variant="contained"
+                    >
                       {copy.actions.save}
                     </Button>
                     <Button onClick={handleCancelEdit} variant="outlined">

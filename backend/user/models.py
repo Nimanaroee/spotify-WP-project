@@ -18,7 +18,6 @@ class User(AbstractUser):
         SILVER = "silver", "Silver"
         GOLD = "gold", "Gold"
 
-        
     email = models.EmailField(unique=True)
     display_name = models.CharField(max_length=150)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.LISTENER)
@@ -35,8 +34,15 @@ class User(AbstractUser):
         choices=SubscriptionTier.choices,
         default=SubscriptionTier.BASIC,
     )
+    following = models.ManyToManyField(
+        "self",
+        symmetrical=False,
+        related_name="followers",
+        blank=True,
+    )
     followers_count = models.PositiveIntegerField(default=0)
     following_count = models.PositiveIntegerField(default=0)
+    streamed_today = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
