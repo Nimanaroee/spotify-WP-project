@@ -172,15 +172,15 @@ class ArtistRegistrationSerializer(BaseRegistrationSerializer):
             stage_name=stage_name,
             display_name=stage_name,
             role=User.Role.ARTIST,
-            is_active=False,
         )
         artist.set_password(password)
         artist.save()
         return artist
 
     def to_representation(self, instance):
+        refresh = RefreshToken.for_user(instance)
         return {
-            "status": "pending_approval",
-            "message": "Your artist account request is pending approval.",
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
             "user": CurrentUserSerializer(instance, context=self.context).data,
         }

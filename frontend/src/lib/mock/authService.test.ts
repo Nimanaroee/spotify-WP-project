@@ -98,8 +98,8 @@ describe('authService', () => {
     expect(storage.get<User>('current_user')?.email).toBe('new.listener@example.com')
   })
 
-  it('stores artist registrations as pending verification requests', () => {
-    const result = registerArtist({
+  it('registers an artist, stores verification request, and starts a session', () => {
+    const user = registerArtist({
       email: 'artist@example.com',
       password: 'password123',
       password_confirmation: 'password123',
@@ -109,10 +109,12 @@ describe('authService', () => {
     const requests =
       storage.get<ArtistVerificationRequest[]>('verification_requests') ?? []
 
-    expect(result.status).toBe('pending_approval')
+    expect(user.role).toBe(ROLES.ARTIST)
+    expect(user.email).toBe('artist@example.com')
     expect(requests).toHaveLength(1)
     expect(requests[0].verification_status).toBe('pending')
-    expect(storage.get<number>('auth_user_id')).toBeNull()
+    expect(storage.get<number>('auth_user_id')).toBe(user.id)
+    expect(storage.get<User>('current_user')?.email).toBe('artist@example.com')
   })
 
   it('records password recovery requests', () => {

@@ -28,12 +28,6 @@ export interface LoginResult {
   redirectPath: string
 }
 
-export interface ArtistRegistrationResult {
-  status: 'pending_approval'
-  message: string
-  user?: User
-}
-
 interface StoredUser extends User {
   account_status?: 'active' | 'pending_approval'
 }
@@ -203,17 +197,16 @@ export async function registerListener(payload: RegisterListenerPayload): Promis
 
 export async function registerArtist(
   payload: RegisterArtistPayload,
-): Promise<ArtistRegistrationResult> {
+): Promise<User> {
   try {
-    const response = await client.post<ArtistRegistrationResult>(
+    const response = await client.post<AuthResponse>(
       '/auth/register/artist/',
       payload,
     )
-    if (response.data.user) {
-      upsertMockUser(response.data.user, 'pending_approval')
-      syncArtistVerificationRequest(response.data.user, payload)
-    }
-    return response.data
+    const user = persistSession(response.data)
+    upsertMockUser(user, 'pending_approval')
+    syncArtistVerificationRequest(user, payload)
+    return user
   } catch (error) {
     throw new Error(getApiErrorMessage(error, UNEXPECTED_ERROR_MESSAGE))
   }
