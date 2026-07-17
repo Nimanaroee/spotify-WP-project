@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeProvider, createTheme } from '@mui/material'
@@ -41,8 +41,20 @@ describe('RegisterPage', () => {
 
     expect(screen.getByRole('dialog')).toHaveTextContent('Privacy Policy')
     expect(screen.getByRole('dialog')).toHaveTextContent(
-      'Your privacy is important to us',
+      'Listener Terms of Service',
     )
+    expect(screen.getByRole('dialog')).toHaveTextContent('Listener Privacy Policy')
+  })
+
+  it('opens the artist privacy policy dialog', async () => {
+    const user = userEvent.setup()
+    renderRegisterPage()
+
+    await user.click(screen.getByRole('tab', { name: /artist/i }))
+    await user.click(screen.getByRole('button', { name: /privacy policy/i }))
+
+    expect(screen.getByRole('dialog')).toHaveTextContent('Artist Terms of Service')
+    expect(screen.getByRole('dialog')).toHaveTextContent('Artist Privacy Policy')
   })
 
   it('submits artist registration as pending approval', async () => {
@@ -62,16 +74,21 @@ describe('RegisterPage', () => {
       screen.getByLabelText(/portfolio links/i),
       'https://example.com/music',
     )
+    const privacyCheckbox = screen.getByLabelText(/i agree to the terms and/i)
+    await user.click(privacyCheckbox)
+    expect(privacyCheckbox).toBeChecked()
     await user.click(screen.getByRole('button', { name: /^register$/i }))
 
-    expect(await screen.findByText(/pending approval/i)).toBeInTheDocument()
-    expect(registerArtist).toHaveBeenCalledWith({
-      email: 'artist@example.com',
-      password: 'password123',
-      password_confirmation: 'password123',
-      stage_name: 'The Artist',
-      portfolio_links: ['https://example.com/music'],
+    await waitFor(() => {
+      expect(registerArtist).toHaveBeenCalledWith({
+        email: 'artist@example.com',
+        password: 'password123',
+        password_confirmation: 'password123',
+        stage_name: 'The Artist',
+        portfolio_links: ['https://example.com/music'],
+      })
     })
+    expect(await screen.findByText(/pending approval/i)).toBeInTheDocument()
     expect(useAuthStore.getState().user).toBeNull()
   })
 })

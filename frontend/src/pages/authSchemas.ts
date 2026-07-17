@@ -9,6 +9,13 @@ export const forgotPasswordSchema = z.object({
   email: z.string().email('Enter a valid email address.'),
 })
 
+const acceptedPolicySchema = z
+  .preprocess(
+    (value) => value === true || value === 'true' || value === 'on',
+    z.boolean(),
+  )
+  .refine((value) => value, 'You must accept the terms and privacy policy.')
+
 export const listenerRegistrationSchema = z
   .object({
     display_name: z.string().min(2, 'Display name must be at least 2 characters.'),
@@ -17,9 +24,7 @@ export const listenerRegistrationSchema = z
     password_confirmation: z.string(),
     birth_date: z.string().min(1, 'Date of birth is required.'),
     gender: z.enum(['male', 'female']),
-    privacy_policy_accepted: z
-      .boolean()
-      .refine((value) => value, 'You must accept the terms and privacy policy.'),
+    privacy_policy_accepted: acceptedPolicySchema,
   })
   .refine((values) => values.password === values.password_confirmation, {
     message: 'Passwords must match.',
