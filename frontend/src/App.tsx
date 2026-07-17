@@ -56,6 +56,10 @@ export default function App() {
   const themeModeContextValue = useMemo(
     () => ({
       mode,
+      setThemeMode: (nextMode: AppThemeMode) => {
+        setMode(nextMode);
+        localStorage.setItem(THEME_MODE_STORAGE_KEY, nextMode);
+      },
       toggleThemeMode: () => {
         setMode((currentMode) => {
           const nextMode = currentMode === 'dark' ? 'light' : 'dark';

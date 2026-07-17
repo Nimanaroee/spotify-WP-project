@@ -47,6 +47,7 @@ function defaultPreferences(userId: EntityId): UserPreferences {
 
   return {
     user_id: userId,
+    theme: 'dark',
     notification_limit: 20,
     app_sound_enabled: true,
     language: 'en',
@@ -63,7 +64,10 @@ export function getUserPreferences(userId: EntityId): UserPreferences {
   )
 
   if (existingPreferences) {
-    return existingPreferences
+    return {
+      ...existingPreferences,
+      theme: existingPreferences.theme ?? 'dark',
+    }
   }
 
   const createdPreferences = defaultPreferences(userId)

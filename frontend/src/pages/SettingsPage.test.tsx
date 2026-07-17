@@ -41,7 +41,11 @@ function TestProviders({ children }: { children: ReactNode }) {
   return (
     <LanguageContext.Provider value={languageValue}>
       <ThemeModeContext.Provider
-        value={{ mode: 'dark', toggleThemeMode: () => undefined }}
+        value={{
+          mode: 'dark',
+          setThemeMode: () => undefined,
+          toggleThemeMode: () => undefined,
+        }}
       >
         <ThemeProvider theme={createTheme()}>{children}</ThemeProvider>
       </ThemeModeContext.Provider>
@@ -111,6 +115,14 @@ describe('SettingsPage', () => {
       screen.queryByText(
         'Control notifications, system preferences, account access, and subscription status.',
       ),
+    ).not.toBeInTheDocument()
+  })
+
+  it('does not require a save button for preference changes', () => {
+    renderSettingsPage()
+
+    expect(
+      screen.queryByRole('button', { name: /save preferences|ذخیره تنظیمات/i }),
     ).not.toBeInTheDocument()
   })
 

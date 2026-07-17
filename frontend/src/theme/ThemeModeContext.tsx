@@ -3,6 +3,7 @@ import type { AppThemeMode } from './appTheme'
 
 interface ThemeModeContextValue {
   mode: AppThemeMode
+  setThemeMode?: (mode: AppThemeMode) => void
   toggleThemeMode: () => void
 }
 

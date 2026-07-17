@@ -61,6 +61,49 @@ class User(AbstractUser):
         return self.email
 
 
+class Preferences(models.Model):
+    class Theme(models.TextChoices):
+        LIGHT = "light", "Light"
+        DARK = "dark", "Dark"
+
+    class Language(models.TextChoices):
+        ENGLISH = "en", "English"
+        PERSIAN = "fa", "Persian"
+
+    class SystemVoice(models.TextChoices):
+        DEFAULT = "default", "Default"
+        CALM = "calm", "Calm"
+        BRIGHT = "bright", "Bright"
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="preferences",
+    )
+    theme = models.CharField(
+        max_length=10,
+        choices=Theme.choices,
+        default=Theme.DARK,
+    )
+    notification_limit = models.PositiveSmallIntegerField(default=20)
+    notification_sound_enabled = models.BooleanField(default=True)
+    language = models.CharField(
+        max_length=5,
+        choices=Language.choices,
+        default=Language.ENGLISH,
+    )
+    system_voice = models.CharField(
+        max_length=10,
+        choices=SystemVoice.choices,
+        default=SystemVoice.DEFAULT,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} preferences"
+
+
 class Artist(User):
     class VerificationStatus(models.TextChoices):
         PENDING = "pending", "Pending"

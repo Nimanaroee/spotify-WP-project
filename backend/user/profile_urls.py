@@ -1,9 +1,19 @@
 from django.urls import path
 
-from .views import FollowView, ProfileView, PublicProfileView
+from .views import (
+    ArtistProfileView,
+    FollowView,
+    PreferencesView,
+    ProfileView,
+    PublicProfileView,
+    SubscriptionView,
+)
 
 urlpatterns = [
-    path("profile/", ProfileView.as_view(), name="profile"),
+    path("profile/listener/", ProfileView.as_view(), name="profile"),
+    path("profile/artist/", ArtistProfileView.as_view(), name="artist-profile"),
+    path("preferences/", PreferencesView.as_view(), name="preferences"),
+    path("subscription/", SubscriptionView.as_view(), name="subscription"),
     path(
         "profiles/<str:user_name>/",
         PublicProfileView.as_view(),

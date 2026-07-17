@@ -4,8 +4,12 @@ import { ROLES } from '../constants/roles'
 import client from './client'
 import {
   followUsername,
+  getManageArtistProfileFromApi,
+  getManageProfileFromApi,
   getPublicProfileFromApi,
   unfollowUsername,
+  updateManageArtistProfileFromApi,
+  updateManageProfileFromApi,
 } from './profileService'
 
 vi.mock('./client', () => ({
@@ -23,6 +27,7 @@ describe('profileService', () => {
     vi.mocked(client.get).mockReset()
     vi.mocked(client.post).mockReset()
     vi.mocked(client.delete).mockReset()
+    vi.mocked(client.patch).mockReset()
   })
 
   it('loads and maps another user profile by username', async () => {
@@ -69,6 +74,148 @@ describe('profileService', () => {
     expect(profile.is_following).toBe(true)
     expect(profile.followers[0].username).toBe('follower')
     expect(profile.following[0].username).toBe('following')
+  })
+
+  it('loads the listener manage profile from the listener endpoint', async () => {
+    vi.mocked(client.get).mockResolvedValue({
+      data: {
+        user_name: 'listener',
+        display_name: 'Listener',
+        bearth_date: null,
+        gender: null,
+        num_following: 0,
+        num_follower: 0,
+        streamed_today: 0,
+        subscription: 'basic',
+        profile_photo: null,
+        followers: [],
+        followings: [],
+      },
+    })
+
+    await getManageProfileFromApi({
+      id: 1,
+      username: 'listener',
+      email: 'listener@example.com',
+      display_name: 'Listener',
+      role: ROLES.LISTENER,
+      created_at: '',
+    })
+
+    expect(client.get).toHaveBeenCalledWith('/users/profile/listener/')
+  })
+
+  it('updates the listener manage profile at the listener endpoint', async () => {
+    vi.mocked(client.patch).mockResolvedValue({
+      data: {
+        user_name: 'listener',
+        display_name: 'Updated Listener',
+        bearth_date: null,
+        gender: null,
+        num_following: 0,
+        num_follower: 0,
+        streamed_today: 0,
+        subscription: 'basic',
+        profile_photo: null,
+        followers: [],
+        followings: [],
+      },
+    })
+
+    await updateManageProfileFromApi(
+      {
+        id: 1,
+        username: 'listener',
+        email: 'listener@example.com',
+        display_name: 'Listener',
+        role: ROLES.LISTENER,
+        created_at: '',
+      },
+      { display_name: 'Updated Listener' },
+    )
+
+    expect(client.patch).toHaveBeenCalledWith('/users/profile/listener/', {
+      display_name: 'Updated Listener',
+      gender: undefined,
+      bearth_date: null,
+      profile_photo: undefined,
+    })
+  })
+
+  it('loads the artist manage profile from the artist endpoint', async () => {
+    vi.mocked(client.get).mockResolvedValue({
+      data: {
+        user_name: 'artist',
+        display_name: 'Artist',
+        bearth_date: null,
+        gender: null,
+        num_following: 0,
+        num_follower: 0,
+        streamed_today: 0,
+        subscription: 'basic',
+        profile_photo: null,
+        role: ROLES.ARTIST,
+        is_following: false,
+        followers: [],
+        followings: [],
+        artist_profile: {
+          stage_name: 'Artist',
+          bio: 'Biography.',
+          verification_status: 'approved',
+          is_verified: true,
+          listener_count: 10,
+          total_streams: 50,
+        },
+        albums: [],
+        singles: [],
+      },
+    })
+
+    const profile = await getManageArtistProfileFromApi()
+
+    expect(client.get).toHaveBeenCalledWith('/users/profile/artist/')
+    expect(profile.artist_profile.stage_name).toBe('Artist')
+  })
+
+  it('updates the artist manage profile at the artist endpoint', async () => {
+    vi.mocked(client.patch).mockResolvedValue({
+      data: {
+        user_name: 'artist',
+        display_name: 'Updated Artist',
+        bearth_date: null,
+        gender: null,
+        num_following: 0,
+        num_follower: 0,
+        streamed_today: 0,
+        subscription: 'basic',
+        profile_photo: null,
+        role: ROLES.ARTIST,
+        is_following: false,
+        followers: [],
+        followings: [],
+        artist_profile: {
+          stage_name: 'Updated Artist',
+          bio: 'Updated biography.',
+          verification_status: 'approved',
+          is_verified: true,
+          listener_count: 10,
+          total_streams: 50,
+        },
+        albums: [],
+        singles: [],
+      },
+    })
+
+    const profile = await updateManageArtistProfileFromApi(
+      'Updated Artist',
+      'Updated biography.',
+    )
+
+    expect(client.patch).toHaveBeenCalledWith('/users/profile/artist/', {
+      stage_name: 'Updated Artist',
+      bio: 'Updated biography.',
+    })
+    expect(profile.artist_profile.bio).toBe('Updated biography.')
   })
 
   it('maps artist-specific profile fields', async () => {

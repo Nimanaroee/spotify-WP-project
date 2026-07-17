@@ -4,13 +4,34 @@ from django.utils.text import slugify
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.settings import api_settings
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from drf_spectacular.utils import extend_schema_field
 
-from .models import Artist
-from .services import update_profile
+from .models import Artist, Preferences
+from .services import update_artist_profile, update_profile
 
 User = get_user_model()
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField(write_only=True)
+
+    def validate_refresh(self, value):
+        try:
+            token = RefreshToken(value)
+        except TokenError as exc:
+            raise serializers.ValidationError("Invalid or expired refresh token.") from exc
+
+        request = self.context["request"]
+        if str(token[api_settings.USER_ID_CLAIM]) != str(request.user.pk):
+            raise serializers.ValidationError(
+                "The refresh token does not belong to the authenticated user."
+            )
+        return token
+
+    def save(self, **kwargs):
+        self.validated_data["refresh"].blacklist()
 
 
 class CurrentUserSerializer(serializers.ModelSerializer):
@@ -145,6 +166,71 @@ class FollowStatusSerializer(serializers.Serializer):
     is_following = serializers.BooleanField(read_only=True)
 
 
+class PreferencesReadSerializer(serializers.ModelSerializer):
+    app_sound_enabled = serializers.BooleanField(
+        source="notification_sound_enabled",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Preferences
+        fields = (
+            "theme",
+            "notification_limit",
+            "app_sound_enabled",
+            "language",
+            "system_voice",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+
+class PreferencesUpdateSerializer(serializers.ModelSerializer):
+    app_sound_enabled = serializers.BooleanField(
+        source="notification_sound_enabled",
+        required=False,
+    )
+
+    class Meta:
+        model = Preferences
+        fields = (
+            "theme",
+            "notification_limit",
+            "app_sound_enabled",
+            "language",
+            "system_voice",
+        )
+        extra_kwargs = {
+            "theme": {"required": False},
+            "notification_limit": {
+                "required": False,
+                "min_value": 1,
+                "max_value": 99,
+            },
+            "language": {"required": False},
+            "system_voice": {"required": False},
+        }
+
+
+class SubscriptionReadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ("subscription_tier",)
+        read_only_fields = fields
+
+
+class SubscriptionUpdateSerializer(serializers.ModelSerializer):
+    subscription_tier = serializers.ChoiceField(
+        choices=User.SubscriptionTier.choices,
+        required=True,
+    )
+
+    class Meta:
+        model = User
+        fields = ("subscription_tier",)
+
+
 class PublicArtistProfileSerializer(serializers.ModelSerializer):
     is_verified = serializers.BooleanField(source="is_approved", read_only=True)
 
@@ -238,6 +324,24 @@ class PublicProfileReadSerializer(ProfileReadSerializer):
     @extend_schema_field(ProfileTrackSerializer(many=True))
     def get_singles(self, user):
         return []
+
+
+class ArtistProfileUpdateSerializer(serializers.Serializer):
+    stage_name = serializers.CharField(required=False, max_length=150)
+    bio = serializers.CharField(required=False, allow_blank=True)
+    profile_photo = serializers.ImageField(required=False)
+
+    def validate_stage_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Stage name cannot be blank.")
+        return value
+
+    def update(self, instance, validated_data):
+        return update_artist_profile(instance, validated_data)
+
+    def create(self, validated_data):
+        raise NotImplementedError
 
 
 class LoginSerializer(TokenObtainPairSerializer):
