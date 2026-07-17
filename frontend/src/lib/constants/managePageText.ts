@@ -21,6 +21,8 @@ type ManageCopy = {
     systemUsername: string;
   };
   messages: {
+    apiError: string;
+    loading: string;
     photoReady: string;
     profileUpdated: string;
     profileNotFound: string;
@@ -70,6 +72,8 @@ export const MANAGE_PAGE_TEXT: Record<AppLanguage, ManageCopy> = {
       systemUsername: 'System username',
     },
     messages: {
+      apiError: 'Unable to load or update the profile.',
+      loading: 'Loading profile...',
       photoReady: 'Profile photo ready to save.',
       profileUpdated: 'Profile updated.',
       profileNotFound: 'Profile not found.',
@@ -117,6 +121,8 @@ export const MANAGE_PAGE_TEXT: Record<AppLanguage, ManageCopy> = {
       systemUsername: 'نام کاربری سیستم',
     },
     messages: {
+      apiError: 'بارگذاری یا به‌روزرسانی پروفایل انجام نشد.',
+      loading: 'در حال بارگذاری پروفایل...',
       photoReady: 'عکس پروفایل آماده ذخیره است.',
       profileUpdated: 'پروفایل به‌روزرسانی شد.',
       profileNotFound: 'پروفایل پیدا نشد.',

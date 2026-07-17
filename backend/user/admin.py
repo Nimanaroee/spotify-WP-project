@@ -22,8 +22,10 @@ class CustomUserAdmin(UserAdmin):
                     "gender",
                     "profile_picture",
                     "subscription_tier",
+                    "following",
                     "followers_count",
                     "following_count",
+                    "streamed_today",
                 )
             },
         ),
@@ -69,8 +71,10 @@ class ArtistAdmin(UserAdmin):
                     "gender",
                     "profile_picture",
                     "subscription_tier",
+                    "following",
                     "followers_count",
                     "following_count",
+                    "streamed_today",
                 )
             },
         ),
