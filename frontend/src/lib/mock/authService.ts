@@ -19,11 +19,6 @@ export interface LoginResult {
   redirectPath: string
 }
 
-export interface ArtistRegistrationResult {
-  status: 'pending_approval'
-  message: string
-}
-
 const USERS_KEY = 'users'
 const AUTH_USER_ID_KEY = 'auth_user_id'
 const CURRENT_USER_KEY = 'current_user'
@@ -154,7 +149,7 @@ export function registerListener(payload: RegisterListenerPayload): User {
 
 export function registerArtist(
   payload: RegisterArtistPayload,
-): ArtistRegistrationResult {
+): User {
   const users = readUsers()
   const normalizedEmail = normalizeEmail(payload.email)
 
@@ -194,11 +189,8 @@ export function registerArtist(
 
   writeUsers([...users, user])
   storage.set(VERIFICATION_REQUESTS_KEY, [...currentRequests, request])
-
-  return {
-    status: 'pending_approval',
-    message: 'Your artist account request is pending approval.',
-  }
+  writeCurrentUser(withoutPassword(user))
+  return withoutPassword(user)
 }
 
 export function requestPasswordRecovery(payload: ForgotPasswordPayload): void {

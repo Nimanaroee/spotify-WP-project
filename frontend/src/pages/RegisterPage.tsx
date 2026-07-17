@@ -289,7 +289,6 @@ export default function RegisterPage() {
   const [artistPrivacyAccepted, setArtistPrivacyAccepted] = useState(false);
   const [artistPrivacyError, setArtistPrivacyError] = useState('');
   const [formError, setFormError] = useState('');
-  const [artistMessage, setArtistMessage] = useState('');
   const { language } = useAppLanguage();
   const copy = getAppText(language);
 
@@ -332,23 +331,21 @@ export default function RegisterPage() {
 
   async function submitArtist(values: ArtistRegistrationFormValues): Promise<void> {
     setFormError('');
-    setArtistMessage('');
     setArtistPrivacyError('');
     if (!artistPrivacyAccepted) {
       setArtistPrivacyError('You must accept the terms and privacy policy.');
       return;
     }
     try {
-      const result = await registerArtist({
+      const user = await registerArtist({
         email: values.email,
         password: values.password,
         password_confirmation: values.password_confirmation,
         stage_name: values.stage_name,
         portfolio_links: parsePortfolioLinks(values.portfolio_links),
       });
-      artistForm.reset();
-      setArtistPrivacyAccepted(false);
-      setArtistMessage(result.message);
+      setUser(user);
+      navigate('/');
     } catch (error) {
       setFormError(
         error instanceof Error ? error.message : 'Registration failed.'
@@ -387,9 +384,6 @@ export default function RegisterPage() {
             </Tabs>
 
             {formError ? <Alert severity="error">{formError}</Alert> : null}
-            {artistMessage ? (
-              <Alert severity="info">{artistMessage}</Alert>
-            ) : null}
 
             {tab === 'listener' ? (
               <Stack

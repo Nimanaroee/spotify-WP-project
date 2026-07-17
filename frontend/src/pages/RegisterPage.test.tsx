@@ -6,6 +6,7 @@ import { ThemeProvider, createTheme } from '@mui/material'
 import RegisterPage from './RegisterPage'
 import { registerArtist, registerListener, setCurrentUser } from '../lib/api/authService'
 import { useAuthStore } from '../store/authStore'
+import type { User } from '../types/user'
 
 vi.mock('../lib/api/authService', () => ({
   getCurrentUser: vi.fn(() => null),
@@ -41,7 +42,7 @@ describe('RegisterPage', () => {
 
     expect(screen.getByRole('dialog')).toHaveTextContent('Privacy Policy')
     expect(screen.getByRole('dialog')).toHaveTextContent(
-      'Listener Terms of Service',
+      'Listener Terms and Privacy Policy',
     )
     expect(screen.getByRole('dialog')).toHaveTextContent('Listener Privacy Policy')
   })
@@ -53,16 +54,24 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('tab', { name: /artist/i }))
     await user.click(screen.getByRole('button', { name: /privacy policy/i }))
 
-    expect(screen.getByRole('dialog')).toHaveTextContent('Artist Terms of Service')
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'Artist Terms and Privacy Policy',
+    )
     expect(screen.getByRole('dialog')).toHaveTextContent('Artist Privacy Policy')
   })
 
-  it('submits artist registration as pending approval', async () => {
+  it('logs in after artist registration', async () => {
     const user = userEvent.setup()
-    vi.mocked(registerArtist).mockResolvedValue({
-      status: 'pending_approval',
-      message: 'Your artist account request is pending approval.',
-    })
+    const artistUser: User = {
+      id: 10,
+      username: 'the_artist',
+      email: 'artist@example.com',
+      display_name: 'The Artist',
+      role: 'artist',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }
+    vi.mocked(registerArtist).mockResolvedValue(artistUser)
     renderRegisterPage()
 
     await user.click(screen.getByRole('tab', { name: /artist/i }))
@@ -88,7 +97,8 @@ describe('RegisterPage', () => {
         portfolio_links: ['https://example.com/music'],
       })
     })
-    expect(await screen.findByText(/pending approval/i)).toBeInTheDocument()
-    expect(useAuthStore.getState().user).toBeNull()
+    await waitFor(() => {
+      expect(useAuthStore.getState().user).toEqual(artistUser)
+    })
   })
 })
