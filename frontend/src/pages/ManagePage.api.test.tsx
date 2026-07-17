@@ -5,9 +5,11 @@ import { ThemeProvider, createTheme } from '@mui/material'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import {
+  getManageArtistProfileFromApi,
   getManageProfileFromApi,
   hasProfileApiSession,
   unfollowUsername,
+  updateManageArtistProfileFromApi,
   updateManageProfileFromApi,
 } from '../lib/api/profileService'
 import { ROLES } from '../lib/constants/roles'
@@ -16,9 +18,11 @@ import { useAuthStore } from '../store/authStore'
 import ManagePage from './ManagePage'
 
 vi.mock('../lib/api/profileService', () => ({
+  getManageArtistProfileFromApi: vi.fn(),
   getManageProfileFromApi: vi.fn(),
   hasProfileApiSession: vi.fn(),
   unfollowUsername: vi.fn(),
+  updateManageArtistProfileFromApi: vi.fn(),
   updateManageProfileFromApi: vi.fn(),
 }))
 
@@ -44,18 +48,73 @@ const profile = {
   following: [],
 }
 
+const artistUser = {
+  id: 2,
+  username: 'artist',
+  email: 'artist@example.com',
+  display_name: 'Artist',
+  role: ROLES.ARTIST,
+  subscription_tier: 'basic' as const,
+  created_at: '2026-01-01T00:00:00.000Z',
+}
+
+const artistProfile = {
+  user: {
+    ...artistUser,
+    followers_count: 0,
+    following_count: 0,
+    daily_streams_count: 0,
+    profile_picture: null,
+  },
+  daily_streams_count: 0,
+  is_following: false,
+  followers: [],
+  following: [],
+  artist_profile: {
+    id: 2,
+    user_id: 2,
+    stage_name: 'Artist',
+    bio: 'Artist biography.',
+    verification_status: 'approved' as const,
+    is_verified: true,
+    listener_count: 12,
+    total_streams: 40,
+    created_at: '',
+  },
+  albums: [],
+  singles: [],
+  listener_count: 12,
+  total_streams: 40,
+}
+
 describe('ManagePage API integration', () => {
   beforeEach(() => {
     vi.mocked(hasProfileApiSession).mockReturnValue(true)
     vi.mocked(getManageProfileFromApi).mockReset()
+    vi.mocked(getManageArtistProfileFromApi).mockReset()
     vi.mocked(updateManageProfileFromApi).mockReset()
+    vi.mocked(updateManageArtistProfileFromApi).mockReset()
     vi.mocked(unfollowUsername).mockReset()
     vi.mocked(getManageProfileFromApi).mockResolvedValue(profile)
+    vi.mocked(getManageArtistProfileFromApi).mockResolvedValue(artistProfile)
     vi.mocked(updateManageProfileFromApi).mockResolvedValue({
       ...profile,
       user: {
         ...profile.user,
         profile_picture: 'http://localhost:8000/media/profile-pictures/avatar.png',
+      },
+    })
+    vi.mocked(updateManageArtistProfileFromApi).mockResolvedValue({
+      ...artistProfile,
+      user: {
+        ...artistProfile.user,
+        profile_picture:
+          'http://localhost:8000/media/profile-pictures/artist-avatar.png',
+      },
+      artist_profile: {
+        ...artistProfile.artist_profile,
+        stage_name: 'Updated Artist',
+        bio: 'Updated biography.',
       },
     })
     useAuthStore.setState({ user: authUser })
@@ -148,5 +207,68 @@ describe('ManagePage API integration', () => {
       await screen.findByRole('tab', { name: /following \(0\)/i }),
     ).toBeInTheDocument()
     expect(screen.queryByText('Following User')).not.toBeInTheDocument()
+  })
+
+  it('loads and updates the artist manage profile through the artist endpoint', async () => {
+    const user = userEvent.setup()
+    useAuthStore.setState({ user: artistUser })
+
+    render(
+      <ThemeProvider theme={createTheme()}>
+        <MemoryRouter initialEntries={[ROUTES.MANAGE]}>
+          <Routes>
+            <Route path={ROUTES.MANAGE} element={<ManagePage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Artist' }),
+    ).toBeInTheDocument()
+    expect(getManageArtistProfileFromApi).toHaveBeenCalled()
+
+    await user.clear(screen.getByLabelText(/artistic name/i))
+    await user.type(screen.getByLabelText(/artistic name/i), 'Updated Artist')
+    await user.clear(screen.getByLabelText(/biography/i))
+    await user.type(screen.getByLabelText(/biography/i), 'Updated biography.')
+    const photo = new File(['avatar'], 'artist-avatar.png', {
+      type: 'image/png',
+    })
+    await user.upload(screen.getByLabelText(/profile photo upload/i), photo)
+    await user.click(screen.getByRole('button', { name: /save artist profile/i }))
+
+    expect(updateManageArtistProfileFromApi).toHaveBeenCalledWith(
+      'Updated Artist',
+      'Updated biography.',
+      photo,
+    )
+    expect(useAuthStore.getState().user?.display_name).toBe('Updated Artist')
+  })
+
+  it('saves artist text changes without sending a profile photo', async () => {
+    const user = userEvent.setup()
+    useAuthStore.setState({ user: artistUser })
+
+    render(
+      <ThemeProvider theme={createTheme()}>
+        <MemoryRouter initialEntries={[ROUTES.MANAGE]}>
+          <Routes>
+            <Route path={ROUTES.MANAGE} element={<ManagePage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    await screen.findByRole('heading', { name: 'Artist' })
+    await user.clear(screen.getByLabelText(/artistic name/i))
+    await user.type(screen.getByLabelText(/artistic name/i), 'Updated Artist')
+    await user.click(screen.getByRole('button', { name: /save artist profile/i }))
+
+    expect(updateManageArtistProfileFromApi).toHaveBeenCalledWith(
+      'Updated Artist',
+      'Artist biography.',
+      null,
+    )
   })
 })

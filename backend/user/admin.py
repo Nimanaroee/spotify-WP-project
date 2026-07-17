@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Artist, User
+from .models import Artist, Preferences, User
 
 
 @admin.register(User)
@@ -93,3 +93,23 @@ class ArtistAdmin(UserAdmin):
             },
         ),
     )
+
+
+@admin.register(Preferences)
+class PreferencesAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "theme",
+        "notification_limit",
+        "notification_sound_enabled",
+        "language",
+        "system_voice",
+        "updated_at",
+    )
+    list_filter = (
+        "theme",
+        "notification_sound_enabled",
+        "language",
+        "system_voice",
+    )
+    search_fields = ("user__email", "user__username", "user__display_name")

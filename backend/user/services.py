@@ -24,6 +24,22 @@ def update_profile(user, validated_data):
 
 
 @transaction.atomic
+def update_artist_profile(artist, validated_data):
+    missing = object()
+    profile_picture = validated_data.pop("profile_photo", missing)
+
+    for field, value in validated_data.items():
+        setattr(artist, field, value)
+    if profile_picture is not missing:
+        artist.profile_picture = profile_picture
+    if validated_data or profile_picture is not missing:
+        artist.save()
+
+    artist.refresh_from_db()
+    return artist
+
+
+@transaction.atomic
 def follow_user(user, target):
     if user.pk == target.pk:
         raise ValidationError({"username": "A user cannot follow themselves."})

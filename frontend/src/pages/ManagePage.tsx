@@ -35,10 +35,13 @@ import { getManagePageText } from '../lib/constants/managePageText';
 import { ROLES } from '../lib/constants/roles';
 import { ROUTES, userProfilePath } from '../lib/constants/routes';
 import {
+  getManageArtistProfileFromApi,
   getManageProfileFromApi,
   hasProfileApiSession,
   unfollowUsername,
+  updateManageArtistProfileFromApi,
   updateManageProfileFromApi,
+  type PublicArtistProfileView,
 } from '../lib/api/profileService';
 import {
   getOwnArtistProfileView,
@@ -98,17 +101,26 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
   const { language } = useAppLanguage();
   const copy = getAppText(language);
   const manageCopy = getManagePageText(language);
+  const usesProfileApi = hasProfileApiSession();
   const isMobile = useMediaQuery('(max-width:767px)');
   const [message, setMessage] = useState<string | null>(null);
-  const [artistView, setArtistView] = useState<ArtistProfileView>(() => {
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(usesProfileApi);
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [artistView, setArtistView] = useState<
+    ArtistProfileView | PublicArtistProfileView | null
+  >(() => {
+    if (usesProfileApi) {
+      return null;
+    }
     const baseProfile = getUserProfileView(authUser.id, authUser.username);
     return getOwnArtistProfileView(authUser.id, baseProfile);
   });
   const [editableArtistProfile, setEditableArtistProfile] =
     useState<ArtistEditableProfile>({
-      stage_name: artistView.artist_profile.stage_name,
-      bio: artistView.artist_profile.bio ?? '',
-      profile_picture: artistView.user.profile_picture ?? '',
+      stage_name: artistView?.artist_profile.stage_name ?? '',
+      bio: artistView?.artist_profile.bio ?? '',
+      profile_picture: artistView?.user.profile_picture ?? '',
     });
   const [activeFollowList, setActiveFollowList] =
     useState<FollowListType>('followers');
@@ -128,7 +140,70 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
   const listSubtitleSize = isCompactMobile ? '0.68rem' : '0.875rem';
   const releaseListHeight = isCompactMobile ? 240 : 260;
 
-  function refreshArtistView(): void {
+  useEffect(() => {
+    if (!usesProfileApi) {
+      return;
+    }
+
+    let isActive = true;
+    setIsLoading(true);
+    setErrorMessage(null);
+    getManageArtistProfileFromApi()
+      .then((nextView) => {
+        if (!isActive) {
+          return;
+        }
+        setArtistView(nextView);
+        setEditableArtistProfile({
+          stage_name: nextView.artist_profile.stage_name,
+          bio: nextView.artist_profile.bio ?? '',
+          profile_picture: nextView.user.profile_picture ?? '',
+        });
+        setUser({
+          ...authUser,
+          display_name: nextView.artist_profile.stage_name,
+          profile_picture: nextView.user.profile_picture,
+          followers_count: nextView.user.followers_count,
+          following_count: nextView.user.following_count,
+        });
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setErrorMessage(
+            error instanceof Error ? error.message : manageCopy.messages.apiError
+          );
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [authUser.id, usesProfileApi]);
+
+  async function refreshArtistView(): Promise<void> {
+    if (usesProfileApi) {
+      const nextView = await getManageArtistProfileFromApi();
+      setArtistView(nextView);
+      setEditableArtistProfile({
+        stage_name: nextView.artist_profile.stage_name,
+        bio: nextView.artist_profile.bio ?? '',
+        profile_picture: nextView.user.profile_picture ?? '',
+      });
+      setUser({
+        ...authUser,
+        display_name: nextView.artist_profile.stage_name,
+        profile_picture: nextView.user.profile_picture,
+        followers_count: nextView.user.followers_count,
+        following_count: nextView.user.following_count,
+      });
+      return;
+    }
+
     const baseProfile = getUserProfileView(authUser.id, authUser.username);
     const nextView = getOwnArtistProfileView(authUser.id, baseProfile);
     setArtistView(nextView);
@@ -139,15 +214,44 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
     });
   }
 
-  function handleSaveArtisticName(): void {
-    const nextProfile = updateArtistProfile(authUser.id, {
-      stage_name: editableArtistProfile.stage_name,
-      bio: editableArtistProfile.bio,
-      profile_picture: editableArtistProfile.profile_picture || null,
-    });
-    setUser({ ...authUser, display_name: nextProfile.stage_name });
-    refreshArtistView();
-    setMessage(copy.profile.artistProfileUpdated);
+  async function handleSaveArtisticName(): Promise<void> {
+    setErrorMessage(null);
+    try {
+      if (usesProfileApi) {
+        const nextView = await updateManageArtistProfileFromApi(
+          editableArtistProfile.stage_name,
+          editableArtistProfile.bio,
+          profilePhotoFile,
+        );
+        setArtistView(nextView);
+        setEditableArtistProfile({
+          stage_name: nextView.artist_profile.stage_name,
+          bio: nextView.artist_profile.bio ?? '',
+          profile_picture: nextView.user.profile_picture ?? '',
+        });
+        setUser({
+          ...authUser,
+          display_name: nextView.artist_profile.stage_name,
+          profile_picture: nextView.user.profile_picture,
+          followers_count: nextView.user.followers_count,
+          following_count: nextView.user.following_count,
+        });
+      } else {
+        const nextProfile = updateArtistProfile(authUser.id, {
+          stage_name: editableArtistProfile.stage_name,
+          bio: editableArtistProfile.bio,
+          profile_picture: editableArtistProfile.profile_picture || null,
+        });
+        setUser({ ...authUser, display_name: nextProfile.stage_name });
+        await refreshArtistView();
+      }
+      setProfilePhotoFile(null);
+      setMessage(copy.profile.artistProfileUpdated);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : manageCopy.messages.apiError
+      );
+    }
   }
 
   function handleArtistPhotoUpload(event: ChangeEvent<HTMLInputElement>): void {
@@ -157,6 +261,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
       return;
     }
 
+    setProfilePhotoFile(file);
     const reader = new FileReader();
     reader.onload = () => {
       if (typeof reader.result === 'string') {
@@ -177,21 +282,64 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
     }
 
     const track = release as Track;
+    if (!artistView) {
+      return;
+    }
     playTrack(track, artistView.singles);
-    refreshArtistView();
+    if (!usesProfileApi) {
+      void refreshArtistView();
+    }
   }
 
-  function handleRemoveFollowAccount(account: UserSummary): void {
-    if (activeFollowList === 'followers') {
-      removeFollower(authUser.id, account.id);
-    } else {
-      unfollowAccount(authUser.id, account.id);
+  async function handleRemoveFollowAccount(account: UserSummary): Promise<void> {
+    setErrorMessage(null);
+    try {
+      if (usesProfileApi) {
+        if (!account.username) {
+          throw new Error(manageCopy.messages.apiError);
+        }
+        await unfollowUsername(account.username);
+      } else if (activeFollowList === 'followers') {
+        removeFollower(authUser.id, account.id);
+      } else {
+        unfollowAccount(authUser.id, account.id);
+      }
+      await refreshArtistView();
+      setMessage(
+        activeFollowList === 'followers'
+          ? manageCopy.messages.removedFollower(account.display_name)
+          : manageCopy.messages.unfollowed(account.display_name)
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : manageCopy.messages.apiError
+      );
     }
-    refreshArtistView();
-    setMessage(
-      activeFollowList === 'followers'
-        ? manageCopy.messages.removedFollower(account.display_name)
-        : manageCopy.messages.unfollowed(account.display_name)
+  }
+
+  if (isLoading) {
+    return (
+      <Box
+        className="min-h-screen p-6"
+        sx={{
+          alignItems: 'center',
+          bgcolor: 'background.default',
+          display: 'flex',
+          justifyContent: 'center',
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!artistView) {
+    return (
+      <Box className="min-h-screen p-6" sx={{ bgcolor: 'background.default' }}>
+        <Alert severity="error">
+          {errorMessage ?? manageCopy.messages.profileNotFound}
+        </Alert>
+      </Box>
     );
   }
 
@@ -231,6 +379,9 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
               />
 
               {message ? <Alert severity="success">{message}</Alert> : null}
+              {errorMessage ? (
+                <Alert severity="error">{errorMessage}</Alert>
+              ) : null}
 
               <Paper className="p-4" variant="outlined">
                 <Stack spacing={2}>
@@ -261,7 +412,10 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
                     </Button>
                   </Box>
                   <Box>
-                    <Button onClick={handleSaveArtisticName} variant="contained">
+                    <Button
+                      onClick={() => void handleSaveArtisticName()}
+                      variant="contained"
+                    >
                       {copy.profile.saveArtistProfile}
                     </Button>
                   </Box>
@@ -376,7 +530,7 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
                         <Button
                           aria-label={`Unfollow ${account.display_name}`}
                           color="inherit"
-                          onClick={() => handleRemoveFollowAccount(account)}
+                          onClick={() => void handleRemoveFollowAccount(account)}
                           size="small"
                           variant="text"
                         >

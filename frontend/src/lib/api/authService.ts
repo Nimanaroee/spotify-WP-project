@@ -218,10 +218,20 @@ export async function requestPasswordRecovery(
   void payload
 }
 
-export function logout(): void {
-  setCurrentUser(null)
-  localStorage.removeItem(ACCESS_TOKEN_KEY)
-  localStorage.removeItem(REFRESH_TOKEN_KEY)
+export async function logout(): Promise<void> {
+  const refresh = localStorage.getItem(REFRESH_TOKEN_KEY)
+
+  try {
+    if (refresh) {
+      await client.post('/auth/logout/', { refresh })
+    }
+  } catch (error) {
+    void error
+  } finally {
+    setCurrentUser(null)
+    localStorage.removeItem(ACCESS_TOKEN_KEY)
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+  }
 }
 
 export function setCurrentUser(user: User | null): void {

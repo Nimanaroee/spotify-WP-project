@@ -24,6 +24,11 @@ import { getHomePageText } from '../lib/constants/homePageText';
 import { getMainNavForRole } from '../lib/constants/navItems';
 import { ROUTES } from '../lib/constants/routes';
 import { logout } from '../lib/api/authService';
+import {
+  hasSettingsApiSession,
+  updateUserPreferencesFromApi,
+} from '../lib/api/settingsService';
+import { updateUserPreferences } from '../lib/mock/settingsService';
 import { useAuthStore } from '../store/authStore';
 import { usePlayerStore } from '../store/playerStore';
 import { useLayoutStore } from '../store/layoutStore'; // <--- NEW IMPORT
@@ -40,7 +45,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   // Use Global State so navigation keeps menu opened/closed exactly as left
   const { sidebarOpen, setSidebarOpen, initialize } = useLayoutStore();
 
-  const { language, toggleLanguage } = useAppLanguage();
+  const { language, setLanguage } = useAppLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
@@ -65,10 +70,30 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const languageLabel = language === 'en' ? appCopy.common.persian : appCopy.common.english;
   const languageShort = language === 'en' ? 'FA' : 'EN';
 
-  function handleLogout(): void {
-    logout();
+  async function handleLogout(): Promise<void> {
+    await logout();
     setUser(null);
     navigate(ROUTES.LOGIN);
+  }
+
+  async function handleLanguageToggle(): Promise<void> {
+    const nextLanguage = language === 'en' ? 'fa' : 'en';
+    setLanguage(nextLanguage);
+
+    if (!user) {
+      return;
+    }
+
+    if (!hasSettingsApiSession()) {
+      updateUserPreferences(user.id, { language: nextLanguage });
+      return;
+    }
+
+    try {
+      await updateUserPreferencesFromApi(user.id, { language: nextLanguage });
+    } catch {
+      setLanguage(language);
+    }
   }
 
   const drawerContent = (
@@ -98,7 +123,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       </List>
       {user && (
          <Box sx={{ p: 2, pb: 4 }}>
-           <Button fullWidth variant="outlined" color="inherit" onClick={handleLogout} sx={{ mb: 1.5 }}>
+           <Button fullWidth variant="outlined" color="inherit" onClick={() => void handleLogout()} sx={{ mb: 1.5 }}>
              {appCopy.auth.logout}
            </Button>
            <Button fullWidth variant="text" color="inherit" onClick={() => setSidebarOpen(false)}>
@@ -178,7 +203,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
                   aria-label={languageLabel}
                   size="small"
                   variant="text"
-                  onClick={toggleLanguage}
+                  onClick={() => void handleLanguageToggle()}
                   color="inherit"
                   sx={{ minWidth: { xs: 36, md: 'auto' }, px: { xs: 1, md: 1.5 } }}
                 >

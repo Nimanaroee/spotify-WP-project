@@ -6,7 +6,7 @@
  *  - [x] Manage local notification and system preferences.
  *  - [x] Update subscription tier and account deletion mock state.
  */
-import { useState, type ChangeEvent } from 'react'
+import { useEffect, useState, type ChangeEvent } from 'react'
 import {
   Alert,
   Box,
@@ -29,6 +29,13 @@ import { ROLES } from '../lib/constants/roles'
 import { ROUTES } from '../lib/constants/routes'
 import type { SubscriptionTier } from '../lib/constants/subscriptionLimits'
 import {
+  getUserSubscriptionFromApi,
+  getUserPreferencesFromApi,
+  hasSettingsApiSession,
+  updateUserSubscriptionFromApi,
+  updateUserPreferencesFromApi,
+} from '../lib/api/settingsService'
+import {
   deleteAccount,
   getUserPreferences,
   updateSubscriptionTier,
@@ -36,9 +43,10 @@ import {
 } from '../lib/mock/settingsService'
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
+import { useThemeMode } from '../theme/ThemeModeContext'
 import type { AppLanguage, SystemVoice, UserPreferences } from '../types'
 
-type MessageSeverity = 'success' | 'info'
+type MessageSeverity = 'success' | 'info' | 'error'
 
 interface PageMessage {
   severity: MessageSeverity
@@ -54,11 +62,82 @@ export default function SettingsPage() {
   const setUser = useAuthStore((state) => state.setUser)
   const navigate = useNavigate()
   const { language, setLanguage } = useAppLanguage()
+  const { setThemeMode } = useThemeMode()
+  const usesSettingsApi = hasSettingsApiSession()
   const copy = getAppText(language)
   const [preferences, setPreferences] = useState<UserPreferences | null>(() =>
-    user ? getUserPreferences(user.id) : null,
+    user && !usesSettingsApi ? getUserPreferences(user.id) : null,
   )
+  const [isLoading, setIsLoading] = useState(usesSettingsApi)
+  const [isSubscriptionSaving, setIsSubscriptionSaving] = useState(false)
   const [message, setMessage] = useState<PageMessage | null>(null)
+
+  useEffect(() => {
+    if (!user || !usesSettingsApi) {
+      return
+    }
+
+    let isActive = true
+    setIsLoading(true)
+    getUserPreferencesFromApi(user.id)
+      .then((nextPreferences) => {
+        if (!isActive) {
+          return
+        }
+        setPreferences(nextPreferences)
+        setLanguage(nextPreferences.language)
+        setThemeMode?.(nextPreferences.theme)
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setMessage({
+            severity: 'error',
+            text: error instanceof Error ? error.message : 'Unable to load preferences.',
+          })
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setIsLoading(false)
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [user?.id, usesSettingsApi])
+
+  useEffect(() => {
+    if (!user || user.role !== ROLES.LISTENER || !usesSettingsApi) {
+      return
+    }
+
+    let isActive = true
+    getUserSubscriptionFromApi()
+      .then((subscriptionTier) => {
+        if (isActive) {
+          setUser({
+            ...user,
+            subscription_tier: subscriptionTier,
+          })
+        }
+      })
+      .catch((error: unknown) => {
+        if (isActive) {
+          setMessage({
+            severity: 'error',
+            text:
+              error instanceof Error
+                ? error.message
+                : 'Unable to load subscription.',
+          })
+        }
+      })
+
+    return () => {
+      isActive = false
+    }
+  }, [user?.id, user?.role, usesSettingsApi])
 
   if (!user) {
     return <Navigate to={ROUTES.LOGIN} replace />
@@ -69,48 +148,136 @@ export default function SettingsPage() {
   }
 
   const currentUser = user
-  const currentPreferences = preferences ?? getUserPreferences(currentUser.id)
+  const currentPreferences =
+    preferences ??
+    (usesSettingsApi ? null : getUserPreferences(currentUser.id))
   const subscriptionTier = currentUser.subscription_tier ?? 'basic'
   const isListener = currentUser.role === ROLES.LISTENER
 
-  function handlePreferenceChange(
+  async function handlePreferenceChange(
     payload: Partial<
       Pick<
         UserPreferences,
-        'app_sound_enabled' | 'language' | 'notification_limit' | 'system_voice'
+        | 'app_sound_enabled'
+        | 'language'
+        | 'notification_limit'
+        | 'system_voice'
+        | 'theme'
       >
     >,
-  ): void {
-    const nextPreferences = updateUserPreferences(currentUser.id, payload)
+  ): Promise<void> {
+    const previousPreferences =
+      currentPreferences ?? getUserPreferences(currentUser.id)
+    const nextPreferences = {
+      ...previousPreferences,
+      ...payload,
+    }
     setPreferences(nextPreferences)
     setMessage(null)
 
     if (payload.language) {
       setLanguage(payload.language)
     }
+    if (payload.theme) {
+      setThemeMode?.(payload.theme)
+    }
+
+    if (!usesSettingsApi) {
+      setPreferences(updateUserPreferences(currentUser.id, payload))
+      return
+    }
+
+    try {
+      const savedPreferences = await updateUserPreferencesFromApi(
+        currentUser.id,
+        payload,
+      )
+      setPreferences((latestPreferences) => ({
+        ...savedPreferences,
+        ...latestPreferences,
+        ...payload,
+        created_at: savedPreferences.created_at,
+        updated_at: savedPreferences.updated_at,
+      }))
+    } catch (error) {
+      setPreferences((latestPreferences) => {
+        if (!latestPreferences) {
+          return previousPreferences
+        }
+
+        const restoredPreferences = { ...latestPreferences }
+        for (const key of Object.keys(payload) as Array<keyof typeof payload>) {
+          if (latestPreferences[key] === payload[key]) {
+            Object.assign(restoredPreferences, {
+              [key]: previousPreferences[key],
+            })
+          }
+        }
+        return restoredPreferences
+      })
+      if (
+        payload.language &&
+        nextPreferences.language === payload.language
+      ) {
+        setLanguage(previousPreferences.language)
+      }
+      if (payload.theme && nextPreferences.theme === payload.theme) {
+        setThemeMode?.(previousPreferences.theme)
+      }
+      setMessage({
+        severity: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Unable to update preferences.',
+      })
+    }
   }
 
   function handleNotificationLimitChange(
     event: ChangeEvent<HTMLInputElement>,
   ): void {
-    handlePreferenceChange({
+    void handlePreferenceChange({
       notification_limit: normalizeNotificationLimit(Number(event.target.value)),
     })
   }
 
-  function handleSavePreferences(): void {
-    updateUserPreferences(currentUser.id, currentPreferences)
-    setMessage({ severity: 'success', text: copy.settings.preferencesSaved })
-  }
+  async function handleSubscriptionChange(
+    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ): Promise<void> {
+    const nextTier = event.target.value as SubscriptionTier
 
-  function handleSubscriptionChange(
-    event: ChangeEvent<HTMLInputElement>,
-  ): void {
-    const nextUser = updateSubscriptionTier(currentUser.id, {
-      subscription_tier: event.target.value as SubscriptionTier,
-    })
-    setUser(nextUser)
-    setMessage({ severity: 'success', text: copy.settings.subscriptionSaved })
+    if (!usesSettingsApi) {
+      const nextUser = updateSubscriptionTier(currentUser.id, {
+        subscription_tier: nextTier,
+      })
+      setUser(nextUser)
+      setMessage({ severity: 'success', text: copy.settings.subscriptionSaved })
+      return
+    }
+
+    setIsSubscriptionSaving(true)
+    setMessage(null)
+    try {
+      const subscriptionTier = await updateUserSubscriptionFromApi({
+        subscription_tier: nextTier,
+      })
+      setUser({
+        ...currentUser,
+        subscription_tier: subscriptionTier,
+      })
+      setMessage({ severity: 'success', text: copy.settings.subscriptionSaved })
+    } catch (error) {
+      setMessage({
+        severity: 'error',
+        text:
+          error instanceof Error
+            ? error.message
+            : 'Unable to update subscription.',
+      })
+    } finally {
+      setIsSubscriptionSaving(false)
+    }
   }
 
   function handleDeleteAccount(): void {
@@ -138,7 +305,10 @@ export default function SettingsPage() {
         ) : null}
 
         <Paper className="p-5 md:p-8">
-          <Stack spacing={3}>
+          {isLoading || !currentPreferences ? (
+            <Typography color="text.secondary">Loading preferences...</Typography>
+          ) : (
+            <Stack spacing={3}>
             <Box>
               <Typography component="h2" variant="h6" sx={{ fontWeight: 700 }}>
                 {copy.settings.notificationsTitle}
@@ -167,7 +337,7 @@ export default function SettingsPage() {
                   <Switch
                     checked={currentPreferences.app_sound_enabled}
                     onChange={(event) =>
-                      handlePreferenceChange({
+                      void handlePreferenceChange({
                         app_sound_enabled: event.target.checked,
                       })
                     }
@@ -199,12 +369,12 @@ export default function SettingsPage() {
                 fullWidth
                 label={copy.settings.languageLabel}
                 onChange={(event) =>
-                  handlePreferenceChange({
+                  void handlePreferenceChange({
                     language: event.target.value as AppLanguage,
                   })
                 }
                 select
-                value={language}
+                value={currentPreferences.language}
               >
                 <MenuItem value="en">{copy.common.english}</MenuItem>
                 <MenuItem value="fa">{copy.common.persian}</MenuItem>
@@ -213,7 +383,7 @@ export default function SettingsPage() {
                 fullWidth
                 label={copy.settings.systemVoice}
                 onChange={(event) =>
-                  handlePreferenceChange({
+                  void handlePreferenceChange({
                     system_voice: event.target.value as SystemVoice,
                   })
                 }
@@ -232,13 +402,10 @@ export default function SettingsPage() {
                 <Typography color="text.secondary" variant="body2">
                   {copy.settings.theme}
                 </Typography>
-                <ThemeToggleButton />
+                <ThemeToggleButton
+                  onToggle={(theme) => void handlePreferenceChange({ theme })}
+                />
               </Stack>
-            </Box>
-            <Box>
-              <Button onClick={handleSavePreferences} variant="contained">
-                {copy.settings.savePreferences}
-              </Button>
             </Box>
 
             {isListener ? (
@@ -254,9 +421,10 @@ export default function SettingsPage() {
                   </Typography>
                 </Box>
                 <TextField
+                  disabled={isSubscriptionSaving}
                   fullWidth
                   label={copy.settings.currentPlan}
-                  onChange={handleSubscriptionChange}
+                  onChange={(event) => void handleSubscriptionChange(event)}
                   select
                   value={subscriptionTier}
                 >
@@ -280,7 +448,8 @@ export default function SettingsPage() {
                 {copy.settings.deleteAccount}
               </Button>
             </Box>
-          </Stack>
+            </Stack>
+          )}
         </Paper>
       </Stack>
     </Box>

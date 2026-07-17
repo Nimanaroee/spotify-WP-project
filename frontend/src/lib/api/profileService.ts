@@ -70,6 +70,12 @@ export interface PublicArtistProfileView extends UserProfileView {
 
 export type PublicProfileView = UserProfileView | PublicArtistProfileView
 
+interface ArtistProfileUpdateRequest {
+  stage_name?: string
+  bio?: string
+  profile_photo?: File | null
+}
+
 interface ProfileUpdateRequest {
   display_name?: string
   gender?: User['gender']
@@ -202,6 +208,21 @@ function toFormData(payload: ProfileUpdateRequest): FormData {
   return formData
 }
 
+function toArtistFormData(payload: ArtistProfileUpdateRequest): FormData {
+  const formData = new FormData()
+
+  if (payload.stage_name !== undefined) {
+    formData.append('stage_name', payload.stage_name)
+  }
+  if (payload.bio !== undefined) {
+    formData.append('bio', payload.bio)
+  }
+  if (payload.profile_photo instanceof File) {
+    formData.append('profile_photo', payload.profile_photo)
+  }
+  return formData
+}
+
 export function hasProfileApiSession(): boolean {
   return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY))
 }
@@ -210,8 +231,25 @@ export async function getManageProfileFromApi(
   currentUser: User,
 ): Promise<ManageProfile> {
   try {
-    const response = await client.get<ProfileResponse>('/users/profile/')
+    const response = await client.get<ProfileResponse>(
+      '/users/profile/listener/',
+    )
     return toManageProfile(response.data, currentUser)
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function getManageArtistProfileFromApi(): Promise<PublicArtistProfileView> {
+  try {
+    const response = await client.get<PublicProfileResponse>(
+      '/users/profile/artist/',
+    )
+    const profile = toPublicProfile(response.data)
+    if (!('artist_profile' in profile)) {
+      throw new Error('Artist profile not found.')
+    }
+    return profile
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
   }
@@ -268,10 +306,36 @@ export async function updateManageProfileFromApi(
 
   try {
     const response = await client.patch<ProfileResponse>(
-      '/users/profile/',
+      '/users/profile/listener/',
       profilePhoto ? toFormData(request) : request,
     )
     return toManageProfile(response.data, currentUser)
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function updateManageArtistProfileFromApi(
+  stageName: string,
+  bio: string,
+  profilePhoto?: File | null,
+): Promise<PublicArtistProfileView> {
+  const request: ArtistProfileUpdateRequest = {
+    stage_name: stageName,
+    bio,
+    ...(profilePhoto ? { profile_photo: profilePhoto } : {}),
+  }
+
+  try {
+    const response = await client.patch<PublicProfileResponse>(
+      '/users/profile/artist/',
+      profilePhoto ? toArtistFormData(request) : request,
+    )
+    const profile = toPublicProfile(response.data)
+    if (!('artist_profile' in profile)) {
+      throw new Error('Artist profile not found.')
+    }
+    return profile
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
   }

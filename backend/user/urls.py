@@ -6,10 +6,12 @@ from .views import (
     CurrentUserView,
     ListenerRegistrationView,
     LoginView,
+    LogoutView,
 )
 
 urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
     path("refresh/", TokenRefreshView.as_view(), name="token-refresh"),
     path("register/listener/", ListenerRegistrationView.as_view(), name="register-listener"),
     path("register/artist/", ArtistRegistrationView.as_view(), name="register-artist"),

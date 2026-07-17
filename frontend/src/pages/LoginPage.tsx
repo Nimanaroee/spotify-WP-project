@@ -15,15 +15,18 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { getAppText } from '../lib/constants/appText';
 import { login } from '../lib/api/authService';
+import { getUserPreferencesFromApi } from '../lib/api/settingsService';
 import { useAuthStore } from '../store/authStore';
 import { useAppLanguage } from '../theme/LanguageContext';
+import { useThemeMode } from '../theme/ThemeModeContext';
 import { loginSchema, type LoginFormValues } from './authSchemas';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const setUser = useAuthStore((state) => state.setUser);
   const [formError, setFormError] = useState('');
-  const { language } = useAppLanguage();
+  const { language, setLanguage } = useAppLanguage();
+  const { setThemeMode } = useThemeMode();
   const copy = getAppText(language);
   const {
     register,
@@ -39,6 +42,12 @@ export default function LoginPage() {
     try {
       const result = await login(values.email, values.password);
       setUser(result.user);
+      await getUserPreferencesFromApi(result.user.id)
+        .then((preferences) => {
+          setLanguage(preferences.language);
+          setThemeMode?.(preferences.theme);
+        })
+        .catch(() => undefined);
       navigate(result.redirectPath);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : 'Login failed.');
