@@ -37,16 +37,6 @@ def create_artist(email, stage_name, **extra):
 
 
 class TicketApiTests(APITestCase):
-    """
-    Contract expected by the frontend (frontend/src/lib/api/managementService.ts):
-    - POST /tickets/ -> ticket with id, user, user_name, subject, status, created_at, updated_at.
-    - GET /management/tickets/ -> paginated {count, next, previous, results}, staff-only.
-    - GET /management/tickets/{id}/ -> ticket + messages[] with
-      id, ticket, sender, sender_name, message, created_at.
-    - POST .../reply/ -> answered status, notifies the ticket owner (unless staff replies to self).
-    - POST .../close/ -> closed status; further replies are rejected.
-    """
-
     def setUp(self):
         self.listener = create_user("listener@example.com")
         self.support = create_user("support@example.com", role=User.Role.SUPPORT)
@@ -165,12 +155,6 @@ class TicketApiTests(APITestCase):
 
 
 class VerificationApiTests(APITestCase):
-    """
-    Contract: Artist itself IS the verification request (no separate model).
-    GET .../verification-requests/?status=pending filters by verification_status.
-    approve()/reject() enforce the "already processed" guard and notify the artist.
-    """
-
     def setUp(self):
         self.support = create_user("support@example.com", role=User.Role.SUPPORT)
         self.admin = create_user("admin@example.com", role=User.Role.ADMIN)
@@ -397,7 +381,6 @@ class RevenueReportApiTests(APITestCase):
         response = self.client.get(self.url, {"year": 2026, "month": 7})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        # 1 silver * 10.00 + 2 gold * 20.00 = 50.00
         self.assertEqual(str(response.data["total_subscription_revenue"]), "50.00")
         distribution = {row["tier"]: row for row in response.data["subscription_distribution"]}
         self.assertEqual(distribution["basic"]["user_count"], 1)

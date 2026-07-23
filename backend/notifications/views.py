@@ -1,12 +1,20 @@
+from drf_spectacular.utils import extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import schema
 from .models import Notification
 from .serializers import NotificationSerializer
 
 
+@extend_schema(
+    tags=schema.NOTIFICATIONS_TAG,
+    summary="List my notifications",
+    description="Returns all notifications for the authenticated user, newest first. Not paginated.",
+    responses={200: NotificationSerializer(many=True)},
+)
 class NotificationListView(generics.ListAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = NotificationSerializer
@@ -16,6 +24,12 @@ class NotificationListView(generics.ListAPIView):
         return Notification.objects.filter(recipient=self.request.user)
 
 
+@extend_schema(
+    tags=schema.NOTIFICATIONS_TAG,
+    summary="Mark a notification as read",
+    request=None,
+    responses={200: NotificationSerializer, 404: schema.NOT_FOUND_RESPONSE},
+)
 class NotificationMarkReadView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -29,6 +43,12 @@ class NotificationMarkReadView(APIView):
         return Response(NotificationSerializer(notification).data)
 
 
+@extend_schema(
+    tags=schema.NOTIFICATIONS_TAG,
+    summary="Mark all my notifications as read",
+    request=None,
+    responses={204: None},
+)
 class NotificationMarkAllReadView(APIView):
     permission_classes = (IsAuthenticated,)
 
@@ -37,6 +57,11 @@ class NotificationMarkAllReadView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema(
+    tags=schema.NOTIFICATIONS_TAG,
+    summary="Delete a notification",
+    responses={204: None, 404: schema.NOT_FOUND_RESPONSE},
+)
 class NotificationDeleteView(APIView):
     permission_classes = (IsAuthenticated,)
 
