@@ -8,7 +8,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import {
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
-  hasSettingsApiSession,
   updateUserSubscriptionFromApi,
   updateUserPreferencesFromApi,
 } from '../lib/api/settingsService'
@@ -26,7 +25,6 @@ import SettingsPage from './SettingsPage'
 vi.mock('../lib/api/settingsService', () => ({
   getUserSubscriptionFromApi: vi.fn(),
   getUserPreferencesFromApi: vi.fn(),
-  hasSettingsApiSession: vi.fn(),
   updateUserSubscriptionFromApi: vi.fn(),
   updateUserPreferencesFromApi: vi.fn(),
 }))
@@ -86,8 +84,6 @@ function renderSettingsPage() {
 describe('SettingsPage API integration', () => {
   beforeEach(() => {
     let savedPreferences: UserPreferences = { ...preferences }
-
-    vi.mocked(hasSettingsApiSession).mockReturnValue(true)
     vi.mocked(getUserPreferencesFromApi).mockReset()
     vi.mocked(getUserSubscriptionFromApi).mockReset()
     vi.mocked(updateUserPreferencesFromApi).mockReset()

@@ -6,7 +6,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import {
   followUsername,
   getPublicProfileFromApi,
-  hasProfileApiSession,
   unfollowUsername,
 } from '../lib/api/profileService'
 import { ROLES } from '../lib/constants/roles'
@@ -16,13 +15,11 @@ import UserProfilePage from './UserProfilePage'
 vi.mock('../lib/api/profileService', () => ({
   followUsername: vi.fn(),
   getPublicProfileFromApi: vi.fn(),
-  hasProfileApiSession: vi.fn(),
   unfollowUsername: vi.fn(),
 }))
 
 describe('UserProfilePage API integration', () => {
   beforeEach(() => {
-    vi.mocked(hasProfileApiSession).mockReturnValue(true)
     vi.mocked(getPublicProfileFromApi).mockReset()
     vi.mocked(followUsername).mockReset()
     vi.mocked(unfollowUsername).mockReset()

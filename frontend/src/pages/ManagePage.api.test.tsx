@@ -7,7 +7,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import {
   getManageArtistProfileFromApi,
   getManageProfileFromApi,
-  hasProfileApiSession,
   unfollowUsername,
   updateManageArtistProfileFromApi,
   updateManageProfileFromApi,
@@ -20,7 +19,6 @@ import ManagePage from './ManagePage'
 vi.mock('../lib/api/profileService', () => ({
   getManageArtistProfileFromApi: vi.fn(),
   getManageProfileFromApi: vi.fn(),
-  hasProfileApiSession: vi.fn(),
   unfollowUsername: vi.fn(),
   updateManageArtistProfileFromApi: vi.fn(),
   updateManageProfileFromApi: vi.fn(),
@@ -89,7 +87,6 @@ const artistProfile = {
 
 describe('ManagePage API integration', () => {
   beforeEach(() => {
-    vi.mocked(hasProfileApiSession).mockReturnValue(true)
     vi.mocked(getManageProfileFromApi).mockReset()
     vi.mocked(getManageArtistProfileFromApi).mockReset()
     vi.mocked(updateManageProfileFromApi).mockReset()
@@ -132,6 +129,11 @@ describe('ManagePage API integration', () => {
 
   it('uploads the selected profile photo when saving and exiting edit mode', async () => {
     const user = userEvent.setup()
+    const silverProfile = {
+      ...profile,
+      user: { ...profile.user, subscription_tier: 'silver' as const },
+    }
+    vi.mocked(getManageProfileFromApi).mockResolvedValue(silverProfile)
     render(
       <ThemeProvider theme={createTheme()}>
         <MemoryRouter initialEntries={[ROUTES.MANAGE]}>
@@ -160,6 +162,37 @@ describe('ManagePage API integration', () => {
     expect(
       screen.queryByRole('button', { name: /save changes/i }),
     ).not.toBeInTheDocument()
+  })
+
+  it('shows an upgrade hint instead of the photo button for basic accounts in edit mode', async () => {
+    const user = userEvent.setup()
+    render(
+      <ThemeProvider theme={createTheme()}>
+        <MemoryRouter initialEntries={[ROUTES.MANAGE]}>
+          <Routes>
+            <Route path={ROUTES.MANAGE} element={<ManagePage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    )
+
+    await screen.findByRole('heading', { name: 'Listener' })
+    await user.click(screen.getByRole('button', { name: /edit/i }))
+
+    expect(
+      screen.queryByLabelText(/profile photo upload/i),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/upgrade your subscription to change your profile photo/i),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(updateManageProfileFromApi).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'listener' }),
+      expect.objectContaining({ display_name: 'Listener' }),
+      null,
+    )
   })
 
   it('unfollows from the following box and refreshes the manage profile', async () => {

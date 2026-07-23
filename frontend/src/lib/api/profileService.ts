@@ -11,7 +11,7 @@ import type {
   UserProfileView,
   UserSummary,
 } from '../../types'
-import client, { ACCESS_TOKEN_KEY } from './client'
+import client from './client'
 
 interface UserShortInfoResponse {
   display_name: string
@@ -221,10 +221,6 @@ function toArtistFormData(payload: ArtistProfileUpdateRequest): FormData {
     formData.append('profile_photo', payload.profile_photo)
   }
   return formData
-}
-
-export function hasProfileApiSession(): boolean {
-  return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY))
 }
 
 export async function getManageProfileFromApi(

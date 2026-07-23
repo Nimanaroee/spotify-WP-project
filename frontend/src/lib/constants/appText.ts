@@ -194,7 +194,7 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       systemVoice: 'System voice',
       theme: 'Theme',
       subscriptionTitle: 'Subscription status',
-      subscriptionDescription: 'Your current plan is stored locally for Phase 1. Change it to preview upgrades or downgrades.',
+      subscriptionDescription: 'Upgrade your subscription to enjoy more features.',
       currentPlan: 'Current plan',
       accountTitle: 'Account management',
       accountDescription: 'Delete your account and sign out.',

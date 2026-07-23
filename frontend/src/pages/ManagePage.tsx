@@ -37,24 +37,11 @@ import { ROUTES, userProfilePath } from '../lib/constants/routes';
 import {
   getManageArtistProfileFromApi,
   getManageProfileFromApi,
-  hasProfileApiSession,
   unfollowUsername,
   updateManageArtistProfileFromApi,
   updateManageProfileFromApi,
   type PublicArtistProfileView,
 } from '../lib/api/profileService';
-import {
-  getOwnArtistProfileView,
-  type ArtistProfileView,
-  updateArtistProfile,
-} from '../lib/mock/artistProfileService';
-import {
-  getManageProfile,
-  getUserProfileView,
-  removeFollower,
-  unfollowAccount,
-  updateUserProfile,
-} from '../lib/mock/userProfileService';
 import { useAuthStore } from '../store/authStore';
 import { usePlayerStore } from '../store/playerStore';
 import { useAppLanguage } from '../theme/LanguageContext';
@@ -101,21 +88,14 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
   const { language } = useAppLanguage();
   const copy = getAppText(language);
   const manageCopy = getManagePageText(language);
-  const usesProfileApi = hasProfileApiSession();
   const isMobile = useMediaQuery('(max-width:767px)');
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(usesProfileApi);
+  const [isLoading, setIsLoading] = useState(true);
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
-  const [artistView, setArtistView] = useState<
-    ArtistProfileView | PublicArtistProfileView | null
-  >(() => {
-    if (usesProfileApi) {
-      return null;
-    }
-    const baseProfile = getUserProfileView(authUser.id, authUser.username);
-    return getOwnArtistProfileView(authUser.id, baseProfile);
-  });
+  const [artistView, setArtistView] = useState<PublicArtistProfileView | null>(
+    null
+  );
   const [editableArtistProfile, setEditableArtistProfile] =
     useState<ArtistEditableProfile>({
       stage_name: artistView?.artist_profile.stage_name ?? '',
@@ -141,10 +121,6 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
   const releaseListHeight = isCompactMobile ? 240 : 260;
 
   useEffect(() => {
-    if (!usesProfileApi) {
-      return;
-    }
-
     let isActive = true;
     setIsLoading(true);
     setErrorMessage(null);
@@ -183,11 +159,33 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
     return () => {
       isActive = false;
     };
-  }, [authUser.id, usesProfileApi]);
+  }, [authUser.id]);
 
   async function refreshArtistView(): Promise<void> {
-    if (usesProfileApi) {
-      const nextView = await getManageArtistProfileFromApi();
+    const nextView = await getManageArtistProfileFromApi();
+    setArtistView(nextView);
+    setEditableArtistProfile({
+      stage_name: nextView.artist_profile.stage_name,
+      bio: nextView.artist_profile.bio ?? '',
+      profile_picture: nextView.user.profile_picture ?? '',
+    });
+    setUser({
+      ...authUser,
+      display_name: nextView.artist_profile.stage_name,
+      profile_picture: nextView.user.profile_picture,
+      followers_count: nextView.user.followers_count,
+      following_count: nextView.user.following_count,
+    });
+  }
+
+  async function handleSaveArtisticName(): Promise<void> {
+    setErrorMessage(null);
+    try {
+      const nextView = await updateManageArtistProfileFromApi(
+        editableArtistProfile.stage_name,
+        editableArtistProfile.bio,
+        profilePhotoFile,
+      );
       setArtistView(nextView);
       setEditableArtistProfile({
         stage_name: nextView.artist_profile.stage_name,
@@ -201,50 +199,6 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
         followers_count: nextView.user.followers_count,
         following_count: nextView.user.following_count,
       });
-      return;
-    }
-
-    const baseProfile = getUserProfileView(authUser.id, authUser.username);
-    const nextView = getOwnArtistProfileView(authUser.id, baseProfile);
-    setArtistView(nextView);
-    setEditableArtistProfile({
-      stage_name: nextView.artist_profile.stage_name,
-      bio: nextView.artist_profile.bio ?? '',
-      profile_picture: nextView.user.profile_picture ?? '',
-    });
-  }
-
-  async function handleSaveArtisticName(): Promise<void> {
-    setErrorMessage(null);
-    try {
-      if (usesProfileApi) {
-        const nextView = await updateManageArtistProfileFromApi(
-          editableArtistProfile.stage_name,
-          editableArtistProfile.bio,
-          profilePhotoFile,
-        );
-        setArtistView(nextView);
-        setEditableArtistProfile({
-          stage_name: nextView.artist_profile.stage_name,
-          bio: nextView.artist_profile.bio ?? '',
-          profile_picture: nextView.user.profile_picture ?? '',
-        });
-        setUser({
-          ...authUser,
-          display_name: nextView.artist_profile.stage_name,
-          profile_picture: nextView.user.profile_picture,
-          followers_count: nextView.user.followers_count,
-          following_count: nextView.user.following_count,
-        });
-      } else {
-        const nextProfile = updateArtistProfile(authUser.id, {
-          stage_name: editableArtistProfile.stage_name,
-          bio: editableArtistProfile.bio,
-          profile_picture: editableArtistProfile.profile_picture || null,
-        });
-        setUser({ ...authUser, display_name: nextProfile.stage_name });
-        await refreshArtistView();
-      }
       setProfilePhotoFile(null);
       setMessage(copy.profile.artistProfileUpdated);
     } catch (error) {
@@ -286,24 +240,15 @@ function ArtistManagementPage({ authUser }: { authUser: User }) {
       return;
     }
     playTrack(track, artistView.singles);
-    if (!usesProfileApi) {
-      void refreshArtistView();
-    }
   }
 
   async function handleRemoveFollowAccount(account: UserSummary): Promise<void> {
     setErrorMessage(null);
     try {
-      if (usesProfileApi) {
-        if (!account.username) {
-          throw new Error(manageCopy.messages.apiError);
-        }
-        await unfollowUsername(account.username);
-      } else if (activeFollowList === 'followers') {
-        removeFollower(authUser.id, account.id);
-      } else {
-        unfollowAccount(authUser.id, account.id);
+      if (!account.username) {
+        throw new Error(manageCopy.messages.apiError);
       }
+      await unfollowUsername(account.username);
       await refreshArtistView();
       setMessage(
         activeFollowList === 'followers'
@@ -567,12 +512,9 @@ export default function ManagePage() {
   const [message, setMessage] = useState<string | null>(null);
   const [activeFollowList, setActiveFollowList] =
     useState<FollowListType>('followers');
-  const usesProfileApi = hasProfileApiSession();
-  const [profile, setProfile] = useState<ManageProfile | null>(() =>
-    authUser && !usesProfileApi ? getManageProfile(authUser.id) : null
-  );
+  const [profile, setProfile] = useState<ManageProfile | null>(null);
   const [isLoading, setIsLoading] = useState(
-    Boolean(authUser && authUser.role === ROLES.LISTENER && usesProfileApi)
+    Boolean(authUser && authUser.role === ROLES.LISTENER)
   );
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -590,11 +532,7 @@ export default function ManagePage() {
   const copy = getManagePageText(language);
 
   useEffect(() => {
-    if (
-      !authUser ||
-      authUser.role !== ROLES.LISTENER ||
-      !usesProfileApi
-    ) {
+    if (!authUser || authUser.role !== ROLES.LISTENER) {
       return;
     }
 
@@ -626,7 +564,7 @@ export default function ManagePage() {
     return () => {
       isActive = false;
     };
-  }, [authUser?.id, copy.messages.apiError, setUser, usesProfileApi]);
+  }, [authUser?.id, copy.messages.apiError, setUser]);
 
   if (!authUser) {
     return <Navigate to={ROUTES.LOGIN} replace />;
@@ -705,21 +643,13 @@ export default function ManagePage() {
   ): Promise<void> {
     setErrorMessage(null);
     try {
-      if (usesProfileApi) {
-        if (!account.username) {
-          throw new Error(copy.messages.apiError);
-        }
-        await unfollowUsername(account.username);
-        const nextProfile = await getManageProfileFromApi(currentAuthUser);
-        setProfile(nextProfile);
-        setUser(nextProfile.user);
-      } else {
-        const nextProfile =
-          activeFollowList === 'followers'
-            ? removeFollower(currentProfile.user.id, account.id)
-            : unfollowAccount(currentProfile.user.id, account.id);
-        setProfile(nextProfile);
+      if (!account.username) {
+        throw new Error(copy.messages.apiError);
       }
+      await unfollowUsername(account.username);
+      const nextProfile = await getManageProfileFromApi(currentAuthUser);
+      setProfile(nextProfile);
+      setUser(nextProfile.user);
       setMessage(
         activeFollowList === 'followers'
           ? copy.messages.removedFollower(account.display_name)
@@ -745,30 +675,25 @@ export default function ManagePage() {
   }
 
   async function handleSaveProfile(): Promise<void> {
+    const canChangePhoto = currentProfile.user.subscription_tier !== 'basic';
     const payload: UpdateUserProfilePayload = {
       display_name: editableProfile.display_name,
       birth_date: editableProfile.birth_date || undefined,
       gender: editableProfile.gender as Gender,
-      profile_picture: editableProfile.profile_picture || null,
+      profile_picture: canChangePhoto
+        ? editableProfile.profile_picture || null
+        : currentProfile.user.profile_picture ?? null,
     };
     setErrorMessage(null);
     try {
-      const nextProfile = usesProfileApi
-        ? await updateManageProfileFromApi(
-            currentAuthUser,
-            payload,
-            profilePhotoFile
-          )
-        : {
-            ...getManageProfile(currentProfile.user.id),
-            user: updateUserProfile(currentProfile.user.id, payload),
-          };
-      const refreshedProfile = usesProfileApi
-        ? nextProfile
-        : getManageProfile(currentProfile.user.id);
-      setUser(refreshedProfile.user);
-      setProfile(refreshedProfile);
-      setEditableProfile(createEditableProfile(refreshedProfile));
+      const nextProfile = await updateManageProfileFromApi(
+        currentAuthUser,
+        payload,
+        canChangePhoto ? profilePhotoFile : null
+      );
+      setUser(nextProfile.user);
+      setProfile(nextProfile);
+      setEditableProfile(createEditableProfile(nextProfile));
       setProfilePhotoFile(null);
       setIsEditing(false);
       setMessage(copy.messages.profileUpdated);
@@ -1022,16 +947,22 @@ export default function ManagePage() {
                   </Box>
                   {isEditing ? (
                     <Box sx={{ gridColumn: { xs: 'auto', md: '1 / -1' } }}>
-                      <Button component="label" variant="outlined">
-                        {copy.form.changePhoto}
-                        <input
-                          aria-label="Profile photo upload"
-                          accept="image/*"
-                          hidden
-                          onChange={handleProfilePhotoUpload}
-                          type="file"
-                        />
-                      </Button>
+                      {profile.user.subscription_tier === 'basic' ? (
+                        <Typography color="text.secondary" variant="body2">
+                          {copy.messages.upgradeToChangePhoto}
+                        </Typography>
+                      ) : (
+                        <Button component="label" variant="outlined">
+                          {copy.form.changePhoto}
+                          <input
+                            aria-label="Profile photo upload"
+                            accept="image/*"
+                            hidden
+                            onChange={handleProfilePhotoUpload}
+                            type="file"
+                          />
+                        </Button>
+                      )}
                     </Box>
                   ) : null}
                 </Box>

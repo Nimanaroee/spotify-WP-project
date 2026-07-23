@@ -25,11 +25,7 @@ import { getAdminPageText } from '../lib/constants/adminPageText'
 import { getAdminAccountNav, getAdminNavForRole } from '../lib/constants/navItems'
 import { ROUTES } from '../lib/constants/routes'
 import { logout } from '../lib/api/authService'
-import {
-  hasSettingsApiSession,
-  updateUserPreferencesFromApi,
-} from '../lib/api/settingsService'
-import { updateUserPreferences } from '../lib/mock/settingsService'
+import { updateUserPreferencesFromApi } from '../lib/api/settingsService'
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 
@@ -63,11 +59,6 @@ export default function AdminLayout() {
     setLanguage(nextLanguage)
 
     if (!user) {
-      return
-    }
-
-    if (!hasSettingsApiSession()) {
-      updateUserPreferences(user.id, { language: nextLanguage })
       return
     }
 

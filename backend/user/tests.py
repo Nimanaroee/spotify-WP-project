@@ -556,6 +556,44 @@ class ProfileApiTests(APITestCase):
         self.assertTrue(self.user.following.filter(pk=self.following.pk).exists())
         self.assertTrue(self.user.followers.filter(pk=self.follower.pk).exists())
 
+    def test_basic_subscription_cannot_change_profile_photo(self):
+        self.user.subscription_tier = User.SubscriptionTier.BASIC
+        self.user.save(update_fields=("subscription_tier",))
+        self.client.force_authenticate(self.user)
+        image_bytes = BytesIO()
+        Image.new("RGB", (1, 1), color="white").save(image_bytes, format="PNG")
+        photo = SimpleUploadedFile(
+            "avatar.png",
+            image_bytes.getvalue(),
+            content_type="image/png",
+        )
+
+        response = self.client.patch(
+            self.url,
+            {"profile_photo": photo},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("profile_photo", response.data)
+        self.user.refresh_from_db()
+        self.assertFalse(self.user.profile_picture)
+
+    def test_basic_subscription_can_still_update_other_fields(self):
+        self.user.subscription_tier = User.SubscriptionTier.BASIC
+        self.user.save(update_fields=("subscription_tier",))
+        self.client.force_authenticate(self.user)
+
+        response = self.client.patch(
+            self.url,
+            {"display_name": "Basic Owner"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.display_name, "Basic Owner")
+
     def test_patch_cannot_edit_another_users_profile(self):
         self.client.force_authenticate(self.follower)
 

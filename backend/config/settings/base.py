@@ -90,3 +90,21 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:5173'])
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Spotify-WP API',
+    'DESCRIPTION': (
+        'REST API for a Spotify-like application. '
+        'Authentication is JWT Bearer (access token). '
+        'Obtain tokens from `/api/v1/auth/login/` or the registration endpoints '
+        'and send them as `Authorization: Bearer <access>`.'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': r'/api/v1/',
+    'TAGS': [
+        {'name': 'auth', 'description': 'Authentication and account registration.'},
+        {'name': 'users', 'description': 'Profiles, preferences, subscription and follows.'},
+    ],
+}

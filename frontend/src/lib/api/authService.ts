@@ -8,13 +8,9 @@ import type {
   RegisterListenerPayload,
   User,
 } from '../../types/user'
-import type { ArtistVerificationRequest } from '../../types/artist'
 import client, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from './client'
 
 const CURRENT_USER_KEY = 'current_user'
-const AUTH_USER_ID_KEY = 'auth_user_id'
-const USERS_KEY = 'users'
-const VERIFICATION_REQUESTS_KEY = 'verification_requests'
 const UNEXPECTED_ERROR_MESSAGE = 'An unexpected error occurred.'
 
 interface AuthResponse {
@@ -26,10 +22,6 @@ interface AuthResponse {
 export interface LoginResult {
   user: User
   redirectPath: string
-}
-
-interface StoredUser extends User {
-  account_status?: 'active' | 'pending_approval'
 }
 
 function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -56,106 +48,6 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
     }
   }
   return fallback || UNEXPECTED_ERROR_MESSAGE
-}
-
-function nowIso(): string {
-  return new Date().toISOString()
-}
-
-function getNextId(items: Array<{ id: number }>): number {
-  return items.reduce((maxId, item) => Math.max(maxId, item.id), 0) + 1
-}
-
-function toMockCompatibleUser(user: User, accountStatus?: StoredUser['account_status']): StoredUser {
-  const currentTime = nowIso()
-  return {
-    ...user,
-    username: user.username || String(user.id),
-    display_name: user.display_name || user.username || user.email,
-    subscription_tier: user.subscription_tier ?? 'basic',
-    followers_count: user.followers_count ?? 0,
-    following_count: user.following_count ?? 0,
-    daily_streams_count: user.daily_streams_count ?? 0,
-    created_at: user.created_at || currentTime,
-    updated_at: user.updated_at ?? currentTime,
-    account_status: accountStatus,
-  }
-}
-
-function readMockUsers(): StoredUser[] {
-  return storage.get<StoredUser[]>(USERS_KEY) ?? []
-}
-
-function writeMockCurrentUser(user: User | null): void {
-  if (user) {
-    storage.set(CURRENT_USER_KEY, user)
-    storage.set(AUTH_USER_ID_KEY, user.id)
-    return
-  }
-
-  storage.remove(CURRENT_USER_KEY)
-  storage.remove(AUTH_USER_ID_KEY)
-}
-
-function upsertMockUser(user: User, accountStatus?: StoredUser['account_status']): User {
-  const users = readMockUsers()
-  const mockUser = toMockCompatibleUser(user, accountStatus)
-  const existingIndex = users.findIndex(
-    (candidate) => candidate.id === user.id || candidate.email === user.email,
-  )
-  const nextUsers =
-    existingIndex === -1
-      ? [...users, mockUser]
-      : users.map((candidate, index) =>
-          index === existingIndex
-            ? {
-                ...candidate,
-                ...mockUser,
-                account_status: accountStatus ?? candidate.account_status,
-              }
-            : candidate,
-        )
-
-  storage.set(USERS_KEY, nextUsers)
-  return mockUser
-}
-
-function syncMockUser(user: User, accountStatus?: StoredUser['account_status']): User {
-  const mockUser = upsertMockUser(user, accountStatus)
-  writeMockCurrentUser(mockUser)
-  return mockUser
-}
-
-function syncArtistVerificationRequest(
-  user: User,
-  payload: RegisterArtistPayload,
-): void {
-  const requests =
-    storage.get<ArtistVerificationRequest[]>(VERIFICATION_REQUESTS_KEY) ?? []
-  const existingIndex = requests.findIndex(
-    (request) => request.user_id === user.id || request.email === user.email,
-  )
-  const currentTime = nowIso()
-  const request: ArtistVerificationRequest = {
-    id: existingIndex === -1 ? getNextId(requests) : requests[existingIndex].id,
-    user_id: user.id,
-    stage_name: payload.stage_name.trim(),
-    email: user.email,
-    portfolio_links: payload.portfolio_links,
-    verification_status: 'pending',
-    created_at:
-      existingIndex === -1 ? currentTime : requests[existingIndex].created_at,
-    updated_at: currentTime,
-  }
-
-  storage.set(
-    VERIFICATION_REQUESTS_KEY,
-    existingIndex === -1
-      ? [...requests, request]
-      : requests.map((candidate, index) =>
-          index === existingIndex ? request : candidate,
-        ),
-  )
 }
 
 function persistSession(response: AuthResponse): User {
@@ -203,10 +95,7 @@ export async function registerArtist(
       '/auth/register/artist/',
       payload,
     )
-    const user = persistSession(response.data)
-    upsertMockUser(user, 'pending_approval')
-    syncArtistVerificationRequest(user, payload)
-    return user
+    return persistSession(response.data)
   } catch (error) {
     throw new Error(getApiErrorMessage(error, UNEXPECTED_ERROR_MESSAGE))
   }
@@ -236,8 +125,8 @@ export async function logout(): Promise<void> {
 
 export function setCurrentUser(user: User | null): void {
   if (user) {
-    syncMockUser(user)
+    storage.set(CURRENT_USER_KEY, user)
     return
   }
-  writeMockCurrentUser(null)
+  storage.remove(CURRENT_USER_KEY)
 }

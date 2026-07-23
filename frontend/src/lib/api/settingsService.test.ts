@@ -1,10 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import client, { ACCESS_TOKEN_KEY } from './client'
+import client from './client'
 import {
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
-  hasSettingsApiSession,
   updateUserSubscriptionFromApi,
   updateUserPreferencesFromApi,
 } from './settingsService'
@@ -34,14 +33,6 @@ describe('settingsService', () => {
     vi.mocked(client.get).mockReset()
     vi.mocked(client.patch).mockReset()
     vi.mocked(client.put).mockReset()
-  })
-
-  it('detects an authenticated settings API session', () => {
-    expect(hasSettingsApiSession()).toBe(false)
-
-    localStorage.setItem(ACCESS_TOKEN_KEY, 'access-token')
-
-    expect(hasSettingsApiSession()).toBe(true)
   })
 
   it('loads and maps current user preferences', async () => {
