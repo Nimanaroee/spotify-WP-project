@@ -24,11 +24,7 @@ import { getHomePageText } from '../lib/constants/homePageText';
 import { getMainNavForRole } from '../lib/constants/navItems';
 import { ROUTES } from '../lib/constants/routes';
 import { logout } from '../lib/api/authService';
-import {
-  hasSettingsApiSession,
-  updateUserPreferencesFromApi,
-} from '../lib/api/settingsService';
-import { updateUserPreferences } from '../lib/mock/settingsService';
+import { updateUserPreferencesFromApi } from '../lib/api/settingsService';
 import { useAuthStore } from '../store/authStore';
 import { usePlayerStore } from '../store/playerStore';
 import { useLayoutStore } from '../store/layoutStore'; // <--- NEW IMPORT
@@ -81,11 +77,6 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     setLanguage(nextLanguage);
 
     if (!user) {
-      return;
-    }
-
-    if (!hasSettingsApiSession()) {
-      updateUserPreferences(user.id, { language: nextLanguage });
       return;
     }
 

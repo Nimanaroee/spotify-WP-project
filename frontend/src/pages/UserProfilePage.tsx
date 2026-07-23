@@ -31,31 +31,23 @@ import ProfileSummaryHeader from '../components/profile/ProfileSummaryHeader'
 import {
   followUsername,
   getPublicProfileFromApi,
-  hasProfileApiSession,
   type PublicProfileView,
   unfollowUsername,
 } from '../lib/api/profileService'
 import { getAppText } from '../lib/constants/appText'
 import { ROLES } from '../lib/constants/roles'
 import { ROUTES, userProfilePath } from '../lib/constants/routes'
-import {
-  getArtistProfileView,
-  type ArtistProfileView,
-} from '../lib/mock/artistProfileService'
-import {
-  followAccount,
-  getUserProfileView,
-  unfollowAccount,
-} from '../lib/mock/userProfileService'
 import { useAuthStore } from '../store/authStore'
 import { usePlayerStore } from '../store/playerStore'
 import { useAppLanguage } from '../theme/LanguageContext'
-import type { Album, Track, UserProfileView } from '../types'
+import type { Album, Track } from '../types'
 
-type ProfileView = UserProfileView | ArtistProfileView | PublicProfileView
+type ProfileView = PublicProfileView
 type FollowListType = 'followers' | 'following'
 
-function isArtistProfile(profile: ProfileView): profile is ArtistProfileView {
+function isArtistProfile(
+  profile: ProfileView,
+): profile is Extract<ProfileView, { artist_profile: unknown }> {
   return profile.user.role === ROLES.ARTIST && 'artist_profile' in profile
 }
 
@@ -71,7 +63,6 @@ export default function UserProfilePage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isUpdatingFollow, setIsUpdatingFollow] = useState(false)
-  const usesProfileApi = hasProfileApiSession()
   const [activeFollowList, setActiveFollowList] =
     useState<FollowListType>('followers')
 
@@ -93,14 +84,7 @@ export default function UserProfilePage() {
 
     const loadProfile = async (): Promise<void> => {
       try {
-        const nextProfile = usesProfileApi
-          ? await getPublicProfileFromApi(username)
-          : (() => {
-              const baseProfile = getUserProfileView(authUser.id, username)
-              return baseProfile.user.role === ROLES.ARTIST
-                ? getArtistProfileView(authUser.id, username, baseProfile)
-                : baseProfile
-            })()
+        const nextProfile = await getPublicProfileFromApi(username)
         if (isActive) {
           setProfile(nextProfile)
           setError('')
@@ -132,7 +116,6 @@ export default function UserProfilePage() {
     copy.common.notFound,
     navigate,
     username,
-    usesProfileApi,
   ])
 
   if (!authUser) {
@@ -195,31 +178,18 @@ export default function UserProfilePage() {
   const releaseListHeight = isCompactMobile ? 240 : 260
 
   function refreshProfile(): void {
-    if (usesProfileApi) {
-      void getPublicProfileFromApi(currentProfile.user.username)
-        .then((nextProfile) => {
-          setProfile(nextProfile)
-          setError('')
-        })
-        .catch((exception: unknown) => {
-          setError(
-            exception instanceof Error
-              ? exception.message
-              : copy.common.notFound,
-          )
-        })
-      return
-    }
-
-    const baseProfile = getUserProfileView(
-      currentAuthUser.id,
-      currentProfile.user.username,
-    )
-    setProfile(
-      baseProfile.user.role === ROLES.ARTIST
-        ? getArtistProfileView(currentAuthUser.id, baseProfile.user.username, baseProfile)
-        : baseProfile,
-    )
+    void getPublicProfileFromApi(currentProfile.user.username)
+      .then((nextProfile) => {
+        setProfile(nextProfile)
+        setError('')
+      })
+      .catch((exception: unknown) => {
+        setError(
+          exception instanceof Error
+            ? exception.message
+            : copy.common.notFound,
+        )
+      })
   }
 
   async function handleToggleFollow(): Promise<void> {
@@ -230,26 +200,15 @@ export default function UserProfilePage() {
     setIsUpdatingFollow(true)
     setError('')
     try {
-      if (usesProfileApi) {
-        if (currentProfile.is_following) {
-          await unfollowUsername(currentProfile.user.username)
-        } else {
-          await followUsername(currentProfile.user.username)
-        }
-        const nextProfile = await getPublicProfileFromApi(
-          currentProfile.user.username,
-        )
-        setProfile(nextProfile)
-        return
-      }
-
       if (currentProfile.is_following) {
-        unfollowAccount(currentAuthUser.id, currentProfile.user.id)
+        await unfollowUsername(currentProfile.user.username)
       } else {
-        followAccount(currentAuthUser.id, currentProfile.user.id)
+        await followUsername(currentProfile.user.username)
       }
-
-      refreshProfile()
+      const nextProfile = await getPublicProfileFromApi(
+        currentProfile.user.username,
+      )
+      setProfile(nextProfile)
     } catch (exception) {
       setError(
         exception instanceof Error ? exception.message : copy.common.notFound,

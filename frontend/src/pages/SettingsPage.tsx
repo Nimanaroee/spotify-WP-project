@@ -31,16 +31,9 @@ import type { SubscriptionTier } from '../lib/constants/subscriptionLimits'
 import {
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
-  hasSettingsApiSession,
   updateUserSubscriptionFromApi,
   updateUserPreferencesFromApi,
 } from '../lib/api/settingsService'
-import {
-  deleteAccount,
-  getUserPreferences,
-  updateSubscriptionTier,
-  updateUserPreferences,
-} from '../lib/mock/settingsService'
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 import { useThemeMode } from '../theme/ThemeModeContext'
@@ -63,17 +56,14 @@ export default function SettingsPage() {
   const navigate = useNavigate()
   const { language, setLanguage } = useAppLanguage()
   const { setThemeMode } = useThemeMode()
-  const usesSettingsApi = hasSettingsApiSession()
   const copy = getAppText(language)
-  const [preferences, setPreferences] = useState<UserPreferences | null>(() =>
-    user && !usesSettingsApi ? getUserPreferences(user.id) : null,
-  )
-  const [isLoading, setIsLoading] = useState(usesSettingsApi)
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [isSubscriptionSaving, setIsSubscriptionSaving] = useState(false)
   const [message, setMessage] = useState<PageMessage | null>(null)
 
   useEffect(() => {
-    if (!user || !usesSettingsApi) {
+    if (!user) {
       return
     }
 
@@ -105,10 +95,10 @@ export default function SettingsPage() {
     return () => {
       isActive = false
     }
-  }, [user?.id, usesSettingsApi])
+  }, [user?.id])
 
   useEffect(() => {
-    if (!user || user.role !== ROLES.LISTENER || !usesSettingsApi) {
+    if (!user || user.role !== ROLES.LISTENER) {
       return
     }
 
@@ -137,7 +127,7 @@ export default function SettingsPage() {
     return () => {
       isActive = false
     }
-  }, [user?.id, user?.role, usesSettingsApi])
+  }, [user?.id, user?.role])
 
   if (!user) {
     return <Navigate to={ROUTES.LOGIN} replace />
@@ -148,9 +138,7 @@ export default function SettingsPage() {
   }
 
   const currentUser = user
-  const currentPreferences =
-    preferences ??
-    (usesSettingsApi ? null : getUserPreferences(currentUser.id))
+  const currentPreferences = preferences
   const subscriptionTier = currentUser.subscription_tier ?? 'basic'
   const isListener = currentUser.role === ROLES.LISTENER
 
@@ -166,8 +154,10 @@ export default function SettingsPage() {
       >
     >,
   ): Promise<void> {
-    const previousPreferences =
-      currentPreferences ?? getUserPreferences(currentUser.id)
+    const previousPreferences = currentPreferences
+    if (!previousPreferences) {
+      return
+    }
     const nextPreferences = {
       ...previousPreferences,
       ...payload,
@@ -180,11 +170,6 @@ export default function SettingsPage() {
     }
     if (payload.theme) {
       setThemeMode?.(payload.theme)
-    }
-
-    if (!usesSettingsApi) {
-      setPreferences(updateUserPreferences(currentUser.id, payload))
-      return
     }
 
     try {
@@ -247,15 +232,6 @@ export default function SettingsPage() {
   ): Promise<void> {
     const nextTier = event.target.value as SubscriptionTier
 
-    if (!usesSettingsApi) {
-      const nextUser = updateSubscriptionTier(currentUser.id, {
-        subscription_tier: nextTier,
-      })
-      setUser(nextUser)
-      setMessage({ severity: 'success', text: copy.settings.subscriptionSaved })
-      return
-    }
-
     setIsSubscriptionSaving(true)
     setMessage(null)
     try {
@@ -285,7 +261,6 @@ export default function SettingsPage() {
       return
     }
 
-    deleteAccount(currentUser.id)
     setUser(null)
     setMessage({ severity: 'info', text: copy.settings.accountDeleted })
     navigate(ROUTES.LOGIN)

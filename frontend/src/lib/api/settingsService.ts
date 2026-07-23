@@ -8,7 +8,7 @@ import type {
 } from '../../types'
 import type { SubscriptionTier } from '../constants/subscriptionLimits'
 import type { AppThemeMode } from '../../theme/appTheme'
-import client, { ACCESS_TOKEN_KEY } from './client'
+import client from './client'
 
 interface PreferencesResponse {
   theme: AppThemeMode
@@ -42,10 +42,6 @@ function toUserPreferences(
     user_id: userId,
     ...response,
   }
-}
-
-export function hasSettingsApiSession(): boolean {
-  return Boolean(localStorage.getItem(ACCESS_TOKEN_KEY))
 }
 
 export async function getUserPreferencesFromApi(

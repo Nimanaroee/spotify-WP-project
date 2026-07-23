@@ -6,16 +6,12 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import HomePage from './HomePage'
 import LoginPage from './LoginPage'
 import { ROLES } from '../lib/constants/roles'
-import {
-  hasSettingsApiSession,
-  updateUserPreferencesFromApi,
-} from '../lib/api/settingsService'
+import { updateUserPreferencesFromApi } from '../lib/api/settingsService'
 import { storage } from '../lib/mock/storage'
 import { useAuthStore } from '../store/authStore'
 import { ThemeModeContext } from '../theme/ThemeModeContext'
 
 vi.mock('../lib/api/settingsService', () => ({
-  hasSettingsApiSession: vi.fn(),
   updateUserPreferencesFromApi: vi.fn(),
 }))
 
@@ -37,7 +33,6 @@ function renderHomePage() {
 describe('HomePage', () => {
   beforeEach(() => {
     localStorage.clear()
-    vi.mocked(hasSettingsApiSession).mockReturnValue(false)
     vi.mocked(updateUserPreferencesFromApi).mockReset()
     vi.mocked(updateUserPreferencesFromApi).mockResolvedValue({
       user_id: 1,
@@ -70,7 +65,7 @@ describe('HomePage', () => {
 
     await user.click(screen.getByRole('button', { name: /logout/i }))
 
-    expect(storage.get<number>('auth_user_id')).toBeNull()
+    expect(storage.get<unknown>('current_user')).toBeNull()
     expect(useAuthStore.getState().user).toBeNull()
     expect(await screen.findByRole('heading', { name: /welcome/i })).toBeInTheDocument()
   })
@@ -84,7 +79,6 @@ describe('HomePage', () => {
 
   it('updates API preferences from the header language button', async () => {
     const user = userEvent.setup()
-    vi.mocked(hasSettingsApiSession).mockReturnValue(true)
     renderHomePage()
 
     await user.click(screen.getByRole('button', { name: /persian/i }))

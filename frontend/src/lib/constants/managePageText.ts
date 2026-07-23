@@ -25,6 +25,7 @@ type ManageCopy = {
     loading: string;
     photoReady: string;
     profileUpdated: string;
+    upgradeToChangePhoto: string;
     profileNotFound: string;
     removedFollower: (name: string) => string;
     unfollowed: (name: string) => string;
@@ -76,6 +77,8 @@ export const MANAGE_PAGE_TEXT: Record<AppLanguage, ManageCopy> = {
       loading: 'Loading profile...',
       photoReady: 'Profile photo ready to save.',
       profileUpdated: 'Profile updated.',
+      upgradeToChangePhoto:
+        'Upgrade your subscription to change your profile photo.',
       profileNotFound: 'Profile not found.',
       removedFollower: (name: string) => `${name} was removed from followers.`,
       unfollowed: (name: string) => `You unfollowed ${name}.`,
@@ -125,6 +128,8 @@ export const MANAGE_PAGE_TEXT: Record<AppLanguage, ManageCopy> = {
       loading: 'در حال بارگذاری پروفایل...',
       photoReady: 'عکس پروفایل آماده ذخیره است.',
       profileUpdated: 'پروفایل به‌روزرسانی شد.',
+      upgradeToChangePhoto:
+        'برای تغییر عکس پروفایل، اشتراک خود را ارتقا دهید.',
       profileNotFound: 'پروفایل پیدا نشد.',
       removedFollower: (name: string) => `‏${name} از دنبال‌کنندگان حذف شد.`,
       unfollowed: (name: string) => `‏${name} از دنبال‌شده‌ها حذف شد.`,

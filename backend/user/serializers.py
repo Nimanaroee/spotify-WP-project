@@ -15,7 +15,10 @@ User = get_user_model()
 
 
 class LogoutSerializer(serializers.Serializer):
-    refresh = serializers.CharField(write_only=True)
+    refresh = serializers.CharField(
+        write_only=True,
+        help_text="Refresh token to blacklist. Must belong to the authenticated user.",
+    )
 
     def validate_refresh(self, value):
         try:
@@ -67,7 +70,11 @@ class UserShortInfoSerializer(serializers.ModelSerializer):
 
 class ProfileReadSerializer(serializers.ModelSerializer):
     user_name = serializers.CharField(source="username", read_only=True)
-    bearth_date = serializers.DateField(source="birth_date", read_only=True)
+    bearth_date = serializers.DateField(
+        source="birth_date",
+        read_only=True,
+        help_text="Date of birth (YYYY-MM-DD).",
+    )
     num_following = serializers.IntegerField(source="following_count", read_only=True)
     num_follower = serializers.IntegerField(source="followers_count", read_only=True)
     subscription = serializers.CharField(source="subscription_tier", read_only=True)
@@ -116,11 +123,13 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         source="birth_date",
         required=False,
         allow_null=True,
+        help_text="Date of birth (YYYY-MM-DD).",
     )
     profile_photo = serializers.ImageField(
         source="profile_picture",
         required=False,
         allow_null=True,
+        help_text="Send as multipart form-data.",
     )
 
     class Meta:
@@ -153,6 +162,17 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
                 {
                     field: "Follow relationships must use the follow API."
                     for field in relationship_fields
+                }
+            )
+        if (
+            "profile_picture" in attrs
+            and self.instance is not None
+            and self.instance.subscription_tier == User.SubscriptionTier.BASIC
+        ):
+            raise serializers.ValidationError(
+                {
+                    "profile_photo": "Basic accounts cannot change the profile photo. "
+                    "Upgrade your subscription to change it."
                 }
             )
         return attrs
@@ -190,6 +210,7 @@ class PreferencesUpdateSerializer(serializers.ModelSerializer):
     app_sound_enabled = serializers.BooleanField(
         source="notification_sound_enabled",
         required=False,
+        help_text="Play a sound for in-app notifications.",
     )
 
     class Meta:
@@ -202,14 +223,18 @@ class PreferencesUpdateSerializer(serializers.ModelSerializer):
             "system_voice",
         )
         extra_kwargs = {
-            "theme": {"required": False},
+            "theme": {"required": False, "help_text": "One of: light, dark."},
             "notification_limit": {
                 "required": False,
                 "min_value": 1,
                 "max_value": 99,
+                "help_text": "Maximum notifications per day (1-99).",
             },
-            "language": {"required": False},
-            "system_voice": {"required": False},
+            "language": {"required": False, "help_text": "One of: en, fa."},
+            "system_voice": {
+                "required": False,
+                "help_text": "One of: default, calm, bright.",
+            },
         }
 
 
@@ -224,6 +249,7 @@ class SubscriptionUpdateSerializer(serializers.ModelSerializer):
     subscription_tier = serializers.ChoiceField(
         choices=User.SubscriptionTier.choices,
         required=True,
+        help_text="One of: basic, silver, gold.",
     )
 
     class Meta:
@@ -329,7 +355,10 @@ class PublicProfileReadSerializer(ProfileReadSerializer):
 class ArtistProfileUpdateSerializer(serializers.Serializer):
     stage_name = serializers.CharField(required=False, max_length=150)
     bio = serializers.CharField(required=False, allow_blank=True)
-    profile_photo = serializers.ImageField(required=False)
+    profile_photo = serializers.ImageField(
+        required=False,
+        help_text="Send as multipart form-data.",
+    )
 
     def validate_stage_name(self, value):
         value = value.strip()
@@ -344,8 +373,20 @@ class ArtistProfileUpdateSerializer(serializers.Serializer):
         raise NotImplementedError
 
 
+class TokenResponseSerializer(serializers.Serializer):
+    """JWT pair returned by login and registration, together with the user."""
+
+    refresh = serializers.CharField(read_only=True)
+    access = serializers.CharField(read_only=True)
+    user = CurrentUserSerializer(read_only=True)
+
+
 class LoginSerializer(TokenObtainPairSerializer):
     username_field = User.EMAIL_FIELD
+
+    default_error_messages = {
+        "no_active_account": "No active account found with the given credentials",
+    }
 
     def validate(self, attrs):
         email = attrs.get(self.username_field, "").strip().lower()
@@ -385,8 +426,15 @@ class LoginSerializer(TokenObtainPairSerializer):
 
 
 class BaseRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=8)
-    password_confirmation = serializers.CharField(write_only=True)
+    password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        help_text="At least 8 characters.",
+    )
+    password_confirmation = serializers.CharField(
+        write_only=True,
+        help_text="Must match `password`.",
+    )
 
     class Meta:
         model = User
@@ -463,6 +511,7 @@ class ArtistRegistrationSerializer(BaseRegistrationSerializer):
         child=serializers.CharField(allow_blank=False, trim_whitespace=True),
         allow_empty=False,
         required=False,
+        help_text="Links used by admins to verify the artist (e.g. SoundCloud, Instagram).",
     )
 
     class Meta:
