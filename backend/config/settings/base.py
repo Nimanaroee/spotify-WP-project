@@ -106,5 +106,7 @@ SPECTACULAR_SETTINGS = {
     'TAGS': [
         {'name': 'auth', 'description': 'Authentication and account registration.'},
         {'name': 'users', 'description': 'Profiles, preferences, subscription and follows.'},
+        {'name': 'subscriptions', 'description': 'Public subscription tiers and monthly fees.'},
+        {'name': 'payments', 'description': 'Subscription payment logs.'},
     ],
 }

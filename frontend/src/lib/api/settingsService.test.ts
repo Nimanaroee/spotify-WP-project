@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import client from './client'
 import {
+  createSubscriptionPaymentFromApi,
+  getSubscriptionFeesFromApi,
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
   updateUserSubscriptionFromApi,
@@ -13,6 +15,7 @@ vi.mock('./client', () => ({
   default: {
     get: vi.fn(),
     patch: vi.fn(),
+    post: vi.fn(),
     put: vi.fn(),
   },
 }))
@@ -32,6 +35,7 @@ describe('settingsService', () => {
     localStorage.clear()
     vi.mocked(client.get).mockReset()
     vi.mocked(client.patch).mockReset()
+    vi.mocked(client.post).mockReset()
     vi.mocked(client.put).mockReset()
   })
 
@@ -65,27 +69,73 @@ describe('settingsService', () => {
 
   it('loads the current user subscription', async () => {
     vi.mocked(client.get).mockResolvedValue({
-      data: { subscription_tier: 'silver' },
+      data: { subscription_tier: 'silver', expires_at: null },
     })
 
-    const subscriptionTier = await getUserSubscriptionFromApi()
+    const subscription = await getUserSubscriptionFromApi()
 
     expect(client.get).toHaveBeenCalledWith('/users/subscription/')
-    expect(subscriptionTier).toBe('silver')
+    expect(subscription).toEqual({
+      subscription_tier: 'silver',
+      expires_at: null,
+    })
   })
 
   it('updates the current user subscription with PUT', async () => {
     vi.mocked(client.put).mockResolvedValue({
-      data: { subscription_tier: 'gold' },
+      data: { subscription_tier: 'gold', expires_at: null },
     })
 
-    const subscriptionTier = await updateUserSubscriptionFromApi({
+    const subscription = await updateUserSubscriptionFromApi({
       subscription_tier: 'gold',
+      duration_months: 3,
+      payment_log_id: 42,
     })
 
     expect(client.put).toHaveBeenCalledWith('/users/subscription/', {
       subscription_tier: 'gold',
+      duration_months: 3,
+      payment_log_id: 42,
     })
-    expect(subscriptionTier).toBe('gold')
+    expect(subscription).toEqual({
+      subscription_tier: 'gold',
+      expires_at: null,
+    })
+  })
+
+  it('loads monthly fees and creates a payment log', async () => {
+    vi.mocked(client.get).mockResolvedValue({
+      data: {
+        results: [
+          { subscription_tier: 'basic', price_per_month: 0 },
+          { subscription_tier: 'silver', price_per_month: 9.99 },
+          { subscription_tier: 'gold', price_per_month: 19.99 },
+        ],
+      },
+    })
+    vi.mocked(client.post).mockResolvedValue({
+      data: {
+        id: 42,
+        amount: 59.97,
+        duration_months: 3,
+        account_type: 'gold',
+      },
+    })
+
+    const fees = await getSubscriptionFeesFromApi()
+    const paymentLog = await createSubscriptionPaymentFromApi({
+      amount: 59.97,
+      duration_months: 3,
+      account_type: 'gold',
+    })
+
+    expect(client.get).toHaveBeenCalledWith('/subscription/')
+    expect(fees).toHaveLength(3)
+    expect(client.post).toHaveBeenCalledWith('/payment/', {
+      amount: 59.97,
+      duration_months: 3,
+      account_type: 'gold',
+    })
+    expect(paymentLog.id).toBe(42)
   })
 })

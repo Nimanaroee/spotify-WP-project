@@ -4,7 +4,7 @@
  *
  * Responsibilities:
  *  - [x] Manage local notification and system preferences.
- *  - [x] Update subscription tier and account deletion mock state.
+ *  - [x] Upgrade subscriptions through the payment and subscription APIs.
  */
 import { useEffect, useState, type ChangeEvent } from 'react'
 import {
@@ -29,6 +29,8 @@ import { ROLES } from '../lib/constants/roles'
 import { ROUTES } from '../lib/constants/routes'
 import type { SubscriptionTier } from '../lib/constants/subscriptionLimits'
 import {
+  createSubscriptionPaymentFromApi,
+  getSubscriptionFeesFromApi,
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
   updateUserSubscriptionFromApi,
@@ -37,7 +39,13 @@ import {
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 import { useThemeMode } from '../theme/ThemeModeContext'
-import type { AppLanguage, SystemVoice, UserPreferences } from '../types'
+import type {
+  AppLanguage,
+  SubscriptionFee,
+  SubscriptionPeriodMonths,
+  SystemVoice,
+  UserPreferences,
+} from '../types'
 
 type MessageSeverity = 'success' | 'info' | 'error'
 
@@ -50,6 +58,12 @@ function normalizeNotificationLimit(value: number): number {
   return Math.min(Math.max(value, 1), 99)
 }
 
+const SUBSCRIPTION_TIER_RANK: Record<SubscriptionTier, number> = {
+  basic: 0,
+  silver: 1,
+  gold: 2,
+}
+
 export default function SettingsPage() {
   const user = useAuthStore((state) => state.user)
   const setUser = useAuthStore((state) => state.setUser)
@@ -60,6 +74,15 @@ export default function SettingsPage() {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubscriptionSaving, setIsSubscriptionSaving] = useState(false)
+  const [subscriptionFees, setSubscriptionFees] = useState<SubscriptionFee[]>([])
+  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(
+    user?.subscription_expires_at ?? null,
+  )
+  const [selectedSubscriptionTier, setSelectedSubscriptionTier] = useState<
+    Exclude<SubscriptionTier, 'basic'>
+  >('silver')
+  const [selectedDurationMonths, setSelectedDurationMonths] =
+    useState<SubscriptionPeriodMonths>(1)
   const [message, setMessage] = useState<PageMessage | null>(null)
 
   useEffect(() => {
@@ -103,13 +126,21 @@ export default function SettingsPage() {
     }
 
     let isActive = true
-    getUserSubscriptionFromApi()
-      .then((subscriptionTier) => {
+    Promise.all([getUserSubscriptionFromApi(), getSubscriptionFeesFromApi()])
+      .then(([subscription, fees]) => {
         if (isActive) {
           setUser({
             ...user,
-            subscription_tier: subscriptionTier,
+            subscription_tier: subscription.subscription_tier,
+            subscription_expires_at: subscription.expires_at,
           })
+          setSubscriptionExpiresAt(subscription.expires_at)
+          setSubscriptionFees(fees)
+          if (subscription.subscription_tier === 'basic') {
+            setSelectedSubscriptionTier('silver')
+          } else {
+            setSelectedSubscriptionTier('gold')
+          }
         }
       })
       .catch((error: unknown) => {
@@ -141,6 +172,15 @@ export default function SettingsPage() {
   const currentPreferences = preferences
   const subscriptionTier = currentUser.subscription_tier ?? 'basic'
   const isListener = currentUser.role === ROLES.LISTENER
+  const availableSubscriptionTiers = (['silver', 'gold'] as const).filter(
+    (tier) => SUBSCRIPTION_TIER_RANK[tier] > SUBSCRIPTION_TIER_RANK[subscriptionTier],
+  )
+  const selectedFee = subscriptionFees.find(
+    (fee) => fee.subscription_tier === selectedSubscriptionTier,
+  )
+  const finalFee = selectedFee
+    ? selectedFee.price_per_month * selectedDurationMonths
+    : null
 
   async function handlePreferenceChange(
     payload: Partial<
@@ -227,21 +267,29 @@ export default function SettingsPage() {
     })
   }
 
-  async function handleSubscriptionChange(
-    event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ): Promise<void> {
-    const nextTier = event.target.value as SubscriptionTier
-
+  async function handleSubscriptionUpgrade(): Promise<void> {
+    if (!selectedFee || !availableSubscriptionTiers.includes(selectedSubscriptionTier)) {
+      return
+    }
     setIsSubscriptionSaving(true)
     setMessage(null)
     try {
-      const subscriptionTier = await updateUserSubscriptionFromApi({
-        subscription_tier: nextTier,
+      const paymentLog = await createSubscriptionPaymentFromApi({
+        amount: finalFee ?? 0,
+        duration_months: selectedDurationMonths,
+        account_type: selectedSubscriptionTier,
+      })
+      const subscription = await updateUserSubscriptionFromApi({
+        subscription_tier: selectedSubscriptionTier,
+        duration_months: selectedDurationMonths,
+        payment_log_id: paymentLog.id,
       })
       setUser({
         ...currentUser,
-        subscription_tier: subscriptionTier,
+        subscription_tier: subscription.subscription_tier,
+        subscription_expires_at: subscription.expires_at,
       })
+      setSubscriptionExpiresAt(subscription.expires_at)
       setMessage({ severity: 'success', text: copy.settings.subscriptionSaved })
     } catch (error) {
       setMessage({
@@ -395,18 +443,85 @@ export default function SettingsPage() {
                     {copy.settings.subscriptionDescription}
                   </Typography>
                 </Box>
-                <TextField
-                  disabled={isSubscriptionSaving}
-                  fullWidth
-                  label={copy.settings.currentPlan}
-                  onChange={(event) => void handleSubscriptionChange(event)}
-                  select
-                  value={subscriptionTier}
-                >
-                  <MenuItem value="basic">{copy.settings.tierOptions.basic}</MenuItem>
-                  <MenuItem value="silver">{copy.settings.tierOptions.silver}</MenuItem>
-                  <MenuItem value="gold">{copy.settings.tierOptions.gold}</MenuItem>
-                </TextField>
+                <Stack spacing={2}>
+                  <Box>
+                    <Typography color="text.secondary" variant="body2">
+                      {copy.settings.currentPlan}
+                    </Typography>
+                    <Typography sx={{ fontWeight: 600 }}>
+                      {copy.settings.tierOptions[subscriptionTier]}
+                      {subscriptionExpiresAt
+                        ? ` · ${copy.settings.expiresAt} ${new Date(
+                            subscriptionExpiresAt,
+                          ).toLocaleDateString(language === 'fa' ? 'fa-IR' : 'en-US')}`
+                        : ` · ${copy.settings.noExpiration}`}
+                    </Typography>
+                  </Box>
+                  {availableSubscriptionTiers.length > 0 ? (
+                    <>
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gap: 2,
+                          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                        }}
+                      >
+                        <TextField
+                          disabled={isSubscriptionSaving}
+                          fullWidth
+                          label={copy.settings.subscriptionType}
+                          onChange={(event) =>
+                            setSelectedSubscriptionTier(
+                              event.target.value as Exclude<SubscriptionTier, 'basic'>,
+                            )
+                          }
+                          select
+                          value={selectedSubscriptionTier}
+                        >
+                          {availableSubscriptionTiers.map((tier) => (
+                            <MenuItem key={tier} value={tier}>
+                              {copy.settings.tierOptions[tier]}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                        <TextField
+                          disabled={isSubscriptionSaving}
+                          fullWidth
+                          label={copy.settings.duration}
+                          onChange={(event) =>
+                            setSelectedDurationMonths(
+                              Number(event.target.value) as SubscriptionPeriodMonths,
+                            )
+                          }
+                          select
+                          value={selectedDurationMonths}
+                        >
+                          {[1, 3, 6, 12].map((months) => (
+                            <MenuItem key={months} value={months}>
+                              {months} {copy.settings.months}
+                            </MenuItem>
+                          ))}
+                        </TextField>
+                      </Box>
+                      <Typography variant="h6">
+                        {copy.settings.finalFee}: {finalFee === null ? '—' : `$${finalFee.toFixed(2)}`}
+                      </Typography>
+                      <Box>
+                        <Button
+                          disabled={isSubscriptionSaving || finalFee === null}
+                          onClick={() => void handleSubscriptionUpgrade()}
+                          variant="contained"
+                        >
+                          Upgrade!
+                        </Button>
+                      </Box>
+                    </>
+                  ) : (
+                    <Typography color="text.secondary">
+                      {copy.settings.highestSubscription}
+                    </Typography>
+                  )}
+                </Stack>
               </>
             ) : null}
 

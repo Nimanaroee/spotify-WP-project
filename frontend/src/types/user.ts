@@ -14,6 +14,7 @@ export interface User extends Timestamps {
   gender?: Gender
   profile_picture?: string | null
   subscription_tier?: SubscriptionTier
+  subscription_expires_at?: string | null
   followers_count?: number
   following_count?: number
   daily_streams_count?: number

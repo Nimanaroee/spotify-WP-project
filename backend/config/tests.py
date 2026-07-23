@@ -40,6 +40,8 @@ class ApiDocumentationTests(TestCase):
                 "/api/v1/auth/refresh/",
                 "/api/v1/auth/register/artist/",
                 "/api/v1/auth/register/listener/",
+                "/api/v1/payment/",
+                "/api/v1/subscription/",
                 "/api/v1/users/follows/{username}/",
                 "/api/v1/users/preferences/",
                 "/api/v1/users/profile/artist/",

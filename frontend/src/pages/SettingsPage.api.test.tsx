@@ -6,6 +6,8 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import {
+  createSubscriptionPaymentFromApi,
+  getSubscriptionFeesFromApi,
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
   updateUserSubscriptionFromApi,
@@ -24,6 +26,8 @@ import SettingsPage from './SettingsPage'
 
 vi.mock('../lib/api/settingsService', () => ({
   getUserSubscriptionFromApi: vi.fn(),
+  getSubscriptionFeesFromApi: vi.fn(),
+  createSubscriptionPaymentFromApi: vi.fn(),
   getUserPreferencesFromApi: vi.fn(),
   updateUserSubscriptionFromApi: vi.fn(),
   updateUserPreferencesFromApi: vi.fn(),
@@ -86,10 +90,20 @@ describe('SettingsPage API integration', () => {
     let savedPreferences: UserPreferences = { ...preferences }
     vi.mocked(getUserPreferencesFromApi).mockReset()
     vi.mocked(getUserSubscriptionFromApi).mockReset()
+    vi.mocked(getSubscriptionFeesFromApi).mockReset()
+    vi.mocked(createSubscriptionPaymentFromApi).mockReset()
     vi.mocked(updateUserPreferencesFromApi).mockReset()
     vi.mocked(updateUserSubscriptionFromApi).mockReset()
     vi.mocked(getUserPreferencesFromApi).mockResolvedValue(preferences)
-    vi.mocked(getUserSubscriptionFromApi).mockResolvedValue('silver')
+    vi.mocked(getUserSubscriptionFromApi).mockResolvedValue({
+      subscription_tier: 'silver',
+      expires_at: '2026-08-17T10:00:00.000Z',
+    })
+    vi.mocked(getSubscriptionFeesFromApi).mockResolvedValue([
+      { subscription_tier: 'basic', price_per_month: 0 },
+      { subscription_tier: 'silver', price_per_month: 9.99 },
+      { subscription_tier: 'gold', price_per_month: 19.99 },
+    ])
     vi.mocked(updateUserPreferencesFromApi).mockImplementation(
       async (_userId, payload) => {
         savedPreferences = {
@@ -100,7 +114,16 @@ describe('SettingsPage API integration', () => {
         return savedPreferences
       },
     )
-    vi.mocked(updateUserSubscriptionFromApi).mockResolvedValue('gold')
+    vi.mocked(createSubscriptionPaymentFromApi).mockResolvedValue({
+      id: 42,
+      amount: 19.99,
+      duration_months: 1,
+      account_type: 'gold',
+    })
+    vi.mocked(updateUserSubscriptionFromApi).mockResolvedValue({
+      subscription_tier: 'gold',
+      expires_at: '2026-08-23T10:00:00.000Z',
+    })
     useAuthStore.setState({
       user: {
         id: 1,
@@ -160,20 +183,26 @@ describe('SettingsPage API integration', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('updates the subscription immediately when selecting a plan', async () => {
+  it('logs payment then upgrades the selected subscription', async () => {
     const user = userEvent.setup()
     renderSettingsPage()
 
-    const planSelect = await screen.findByRole('combobox', {
-      name: /current plan/i,
+    const typeSelect = await screen.findByRole('combobox', {
+      name: /subscription type/i,
     })
-    expect(planSelect).toHaveTextContent('Silver')
+    expect(typeSelect).toHaveTextContent('Gold')
 
-    await user.click(planSelect)
-    await user.click(screen.getByRole('option', { name: /gold/i }))
+    await user.click(screen.getByRole('button', { name: /upgrade!/i }))
 
+    expect(createSubscriptionPaymentFromApi).toHaveBeenCalledWith({
+      amount: 19.99,
+      duration_months: 1,
+      account_type: 'gold',
+    })
     expect(updateUserSubscriptionFromApi).toHaveBeenCalledWith({
       subscription_tier: 'gold',
+      duration_months: 1,
+      payment_log_id: 42,
     })
     expect(useAuthStore.getState().user?.subscription_tier).toBe('gold')
   })

@@ -3,6 +3,11 @@ import type { EntityId, Timestamps } from './common'
 
 export type SubscriptionPeriodMonths = 1 | 3 | 6 | 12
 
+export interface SubscriptionFee {
+  subscription_tier: SubscriptionTier
+  price_per_month: number
+}
+
 export interface SubscriptionPlan {
   id: EntityId
   tier: SubscriptionTier
