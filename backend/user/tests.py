@@ -1,11 +1,15 @@
 from io import BytesIO
+from datetime import timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from payment.models import SubscriptionPaymentLog
 
 from .models import Artist, Preferences, User
 
@@ -296,22 +300,53 @@ class SubscriptionApiTests(APITestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"subscription_tier": "silver"})
+        self.assertEqual(
+            response.data,
+            {
+                "subscription_tier": "silver",
+                "expires_at": None,
+            },
+        )
 
-    def test_put_updates_only_authenticated_users_subscription(self):
+    def test_get_returns_basic_when_paid_subscription_is_expired(self):
+        self.user.subscription_expires_at = timezone.now() - timedelta(days=1)
+        self.user.save(update_fields=("subscription_expires_at",))
         self.client.force_authenticate(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["subscription_tier"], "basic")
+        self.assertIsNotNone(response.data["expires_at"])
+
+    def test_put_activates_subscription_with_matching_payment_log(self):
+        self.client.force_authenticate(self.user)
+        payment_log = SubscriptionPaymentLog.objects.create(
+            user=self.user,
+            amount="59.97",
+            account_type=User.SubscriptionTier.GOLD,
+            duration_months=3,
+        )
 
         response = self.client.put(
             self.url,
-            {"subscription_tier": User.SubscriptionTier.GOLD},
+            {
+                "subscription_tier": User.SubscriptionTier.GOLD,
+                "duration_months": 3,
+                "payment_log_id": payment_log.id,
+            },
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {"subscription_tier": "gold"})
+        self.assertEqual(response.data["subscription_tier"], "gold")
+        self.assertIsNotNone(response.data["expires_at"])
         self.user.refresh_from_db()
         self.other_user.refresh_from_db()
         self.assertEqual(self.user.subscription_tier, User.SubscriptionTier.GOLD)
+        self.assertIsNotNone(self.user.subscription_expires_at)
+        payment_log.refresh_from_db()
+        self.assertIsNotNone(payment_log.subscription_applied_at)
         self.assertEqual(
             self.other_user.subscription_tier,
             User.SubscriptionTier.GOLD,
@@ -323,7 +358,11 @@ class SubscriptionApiTests(APITestCase):
         missing_response = self.client.put(self.url, {}, format="json")
         invalid_response = self.client.put(
             self.url,
-            {"subscription_tier": "platinum"},
+            {
+                "subscription_tier": "platinum",
+                "duration_months": 1,
+                "payment_log_id": 1,
+            },
             format="json",
         )
 

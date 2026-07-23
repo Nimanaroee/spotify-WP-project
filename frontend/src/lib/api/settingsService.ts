@@ -6,6 +6,10 @@ import type {
   UpdateUserPreferencesPayload,
   UserPreferences,
 } from '../../types'
+import type {
+  SubscriptionFee,
+  SubscriptionPeriodMonths,
+} from '../../types/subscription'
 import type { SubscriptionTier } from '../constants/subscriptionLimits'
 import type { AppThemeMode } from '../../theme/appTheme'
 import client from './client'
@@ -22,6 +26,18 @@ interface PreferencesResponse {
 
 interface SubscriptionResponse {
   subscription_tier: SubscriptionTier
+  expires_at: string | null
+}
+
+interface SubscriptionFeeListResponse {
+  results: SubscriptionFee[]
+}
+
+interface PaymentLogResponse {
+  id: EntityId
+  amount: number
+  duration_months: SubscriptionPeriodMonths
+  account_type: Exclude<SubscriptionTier, 'basic'>
 }
 
 function getApiErrorMessage(error: unknown): string {
@@ -70,12 +86,12 @@ export async function updateUserPreferencesFromApi(
   }
 }
 
-export async function getUserSubscriptionFromApi(): Promise<SubscriptionTier> {
+export async function getUserSubscriptionFromApi(): Promise<SubscriptionResponse> {
   try {
     const response = await client.get<SubscriptionResponse>(
       '/users/subscription/',
     )
-    return response.data.subscription_tier
+    return response.data
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
   }
@@ -83,13 +99,35 @@ export async function getUserSubscriptionFromApi(): Promise<SubscriptionTier> {
 
 export async function updateUserSubscriptionFromApi(
   payload: UpdateSubscriptionTierPayload,
-): Promise<SubscriptionTier> {
+): Promise<SubscriptionResponse> {
   try {
     const response = await client.put<SubscriptionResponse>(
       '/users/subscription/',
       payload,
     )
-    return response.data.subscription_tier
+    return response.data
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function getSubscriptionFeesFromApi(): Promise<SubscriptionFee[]> {
+  try {
+    const response = await client.get<SubscriptionFeeListResponse>('/subscription/')
+    return response.data.results
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}
+
+export async function createSubscriptionPaymentFromApi(payload: {
+  amount: number
+  duration_months: SubscriptionPeriodMonths
+  account_type: Exclude<SubscriptionTier, 'basic'>
+}): Promise<PaymentLogResponse> {
+  try {
+    const response = await client.post<PaymentLogResponse>('/payment/', payload)
+    return response.data
   } catch (error) {
     throw new Error(getApiErrorMessage(error))
   }

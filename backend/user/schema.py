@@ -32,6 +32,7 @@ LISTENER_USER = {
     "gender": "female",
     "profile_picture": "http://localhost:8000/media/profile-pictures/sara.jpg",
     "subscription_tier": "basic",
+    "subscription_expires_at": None,
     "followers_count": 3,
     "following_count": 8,
     "streamed_today": 14,
@@ -49,6 +50,7 @@ ARTIST_USER = {
     "gender": None,
     "profile_picture": None,
     "subscription_tier": "basic",
+    "subscription_expires_at": None,
     "followers_count": 1240,
     "following_count": 12,
     "streamed_today": 0,
@@ -221,6 +223,7 @@ PROFILE_READ = {
     "num_follower": 3,
     "streamed_today": 14,
     "subscription": "basic",
+    "subscription_expires_at": None,
     "profile_photo": "http://localhost:8000/media/profile-pictures/sara.jpg",
     "followings": SHORT_USERS,
     "followers": SHORT_USERS[:1],
@@ -342,14 +345,21 @@ PREFERENCES_EXAMPLES = [
 SUBSCRIPTION_EXAMPLES = [
     OpenApiExample(
         "Subscription response",
-        value={"subscription_tier": "silver"},
+        value={
+            "subscription_tier": "silver",
+            "expires_at": "2026-08-23T12:00:00Z",
+        },
         response_only=True,
         status_codes=["200"],
     ),
     OpenApiExample(
-        "Change subscription request",
-        description="One of: `basic`, `silver`, `gold`.",
-        value={"subscription_tier": "gold"},
+        "Activate subscription request",
+        description="The payment log must match the requested tier and duration.",
+        value={
+            "subscription_tier": "gold",
+            "duration_months": 3,
+            "payment_log_id": 42,
+        },
         request_only=True,
     ),
 ]

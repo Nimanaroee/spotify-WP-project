@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 
-from .models import Artist, Preferences, User
+from .models import Artist, Preferences, SubscriptionFee, User
 
 
 @admin.register(User)
@@ -22,6 +22,7 @@ class CustomUserAdmin(UserAdmin):
                     "gender",
                     "profile_picture",
                     "subscription_tier",
+                    "subscription_expires_at",
                     "following",
                     "followers_count",
                     "following_count",
@@ -71,6 +72,7 @@ class ArtistAdmin(UserAdmin):
                     "gender",
                     "profile_picture",
                     "subscription_tier",
+                    "subscription_expires_at",
                     "following",
                     "followers_count",
                     "following_count",
@@ -113,3 +115,10 @@ class PreferencesAdmin(admin.ModelAdmin):
         "system_voice",
     )
     search_fields = ("user__email", "user__username", "user__display_name")
+
+
+@admin.register(SubscriptionFee)
+class SubscriptionFeeAdmin(admin.ModelAdmin):
+    list_display = ("subscription_tier", "price_per_month", "updated_at")
+    list_editable = ("price_per_month",)
+    ordering = ("subscription_tier",)

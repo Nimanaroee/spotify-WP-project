@@ -70,6 +70,13 @@ type SharedCopy = {
     subscriptionTitle: string;
     subscriptionDescription: string;
     currentPlan: string;
+    expiresAt: string;
+    noExpiration: string;
+    subscriptionType: string;
+    duration: string;
+    months: string;
+    finalFee: string;
+    highestSubscription: string;
     accountTitle: string;
     accountDescription: string;
     deleteAccount: string;
@@ -196,6 +203,13 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       subscriptionTitle: 'Subscription status',
       subscriptionDescription: 'Upgrade your subscription to enjoy more features.',
       currentPlan: 'Current plan',
+      expiresAt: 'Expires on',
+      noExpiration: 'No expiration',
+      subscriptionType: 'Subscription type',
+      duration: 'Duration',
+      months: 'months',
+      finalFee: 'Final fee',
+      highestSubscription: 'You already have the highest subscription.',
       accountTitle: 'Account management',
       accountDescription: 'Delete your account and sign out.',
       deleteAccount: 'Delete account',
@@ -318,8 +332,15 @@ export const APP_TEXT: Record<AppLanguage, SharedCopy> = {
       systemVoice: 'صدای سیستم',
       theme: 'پوسته',
       subscriptionTitle: 'وضعیت اشتراک',
-      subscriptionDescription: 'اشتراک فعلی در فاز اول به‌صورت محلی ذخیره می‌شود. برای پیش‌نمایش ارتقا یا کاهش، آن را تغییر دهید.',
+      subscriptionDescription: 'برای دسترسی به امکانات بیشتر، اشتراک خود را ارتقا دهید.',
       currentPlan: 'طرح فعلی',
+      expiresAt: 'تاریخ انقضا',
+      noExpiration: 'بدون تاریخ انقضا',
+      subscriptionType: 'نوع اشتراک',
+      duration: 'مدت',
+      months: 'ماه',
+      finalFee: 'مبلغ نهایی',
+      highestSubscription: 'شما بالاترین سطح اشتراک را دارید.',
       accountTitle: 'مدیریت حساب',
       accountDescription: 'حساب خود را حذف کنید و خارج شوید.',
       deleteAccount: 'حذف حساب',
