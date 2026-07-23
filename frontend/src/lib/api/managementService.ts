@@ -40,8 +40,6 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback
 }
 
-// ---- Support tickets ----
-
 interface TicketMessageResponse {
   id: number
   ticket: number
@@ -141,8 +139,6 @@ export async function closeTicket(ticketId: number): Promise<SupportTicket> {
   }
 }
 
-// ---- Artist verification ----
-
 interface VerificationRequestResponse {
   user_id: number
   stage_name: string
@@ -231,8 +227,6 @@ export async function rejectRequest(
   }
 }
 
-// ---- Monthly artist audits ----
-
 interface MonthlyArtistAuditResponse {
   id: number
   artist_id: number
@@ -293,8 +287,6 @@ export function getCurrentPeriod(): { year: number; month: number } {
   const now = new Date()
   return { year: now.getFullYear(), month: now.getMonth() + 1 }
 }
-
-// ---- Subscription pricing & revenue ----
 
 interface SubscriptionPricingResponse {
   silver_price: string

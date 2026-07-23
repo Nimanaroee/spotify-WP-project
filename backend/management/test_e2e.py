@@ -1,10 +1,3 @@
-"""
-End-to-end tests that walk full multi-step flows across the management,
-notifications and user apps the way a real client (the frontend) would:
-one authenticated session issuing a sequence of requests, asserting on
-state changes and side effects (notifications) at each step.
-"""
-
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
@@ -35,7 +28,6 @@ class SupportTicketLifecycleE2ETests(APITestCase):
         )
 
     def test_ticket_created_answered_then_closed(self):
-        # 1. Listener opens a ticket.
         self.client.force_authenticate(self.listener)
         create_response = self.client.post(
             reverse("create-ticket"),
@@ -48,18 +40,15 @@ class SupportTicketLifecycleE2ETests(APITestCase):
             Notification.objects.filter(recipient=self.support, category="new_ticket").exists()
         )
 
-        # A listener has no staff access to the management queue.
         listener_list = self.client.get(reverse("ticket-list"))
         self.assertEqual(listener_list.status_code, status.HTTP_403_FORBIDDEN)
 
-        # 2. Support sees the ticket in the queue.
         self.client.force_authenticate(self.support)
         queue_response = self.client.get(reverse("ticket-list"))
         self.assertEqual(queue_response.status_code, status.HTTP_200_OK)
         self.assertEqual(queue_response.data["count"], 1)
         self.assertEqual(queue_response.data["results"][0]["status"], "open")
 
-        # 3. Support replies -> ticket becomes "answered", listener is notified.
         reply_response = self.client.post(
             reverse("ticket-reply", kwargs={"pk": ticket_id}),
             {"message": "Please try clearing the app cache."},
@@ -72,20 +61,15 @@ class SupportTicketLifecycleE2ETests(APITestCase):
             ).exists()
         )
 
-        # 4. Listener reads the full thread.
         self.client.force_authenticate(self.listener)
-        # Listener can't hit the staff detail endpoint (staff-only by design);
-        # confirm the underlying data is what the reply produced instead.
         ticket = SupportTicket.objects.get(pk=ticket_id)
         self.assertEqual(ticket.messages.count(), 2)
 
-        # 5. Support closes the ticket.
         self.client.force_authenticate(self.support)
         close_response = self.client.post(reverse("ticket-close", kwargs={"pk": ticket_id}))
         self.assertEqual(close_response.status_code, status.HTTP_200_OK)
         self.assertEqual(close_response.data["status"], "closed")
 
-        # 6. No further replies are accepted once closed.
         reopened_reply = self.client.post(
             reverse("ticket-reply", kwargs={"pk": ticket_id}), {"message": "one more thing"}
         )
@@ -110,7 +94,6 @@ class ArtistOnboardingToPayoutE2ETests(APITestCase):
         )
 
     def test_registration_through_approval_to_settled_payout(self):
-        # 1. Artist self-registers -> starts pending & inactive, staff notified.
         register_response = self.client.post(
             reverse("register-artist"),
             {
@@ -131,7 +114,6 @@ class ArtistOnboardingToPayoutE2ETests(APITestCase):
             ).exists()
         )
 
-        # 2. Support reviews the pending queue and approves.
         self.client.force_authenticate(self.support)
         pending_list = self.client.get(
             reverse("verification-request-list"), {"status": "pending"}
@@ -152,7 +134,6 @@ class ArtistOnboardingToPayoutE2ETests(APITestCase):
             ).exists()
         )
 
-        # 3. A month later, an admin records the artist's monthly audit and settles it.
         audit = MonthlyArtistAudit.objects.create(
             artist=artist,
             period_year=2026,
@@ -176,7 +157,6 @@ class ArtistOnboardingToPayoutE2ETests(APITestCase):
             ).exists()
         )
 
-        # 4. The artist can now see their payout notification via the notifications API.
         self.client.force_authenticate(artist)
         notifications_response = self.client.get(reverse("notification-list"))
         self.assertEqual(notifications_response.status_code, status.HTTP_200_OK)

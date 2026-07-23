@@ -10,14 +10,6 @@ User = get_user_model()
 
 
 class NotificationApiTests(APITestCase):
-    """
-    Contract expected by the frontend (frontend/src/lib/api/notificationService.ts):
-    - list is a *plain array* (pagination disabled), each item has
-      id, category, title, message, link, is_read, created_at.
-    - only the requesting user's own notifications are ever returned.
-    - mark-read / mark-all-read / delete are scoped to the current user.
-    """
-
     def setUp(self):
         self.user = User.objects.create_user(
             email="listener@example.com",
