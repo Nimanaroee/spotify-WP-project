@@ -3,7 +3,7 @@ from pathlib import Path
 
 from django.conf import settings
 from django.test import Client, TestCase, override_settings
-from django.urls import clear_url_caches
+from django.urls import clear_url_caches, reverse
 
 
 class MediaUrlTests(TestCase):
@@ -22,3 +22,36 @@ class MediaUrlTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(b"".join(response.streaming_content), b"profile-picture")
+
+
+class ApiDocumentationTests(TestCase):
+    def test_openapi_schema_documents_every_registered_api_route(self):
+        response = self.client.get(reverse("schema"), {"format": "json"})
+
+        self.assertEqual(response.status_code, 200)
+        schema = response.json()
+        self.assertEqual(schema["openapi"].split(".")[0], "3")
+        self.assertEqual(
+            set(schema["paths"]),
+            {
+                "/api/v1/auth/login/",
+                "/api/v1/auth/logout/",
+                "/api/v1/auth/me/",
+                "/api/v1/auth/refresh/",
+                "/api/v1/auth/register/artist/",
+                "/api/v1/auth/register/listener/",
+                "/api/v1/users/follows/{username}/",
+                "/api/v1/users/preferences/",
+                "/api/v1/users/profile/artist/",
+                "/api/v1/users/profile/listener/",
+                "/api/v1/users/profiles/{user_name}/",
+                "/api/v1/users/subscription/",
+            },
+        )
+
+    def test_documentation_interfaces_are_publicly_available(self):
+        for url_name in ("swagger-ui", "redoc"):
+            with self.subTest(url_name=url_name):
+                response = self.client.get(reverse(url_name))
+
+                self.assertEqual(response.status_code, 200)
