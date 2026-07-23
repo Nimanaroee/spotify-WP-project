@@ -2,6 +2,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   MenuItem,
   Stack,
   TableBody,
@@ -11,7 +12,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import EmptyState from '../../components/common/EmptyState'
 import PageHeader from '../../components/common/PageHeader'
 import ScrollableTableContainer from '../../components/common/ScrollableTableContainer'
@@ -24,10 +25,11 @@ import {
   confirmSettlement,
   getCurrentPeriod,
   listMonthlyAudits,
-} from '../../lib/mock/auditService'
+} from '../../lib/api/managementService'
 import { hasRole } from '../../routes/RoleGuard'
 import { useAuthStore } from '../../store/authStore'
 import { useAppLanguage } from '../../theme/LanguageContext'
+import type { MonthlyArtistAudit } from '../../types/admin'
 
 const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1)
 
@@ -40,22 +42,40 @@ export default function AuditingPage() {
   const [year, setYear] = useState(currentPeriod.year)
   const [month, setMonth] = useState(currentPeriod.month)
   const [error, setError] = useState('')
-  const [refreshKey, setRefreshKey] = useState(0)
-
-  const audits = useMemo(
-    () => listMonthlyAudits(year, month),
-    [year, month, refreshKey],
-  )
+  const [audits, setAudits] = useState<MonthlyArtistAudit[]>([])
+  const [loading, setLoading] = useState(true)
   const isAdmin = hasRole(user, [ROLES.ADMIN])
 
-  function handleConfirmSettlement(auditId: number): void {
-    if (!user) {
-      return
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    listMonthlyAudits(year, month)
+      .then((result) => {
+        if (!cancelled) {
+          setAudits(result)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : copy.auditing.noRecords)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [year, month])
+
+  async function handleConfirmSettlement(auditId: number): Promise<void> {
     setError('')
     try {
-      confirmSettlement(auditId, user.role)
-      setRefreshKey((k) => k + 1)
+      const updated = await confirmSettlement(auditId)
+      setAudits((current) => current.map((a) => (a.id === updated.id ? updated : a)))
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.auditing.failedSettlement)
     }
@@ -102,7 +122,11 @@ export default function AuditingPage() {
         </Alert>
       ) : null}
 
-      {audits.length === 0 ? (
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : audits.length === 0 ? (
         <EmptyState title={copy.auditing.noRecords} />
       ) : (
         <ScrollableTableContainer minWidth={{ xs: 720, md: 'auto' }}>

@@ -34,6 +34,8 @@ urlpatterns = [
     ),
     path('api/v1/auth/', include('user.urls')),
     path('api/v1/users/', include('user.profile_urls')),
+    path('api/v1/', include('management.urls')),
+    path('api/v1/notifications/', include('notifications.urls')),
     path('api/v1/subscription/', include('user.subscription_urls')),
     path('api/v1/payment/', include('payment.urls')),
 ]

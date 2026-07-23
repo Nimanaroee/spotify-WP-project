@@ -1,93 +1,59 @@
 import { create } from 'zustand'
-import type { Role } from '../lib/constants/roles'
 import {
   deleteNotification as deleteNotificationService,
-  getUnreadCount,
   listNotifications,
   markAllAsRead as markAllAsReadService,
   markNotificationAsRead,
-} from '../lib/mock/notificationService'
+} from '../lib/api/notificationService'
 import type { Notification } from '../types/notification'
 
 interface NotificationState {
-  recipientId: number | null
-  role: Role | null
+  loaded: boolean
   notifications: Notification[]
   unreadCount: number
-  loadForUser: (userId: number, role: Role) => void
-  markAsRead: (id: number) => void
-  deleteNotification: (id: number) => void
-  markAllAsRead: () => void
-  refresh: () => void
+  loadForUser: () => Promise<void>
+  markAsRead: (id: number) => Promise<void>
+  deleteNotification: (id: number) => Promise<void>
+  markAllAsRead: () => Promise<void>
+  refresh: () => Promise<void>
   clear: () => void
 }
 
-function syncFromStorage(
-  recipientId: number,
-  role: Role,
-): Pick<NotificationState, 'notifications' | 'unreadCount'> {
-  const notifications = listNotifications(recipientId, role)
-  return {
-    notifications,
-    unreadCount: getUnreadCount(recipientId, role),
-  }
+function countUnread(notifications: Notification[]): number {
+  return notifications.filter((n) => !n.is_read).length
 }
 
 export const useNotificationStore = create<NotificationState>((set, get) => ({
-  recipientId: null,
-  role: null,
+  loaded: false,
   notifications: [],
   unreadCount: 0,
 
-  loadForUser: (userId, role) => {
-    set({
-      recipientId: userId,
-      role,
-      ...syncFromStorage(userId, role),
-    })
+  loadForUser: async () => {
+    await get().refresh()
+    set({ loaded: true })
   },
 
-  markAsRead: (id) => {
-    const { recipientId } = get()
-    if (recipientId === null) {
-      return
-    }
-    markNotificationAsRead(id, recipientId)
-    get().refresh()
+  markAsRead: async (id) => {
+    await markNotificationAsRead(id)
+    await get().refresh()
   },
 
-  deleteNotification: (id) => {
-    const { recipientId } = get()
-    if (recipientId === null) {
-      return
-    }
-    deleteNotificationService(id, recipientId)
-    get().refresh()
+  deleteNotification: async (id) => {
+    await deleteNotificationService(id)
+    await get().refresh()
   },
 
-  markAllAsRead: () => {
-    const { recipientId, role } = get()
-    if (recipientId === null || role === null) {
-      return
-    }
-    markAllAsReadService(recipientId, role)
-    get().refresh()
+  markAllAsRead: async () => {
+    await markAllAsReadService()
+    await get().refresh()
   },
 
-  refresh: () => {
-    const { recipientId, role } = get()
-    if (recipientId === null || role === null) {
-      return
-    }
-    set(syncFromStorage(recipientId, role))
+  refresh: async () => {
+    const notifications = await listNotifications()
+    set({ notifications, unreadCount: countUnread(notifications) })
   },
 
   clear: () => {
-    set({
-      recipientId: null,
-      role: null,
-      notifications: [],
-      unreadCount: 0,
-    })
+    set({ loaded: false, notifications: [], unreadCount: 0 })
   },
 }))

@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'music',
     'payment',
     'management',
+    'notifications',
 ]
 
 MIDDLEWARE = [
