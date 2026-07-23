@@ -24,6 +24,7 @@ export type {
 
 export type {
   PurchaseSubscriptionPayload,
+  SubscriptionFee,
   SubscriptionPeriodMonths,
   SubscriptionPlan,
   SubscriptionPricing,

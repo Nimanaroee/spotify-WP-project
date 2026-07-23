@@ -8,8 +8,8 @@ from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from drf_spectacular.utils import extend_schema_field
 
-from .models import Artist, Preferences
-from .services import update_artist_profile, update_profile
+from .models import Artist, Preferences, SubscriptionFee
+from .services import activate_subscription, update_artist_profile, update_profile
 
 User = get_user_model()
 
@@ -38,6 +38,9 @@ class LogoutSerializer(serializers.Serializer):
 
 
 class CurrentUserSerializer(serializers.ModelSerializer):
+    subscription_tier = serializers.SerializerMethodField()
+    subscription_expires_at = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = User
         fields = (
@@ -50,6 +53,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "gender",
             "profile_picture",
             "subscription_tier",
+            "subscription_expires_at",
             "followers_count",
             "following_count",
             "streamed_today",
@@ -57,6 +61,10 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = fields
+
+    @extend_schema_field(serializers.CharField())
+    def get_subscription_tier(self, user):
+        return user.get_effective_subscription_tier()
 
 
 class UserShortInfoSerializer(serializers.ModelSerializer):
@@ -77,7 +85,8 @@ class ProfileReadSerializer(serializers.ModelSerializer):
     )
     num_following = serializers.IntegerField(source="following_count", read_only=True)
     num_follower = serializers.IntegerField(source="followers_count", read_only=True)
-    subscription = serializers.CharField(source="subscription_tier", read_only=True)
+    subscription = serializers.SerializerMethodField()
+    subscription_expires_at = serializers.DateTimeField(read_only=True)
     profile_photo = serializers.ImageField(source="profile_picture", read_only=True)
     followers = serializers.SerializerMethodField()
     followings = serializers.SerializerMethodField()
@@ -93,11 +102,16 @@ class ProfileReadSerializer(serializers.ModelSerializer):
             "num_follower",
             "streamed_today",
             "subscription",
+            "subscription_expires_at",
             "profile_photo",
             "followings",
             "followers",
         )
         read_only_fields = fields
+
+    @extend_schema_field(serializers.CharField())
+    def get_subscription(self, user):
+        return user.get_effective_subscription_tier()
 
     @extend_schema_field(UserShortInfoSerializer(many=True))
     def get_followers(self, user):
@@ -167,7 +181,8 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         if (
             "profile_picture" in attrs
             and self.instance is not None
-            and self.instance.subscription_tier == User.SubscriptionTier.BASIC
+            and self.instance.get_effective_subscription_tier()
+            == User.SubscriptionTier.BASIC
         ):
             raise serializers.ValidationError(
                 {
@@ -239,22 +254,63 @@ class PreferencesUpdateSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionReadSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = ("subscription_tier",)
-        read_only_fields = fields
-
-
-class SubscriptionUpdateSerializer(serializers.ModelSerializer):
-    subscription_tier = serializers.ChoiceField(
-        choices=User.SubscriptionTier.choices,
-        required=True,
-        help_text="One of: basic, silver, gold.",
+    subscription_tier = serializers.SerializerMethodField()
+    expires_at = serializers.DateTimeField(
+        source="subscription_expires_at",
+        read_only=True,
     )
 
     class Meta:
         model = User
-        fields = ("subscription_tier",)
+        fields = ("subscription_tier", "expires_at")
+        read_only_fields = fields
+
+    @extend_schema_field(serializers.CharField())
+    def get_subscription_tier(self, user):
+        return user.get_effective_subscription_tier()
+
+
+class SubscriptionUpdateSerializer(serializers.Serializer):
+    subscription_tier = serializers.ChoiceField(
+        choices=(
+            User.SubscriptionTier.SILVER,
+            User.SubscriptionTier.GOLD,
+        ),
+        required=True,
+        help_text="One of: silver, gold.",
+    )
+    duration_months = serializers.ChoiceField(
+        choices=(1, 3, 6, 12),
+        required=True,
+        help_text="One of: 1, 3, 6, 12.",
+    )
+    payment_log_id = serializers.IntegerField(
+        min_value=1,
+        required=True,
+        help_text="ID returned by the payment endpoint.",
+    )
+
+    def update(self, instance, validated_data):
+        try:
+            return activate_subscription(instance, **validated_data)
+        except ValueError as exc:
+            raise serializers.ValidationError({"detail": str(exc)}) from exc
+
+    def create(self, validated_data):
+        raise NotImplementedError
+
+
+class SubscriptionFeeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubscriptionFee
+        fields = (
+            "subscription_tier",
+            "price_per_month",
+        )
+        read_only_fields = fields
+        extra_kwargs = {
+            "price_per_month": {"coerce_to_string": False},
+        }
 
 
 class PublicArtistProfileSerializer(serializers.ModelSerializer):

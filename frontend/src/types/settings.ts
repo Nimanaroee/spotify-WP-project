@@ -23,5 +23,7 @@ export interface UpdateUserPreferencesPayload {
 }
 
 export interface UpdateSubscriptionTierPayload {
-  subscription_tier: SubscriptionTier
+  subscription_tier: Exclude<SubscriptionTier, 'basic'>
+  duration_months: 1 | 3 | 6 | 12
+  payment_log_id: EntityId
 }

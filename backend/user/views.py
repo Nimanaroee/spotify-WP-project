@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from . import schema
-from .models import Artist, Preferences
+from .models import Artist, Preferences, SubscriptionFee
 from .serializers import (
     ArtistProfileUpdateSerializer,
     ArtistRegistrationSerializer,
@@ -25,6 +25,7 @@ from .serializers import (
     ProfileUpdateSerializer,
     PublicProfileReadSerializer,
     SubscriptionReadSerializer,
+    SubscriptionFeeSerializer,
     SubscriptionUpdateSerializer,
     TokenResponseSerializer,
 )
@@ -321,7 +322,11 @@ class SubscriptionView(generics.RetrieveUpdateAPIView):
         return SubscriptionReadSerializer
 
     @extend_schema(
-        summary="Get own subscription tier",
+        summary="Get own subscription",
+        description=(
+            "Return the authenticated user's effective subscription tier and "
+            "expiration. Expired paid subscriptions are returned as `basic`."
+        ),
         responses=SubscriptionReadSerializer,
         examples=schema.SUBSCRIPTION_EXAMPLES,
     )
@@ -329,8 +334,12 @@ class SubscriptionView(generics.RetrieveUpdateAPIView):
         return super().get(request, *args, **kwargs)
 
     @extend_schema(
-        summary="Change own subscription tier",
-        description="Replace the subscription tier. Allowed values: `basic`, `silver`, `gold`.",
+        summary="Activate a paid subscription",
+        description=(
+            "Activate a higher paid tier using the matching payment receipt from "
+            "`POST /api/v1/payment/`. The expiration is calculated from the "
+            "selected duration."
+        ),
         request=SubscriptionUpdateSerializer,
         responses=SubscriptionReadSerializer,
         examples=schema.SUBSCRIPTION_EXAMPLES,
@@ -339,13 +348,31 @@ class SubscriptionView(generics.RetrieveUpdateAPIView):
         user = self.get_object()
         serializer = self.get_serializer(user, data=request.data)
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        updated_user = serializer.save()
         return Response(
             SubscriptionReadSerializer(
-                user,
+                updated_user,
                 context=self.get_serializer_context(),
             ).data
         )
+
+
+@extend_schema(tags=["subscriptions"])
+class SubscriptionFeeListView(generics.ListAPIView):
+    serializer_class = SubscriptionFeeSerializer
+    permission_classes = (AllowAny,)
+    queryset = SubscriptionFee.objects.all()
+
+    @extend_schema(
+        summary="List subscription monthly fees",
+        description=(
+            "Return the monthly fee configured for each subscription tier. "
+            "This endpoint is public so pricing can be shown before purchase."
+        ),
+        responses=SubscriptionFeeSerializer(many=True),
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 
 @extend_schema(

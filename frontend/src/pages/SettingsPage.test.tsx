@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider, createTheme } from '@mui/material'
 import { useMemo, useState, type ReactNode } from 'react'
@@ -12,10 +12,25 @@ import { ROUTES } from '../lib/constants/routes'
 import { storage } from '../lib/mock/storage'
 import { useAuthStore } from '../store/authStore'
 import {
+  getSubscriptionFeesFromApi,
+  getUserPreferencesFromApi,
+  getUserSubscriptionFromApi,
+  updateUserPreferencesFromApi,
+} from '../lib/api/settingsService'
+import {
   APP_LANGUAGE_STORAGE_KEY,
   LanguageContext,
 } from '../theme/LanguageContext'
 import { ThemeModeContext } from '../theme/ThemeModeContext'
+
+vi.mock('../lib/api/settingsService', () => ({
+  createSubscriptionPaymentFromApi: vi.fn(),
+  getSubscriptionFeesFromApi: vi.fn(),
+  getUserPreferencesFromApi: vi.fn(),
+  getUserSubscriptionFromApi: vi.fn(),
+  updateUserPreferencesFromApi: vi.fn(),
+  updateUserSubscriptionFromApi: vi.fn(),
+}))
 
 function TestProviders({ children }: { children: ReactNode }) {
   const [language, setLanguage] = useState<'en' | 'fa'>(
@@ -69,6 +84,37 @@ function renderSettingsPage() {
 describe('SettingsPage', () => {
   beforeEach(() => {
     localStorage.clear()
+    vi.mocked(getUserPreferencesFromApi).mockResolvedValue({
+      user_id: 1,
+      theme: 'dark',
+      notification_limit: 20,
+      app_sound_enabled: true,
+      language: 'en',
+      system_voice: 'default',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    })
+    vi.mocked(getUserSubscriptionFromApi).mockResolvedValue({
+      subscription_tier: 'basic',
+      expires_at: null,
+    })
+    vi.mocked(getSubscriptionFeesFromApi).mockResolvedValue([
+      { subscription_tier: 'basic', price_per_month: 0 },
+      { subscription_tier: 'silver', price_per_month: 9.99 },
+      { subscription_tier: 'gold', price_per_month: 19.99 },
+    ])
+    vi.mocked(updateUserPreferencesFromApi).mockImplementation(
+      async (userId, payload) => ({
+        user_id: userId,
+        theme: payload.theme ?? 'dark',
+        notification_limit: payload.notification_limit ?? 20,
+        app_sound_enabled: payload.app_sound_enabled ?? true,
+        language: payload.language ?? 'en',
+        system_voice: payload.system_voice ?? 'default',
+        created_at: '2026-01-01T00:00:00.000Z',
+        updated_at: '2026-01-01T00:00:00.000Z',
+      }),
+    )
     storage.set('users', [
       {
         id: 1,
@@ -100,7 +146,7 @@ describe('SettingsPage', () => {
     const user = userEvent.setup()
     renderSettingsPage()
 
-    await user.click(screen.getByRole('combobox', { name: /language/i }))
+    await user.click(await screen.findByRole('combobox', { name: /language/i }))
     await user.click(screen.getByRole('option', { name: /persian/i }))
 
     expect(await screen.findByText('تنظیمات اعلان')).toBeInTheDocument()
@@ -126,21 +172,16 @@ describe('SettingsPage', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('updates the local subscription tier', async () => {
-    const user = userEvent.setup()
+  it('shows subscription upgrade fields instead of a plan-changing bar', async () => {
     renderSettingsPage()
 
-    await user.click(screen.getByRole('combobox', { name: /current plan/i }))
-    await user.click(screen.getByRole('option', { name: /gold/i }))
-
-    await waitFor(() =>
-      expect(useAuthStore.getState().user?.subscription_tier).toBe('gold'),
-    )
     expect(
-      storage
-        .get<Array<{ id: number; subscription_tier: string }>>('users')
-        ?.find((storedUser) => storedUser.id === 1)?.subscription_tier,
-    ).toBe('gold')
+      await screen.findByRole('combobox', { name: /subscription type/i }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('combobox', { name: /duration/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /upgrade!/i })).toBeInTheDocument()
   })
 
   it('allows support staff to open settings', () => {
@@ -186,10 +227,12 @@ describe('SettingsPage', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderSettingsPage()
 
-    await user.click(screen.getByRole('button', { name: /delete account/i }))
+    await user.click(
+      await screen.findByRole('button', { name: /delete account/i }),
+    )
 
     expect(useAuthStore.getState().user).toBeNull()
     expect(storage.get<number>('auth_user_id')).toBeNull()
-    expect(storage.get<Array<{ id: number }>>('users')).toHaveLength(0)
+    expect(storage.get<Array<{ id: number }>>('users')).toHaveLength(1)
   })
 })

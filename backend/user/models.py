@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
 
 class User(AbstractUser):
@@ -34,6 +35,7 @@ class User(AbstractUser):
         choices=SubscriptionTier.choices,
         default=SubscriptionTier.BASIC,
     )
+    subscription_expires_at = models.DateTimeField(null=True, blank=True)
     following = models.ManyToManyField(
         "self",
         symmetrical=False,
@@ -59,6 +61,32 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+
+    def get_effective_subscription_tier(self):
+        if (
+            self.subscription_tier != self.SubscriptionTier.BASIC
+            and self.subscription_expires_at is not None
+            and self.subscription_expires_at <= timezone.now()
+        ):
+            return self.SubscriptionTier.BASIC.value
+        return self.subscription_tier
+
+
+class SubscriptionFee(models.Model):
+    subscription_tier = models.CharField(
+        max_length=20,
+        choices=User.SubscriptionTier.choices,
+        unique=True,
+    )
+    price_per_month = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ("subscription_tier",)
+
+    def __str__(self):
+        return f"{self.get_subscription_tier_display()}: {self.price_per_month}"
 
 
 class Preferences(models.Model):
