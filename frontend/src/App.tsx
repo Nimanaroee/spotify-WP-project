@@ -99,7 +99,7 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      loadNotificationsForUser(user.id, user.role);
+      void loadNotificationsForUser();
       return;
     }
     clearNotifications();

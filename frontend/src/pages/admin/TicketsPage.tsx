@@ -2,6 +2,7 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Paper,
   Tab,
   TableBody,
@@ -10,7 +11,7 @@ import {
   TableRow,
   Tabs,
 } from '@mui/material'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom'
 import EmptyState from '../../components/common/EmptyState'
 import PageHeader from '../../components/common/PageHeader'
@@ -23,9 +24,10 @@ import {
   adminTicketDetailPath,
   adminVerificationDetailPath,
 } from '../../lib/constants/routes'
-import { listTickets } from '../../lib/mock/ticketService'
-import { listPendingRequests } from '../../lib/mock/verificationService'
+import { listPendingRequests, listTickets } from '../../lib/api/managementService'
 import { useAppLanguage } from '../../theme/LanguageContext'
+import type { ArtistVerificationRequest } from '../../types/artist'
+import type { SupportTicket } from '../../types/support'
 
 export default function TicketsPage() {
   const { language } = useAppLanguage()
@@ -36,8 +38,30 @@ export default function TicketsPage() {
   const tabParam = searchParams.get('tab')
   const [tab, setTab] = useState(tabParam === 'verification' ? 1 : 0)
 
-  const tickets = listTickets()
-  const pendingRequests = listPendingRequests()
+  const [tickets, setTickets] = useState<SupportTicket[]>([])
+  const [pendingRequests, setPendingRequests] = useState<ArtistVerificationRequest[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    Promise.all([listTickets(), listPendingRequests()])
+      .then(([ticketsResult, requestsResult]) => {
+        if (cancelled) {
+          return
+        }
+        setTickets(ticketsResult)
+        setPendingRequests(requestsResult)
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   function handleTabChange(_: React.SyntheticEvent, newValue: number): void {
     setTab(newValue)
@@ -61,7 +85,11 @@ export default function TicketsPage() {
         </Tabs>
       </Paper>
 
-      {tab === 0 ? (
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      ) : tab === 0 ? (
         tickets.length === 0 ? (
           <EmptyState title={copy.tickets.noTickets} />
         ) : (
