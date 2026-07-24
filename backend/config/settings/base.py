@@ -91,6 +91,11 @@ REST_FRAMEWORK = {
 }
 
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:5173'])
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173').rstrip('/')
+
+ZARINPAL_MERCHANT_ID = env('ZARINPAL_MERCHANT_ID', default='')
+ZARINPAL_SANDBOX = env.bool('ZARINPAL_SANDBOX', default=False)
+ZARINPAL_REQUEST_TIMEOUT = env.int('ZARINPAL_REQUEST_TIMEOUT', default=15)
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Spotify-WP API',

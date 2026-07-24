@@ -103,7 +103,7 @@ describe('settingsService', () => {
     })
   })
 
-  it('loads monthly fees and creates a payment log', async () => {
+  it('loads monthly fees and starts a payment', async () => {
     vi.mocked(client.get).mockResolvedValue({
       data: {
         results: [
@@ -116,15 +116,12 @@ describe('settingsService', () => {
     vi.mocked(client.post).mockResolvedValue({
       data: {
         id: 42,
-        amount: 59.97,
-        duration_months: 3,
-        account_type: 'gold',
+        redirect_url: 'https://payment.zarinpal.com/pg/StartPay/A-test-authority',
       },
     })
 
     const fees = await getSubscriptionFeesFromApi()
     const paymentLog = await createSubscriptionPaymentFromApi({
-      amount: 59.97,
       duration_months: 3,
       account_type: 'gold',
     })
@@ -132,10 +129,10 @@ describe('settingsService', () => {
     expect(client.get).toHaveBeenCalledWith('/subscription/')
     expect(fees).toHaveLength(3)
     expect(client.post).toHaveBeenCalledWith('/payment/', {
-      amount: 59.97,
       duration_months: 3,
       account_type: 'gold',
     })
     expect(paymentLog.id).toBe(42)
+    expect(paymentLog.redirect_url).toContain('payment.zarinpal.com')
   })
 })

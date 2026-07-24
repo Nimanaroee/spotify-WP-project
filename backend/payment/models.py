@@ -5,6 +5,7 @@ from user.models import User
 
 class SubscriptionPaymentLog(models.Model):
     class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
         SUCCESSFUL = "successful", "Successful"
         FAILED = "failed", "Failed"
 
@@ -22,8 +23,13 @@ class SubscriptionPaymentLog(models.Model):
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.SUCCESSFUL,
+        default=Status.PENDING,
     )
+    authority = models.CharField(max_length=255, unique=True, null=True, blank=True)
+    gateway_request = models.JSONField(default=dict, blank=True)
+    gateway_verify = models.JSONField(default=dict, blank=True)
+    gateway_message = models.CharField(max_length=500, blank=True)
+    ref_id = models.BigIntegerField(null=True, blank=True)
     subscription_applied_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
