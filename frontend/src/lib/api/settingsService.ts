@@ -33,11 +33,9 @@ interface SubscriptionFeeListResponse {
   results: SubscriptionFee[]
 }
 
-interface PaymentLogResponse {
+interface PaymentStartResponse {
   id: EntityId
-  amount: number
-  duration_months: SubscriptionPeriodMonths
-  account_type: Exclude<SubscriptionTier, 'basic'>
+  redirect_url: string
 }
 
 function getApiErrorMessage(error: unknown): string {
@@ -121,12 +119,11 @@ export async function getSubscriptionFeesFromApi(): Promise<SubscriptionFee[]> {
 }
 
 export async function createSubscriptionPaymentFromApi(payload: {
-  amount: number
   duration_months: SubscriptionPeriodMonths
   account_type: Exclude<SubscriptionTier, 'basic'>
-}): Promise<PaymentLogResponse> {
+}): Promise<PaymentStartResponse> {
   try {
-    const response = await client.post<PaymentLogResponse>('/payment/', payload)
+    const response = await client.post<PaymentStartResponse>('/payment/', payload)
     return response.data
   } catch (error) {
     throw new Error(getApiErrorMessage(error))

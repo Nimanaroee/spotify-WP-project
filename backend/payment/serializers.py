@@ -1,11 +1,10 @@
-from decimal import Decimal
-
 from rest_framework import serializers
 
 from user.models import SubscriptionFee, User
 from user.services import SUBSCRIPTION_TIER_RANK
 
 from .models import SubscriptionPaymentLog
+from .services import get_gateway_amount
 
 
 class SubscriptionPaymentLogSerializer(serializers.ModelSerializer):
@@ -17,6 +16,9 @@ class SubscriptionPaymentLogSerializer(serializers.ModelSerializer):
             "duration_months",
             "account_type",
             "status",
+            "authority",
+            "ref_id",
+            "gateway_message",
             "subscription_applied_at",
             "created_at",
         )
@@ -27,11 +29,6 @@ class SubscriptionPaymentLogSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionPaymentCreateSerializer(serializers.Serializer):
-    amount = serializers.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        min_value=Decimal("0.01"),
-    )
     duration_months = serializers.ChoiceField(
         choices=(1, 3, 6, 12),
         help_text="One of: 1, 3, 6, 12.",
@@ -47,34 +44,38 @@ class SubscriptionPaymentCreateSerializer(serializers.Serializer):
     def validate(self, attrs):
         user = self.context["request"].user
         account_type = attrs["account_type"]
-        if SUBSCRIPTION_TIER_RANK[account_type] <= SUBSCRIPTION_TIER_RANK[
-            user.get_effective_subscription_tier()
-        ]:
+        if (
+            SUBSCRIPTION_TIER_RANK[account_type]
+            <= SUBSCRIPTION_TIER_RANK[user.get_effective_subscription_tier()]
+        ):
             raise serializers.ValidationError(
-                {"account_type": "You can only pay to upgrade to a higher subscription tier."}
+                {
+                    "account_type": "You can only pay to upgrade to a higher subscription tier."
+                }
             )
 
         try:
             fee = SubscriptionFee.objects.get(subscription_tier=account_type)
         except SubscriptionFee.DoesNotExist as exc:
             raise serializers.ValidationError(
-                {"account_type": "No monthly fee is configured for this subscription tier."}
+                {
+                    "account_type": "No monthly fee is configured for this subscription tier."
+                }
             ) from exc
 
-        expected_amount = fee.price_per_month * attrs["duration_months"]
-        if attrs["amount"] != expected_amount:
+        attrs["amount"] = fee.price_per_month * attrs["duration_months"]
+        if get_gateway_amount(attrs["amount"]) < 1000:
             raise serializers.ValidationError(
                 {
-                    "amount": (
-                        "Amount must equal the configured monthly fee multiplied by "
-                        f"the duration ({expected_amount})."
+                    "account_type": (
+                        "This subscription price is below Zarinpal's 1,000 IRR "
+                        "minimum payment amount."
                     )
                 }
             )
         return attrs
 
-    def create(self, validated_data):
-        return SubscriptionPaymentLog.objects.create(
-            user=self.context["request"].user,
-            **validated_data,
-        )
+
+class SubscriptionPaymentInitiateSerializer(serializers.Serializer):
+    id = serializers.IntegerField(read_only=True)
+    redirect_url = serializers.URLField(read_only=True)

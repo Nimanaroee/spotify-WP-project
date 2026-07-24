@@ -15,6 +15,6 @@ export interface Transaction extends Timestamps {
 }
 
 export interface PaymentInitResponse {
-  transaction_id: EntityId
+  id: EntityId
   redirect_url: string
 }

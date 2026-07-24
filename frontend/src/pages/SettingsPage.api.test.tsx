@@ -13,6 +13,7 @@ import {
   updateUserSubscriptionFromApi,
   updateUserPreferencesFromApi,
 } from '../lib/api/settingsService'
+import { redirectToPayment } from '../lib/payment/redirectToPayment'
 import { ROLES } from '../lib/constants/roles'
 import { ROUTES } from '../lib/constants/routes'
 import { useAuthStore } from '../store/authStore'
@@ -31,6 +32,10 @@ vi.mock('../lib/api/settingsService', () => ({
   getUserPreferencesFromApi: vi.fn(),
   updateUserSubscriptionFromApi: vi.fn(),
   updateUserPreferencesFromApi: vi.fn(),
+}))
+
+vi.mock('../lib/payment/redirectToPayment', () => ({
+  redirectToPayment: vi.fn(),
 }))
 
 const preferences = {
@@ -73,10 +78,10 @@ function TestProviders({ children }: { children: ReactNode }) {
   )
 }
 
-function renderSettingsPage() {
+function renderSettingsPage(initialEntry = ROUTES.SETTINGS) {
   return render(
     <TestProviders>
-      <MemoryRouter initialEntries={[ROUTES.SETTINGS]}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <Routes>
           <Route path={ROUTES.SETTINGS} element={<SettingsPage />} />
         </Routes>
@@ -94,6 +99,7 @@ describe('SettingsPage API integration', () => {
     vi.mocked(createSubscriptionPaymentFromApi).mockReset()
     vi.mocked(updateUserPreferencesFromApi).mockReset()
     vi.mocked(updateUserSubscriptionFromApi).mockReset()
+    vi.mocked(redirectToPayment).mockReset()
     vi.mocked(getUserPreferencesFromApi).mockResolvedValue(preferences)
     vi.mocked(getUserSubscriptionFromApi).mockResolvedValue({
       subscription_tier: 'silver',
@@ -116,9 +122,7 @@ describe('SettingsPage API integration', () => {
     )
     vi.mocked(createSubscriptionPaymentFromApi).mockResolvedValue({
       id: 42,
-      amount: 19.99,
-      duration_months: 1,
-      account_type: 'gold',
+      redirect_url: 'https://payment.zarinpal.com/pg/StartPay/A-test-authority',
     })
     vi.mocked(updateUserSubscriptionFromApi).mockResolvedValue({
       subscription_tier: 'gold',
@@ -144,6 +148,26 @@ describe('SettingsPage API integration', () => {
     expect(await screen.findByDisplayValue('20')).toBeInTheDocument()
     expect(getUserPreferencesFromApi).toHaveBeenCalledWith(1)
     expect(getUserSubscriptionFromApi).toHaveBeenCalled()
+  })
+
+  it('shows a cancellation message after returning from Zarinpal', async () => {
+    renderSettingsPage(`${ROUTES.SETTINGS}?payment=cancelled`)
+
+    expect(
+      await screen.findByText(
+        'Payment was cancelled. Your subscription was not changed.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('shows a success message after a verified payment', async () => {
+    renderSettingsPage(`${ROUTES.SETTINGS}?payment=success`)
+
+    expect(
+      await screen.findByText(
+        'Payment verified. Your subscription has been updated.',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('patches each preference immediately without a save button', async () => {
@@ -183,7 +207,7 @@ describe('SettingsPage API integration', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('logs payment then upgrades the selected subscription', async () => {
+  it('starts the selected subscription payment', async () => {
     const user = userEvent.setup()
     renderSettingsPage()
 
@@ -195,15 +219,13 @@ describe('SettingsPage API integration', () => {
     await user.click(screen.getByRole('button', { name: /upgrade!/i }))
 
     expect(createSubscriptionPaymentFromApi).toHaveBeenCalledWith({
-      amount: 19.99,
       duration_months: 1,
       account_type: 'gold',
     })
-    expect(updateUserSubscriptionFromApi).toHaveBeenCalledWith({
-      subscription_tier: 'gold',
-      duration_months: 1,
-      payment_log_id: 42,
-    })
-    expect(useAuthStore.getState().user?.subscription_tier).toBe('gold')
+    expect(updateUserSubscriptionFromApi).not.toHaveBeenCalled()
+    expect(redirectToPayment).toHaveBeenCalledWith(
+      'https://payment.zarinpal.com/pg/StartPay/A-test-authority',
+    )
+    expect(useAuthStore.getState().user?.subscription_tier).toBe('silver')
   })
 })

@@ -20,7 +20,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 
 import PageHeader from '../components/common/PageHeader'
 import ThemeToggleButton from '../components/common/ThemeToggleButton'
@@ -33,9 +33,9 @@ import {
   getSubscriptionFeesFromApi,
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
-  updateUserSubscriptionFromApi,
   updateUserPreferencesFromApi,
 } from '../lib/api/settingsService'
+import { redirectToPayment } from '../lib/payment/redirectToPayment'
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 import { useThemeMode } from '../theme/ThemeModeContext'
@@ -68,6 +68,7 @@ export default function SettingsPage() {
   const user = useAuthStore((state) => state.user)
   const setUser = useAuthStore((state) => state.setUser)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { language, setLanguage } = useAppLanguage()
   const { setThemeMode } = useThemeMode()
   const copy = getAppText(language)
@@ -84,6 +85,24 @@ export default function SettingsPage() {
   const [selectedDurationMonths, setSelectedDurationMonths] =
     useState<SubscriptionPeriodMonths>(1)
   const [message, setMessage] = useState<PageMessage | null>(null)
+
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment')
+    if (paymentStatus === 'cancelled') {
+      setMessage({
+        severity: 'error',
+        text: 'Payment was cancelled. Your subscription was not changed.',
+      })
+      navigate(ROUTES.SETTINGS, { replace: true })
+    }
+    if (paymentStatus === 'success') {
+      setMessage({
+        severity: 'success',
+        text: 'Payment verified. Your subscription has been updated.',
+      })
+      navigate(ROUTES.SETTINGS, { replace: true })
+    }
+  }, [navigate, searchParams])
 
   useEffect(() => {
     if (!user) {
@@ -275,22 +294,10 @@ export default function SettingsPage() {
     setMessage(null)
     try {
       const paymentLog = await createSubscriptionPaymentFromApi({
-        amount: finalFee ?? 0,
         duration_months: selectedDurationMonths,
         account_type: selectedSubscriptionTier,
       })
-      const subscription = await updateUserSubscriptionFromApi({
-        subscription_tier: selectedSubscriptionTier,
-        duration_months: selectedDurationMonths,
-        payment_log_id: paymentLog.id,
-      })
-      setUser({
-        ...currentUser,
-        subscription_tier: subscription.subscription_tier,
-        subscription_expires_at: subscription.expires_at,
-      })
-      setSubscriptionExpiresAt(subscription.expires_at)
-      setMessage({ severity: 'success', text: copy.settings.subscriptionSaved })
+      redirectToPayment(paymentLog.redirect_url)
     } catch (error) {
       setMessage({
         severity: 'error',
