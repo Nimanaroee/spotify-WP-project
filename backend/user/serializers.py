@@ -592,6 +592,14 @@ class ArtistRegistrationSerializer(BaseRegistrationSerializer):
         )
         artist.set_password(password)
         artist.save()
+
+        from notifications.services import notify_staff
+
+        notify_staff(
+            category="artist_verification_request",
+            title=f"New artist verification request: {artist.stage_name}",
+            link=f"/admin/verification/{artist.pk}",
+        )
         return artist
 
     def to_representation(self, instance):

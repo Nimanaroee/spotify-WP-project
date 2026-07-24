@@ -3,12 +3,13 @@ import {
   Box,
   Button,
   Chip,
+  CircularProgress,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import PageHeader from '../../components/common/PageHeader'
 import {
@@ -16,28 +17,57 @@ import {
   getAdminPageText,
 } from '../../lib/constants/adminPageText'
 import { ROUTES } from '../../lib/constants/routes'
-import { closeTicket, getTicket, replyToTicket } from '../../lib/mock/ticketService'
-import { useAuthStore } from '../../store/authStore'
+import { closeTicket, getTicket, replyToTicket } from '../../lib/api/managementService'
 import { useAppLanguage } from '../../theme/LanguageContext'
 import type { SupportTicket } from '../../types/support'
 
 export default function TicketDetailPage() {
   const { ticketId } = useParams()
-  const user = useAuthStore((state) => state.user)
   const { language } = useAppLanguage()
   const copy = getAdminPageText(language)
   const isRtl = language === 'fa'
   const parsedId = Number(ticketId)
   const [reply, setReply] = useState('')
   const [error, setError] = useState('')
-  const [ticketOverride, setTicketOverride] = useState<SupportTicket | null>(null)
+  const [ticket, setTicket] = useState<SupportTicket | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const ticket = useMemo(() => {
-    if (ticketOverride) {
-      return ticketOverride
+  useEffect(() => {
+    let cancelled = false
+    if (!Number.isFinite(parsedId)) {
+      setLoading(false)
+      return
     }
-    return Number.isFinite(parsedId) ? getTicket(parsedId) : null
-  }, [parsedId, ticketOverride])
+    setLoading(true)
+    getTicket(parsedId)
+      .then((result) => {
+        if (!cancelled) {
+          setTicket(result)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : copy.ticketDetail.notFound)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [parsedId])
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
 
   if (!ticket) {
     return (
@@ -55,30 +85,22 @@ export default function TicketDetailPage() {
   const currentTicket = ticket
   const submittedAt = formatAdminDateTime(ticket.created_at, language)
 
-  function handleSendReply(): void {
-    if (!user) {
-      return
-    }
+  async function handleSendReply(): Promise<void> {
     setError('')
     try {
-      const updated = replyToTicket(
-        currentTicket.id,
-        user.id,
-        user.display_name,
-        { message: reply },
-      )
+      const updated = await replyToTicket(currentTicket.id, { message: reply })
       setReply('')
-      setTicketOverride(updated)
+      setTicket(updated)
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.ticketDetail.failedSendReply)
     }
   }
 
-  function handleClose(): void {
+  async function handleClose(): Promise<void> {
     setError('')
     try {
-      const updated = closeTicket(currentTicket.id)
-      setTicketOverride(updated)
+      const updated = await closeTicket(currentTicket.id)
+      setTicket(updated)
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.ticketDetail.failedCloseTicket)
     }

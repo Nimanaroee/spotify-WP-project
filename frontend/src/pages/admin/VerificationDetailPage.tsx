@@ -3,6 +3,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -13,7 +14,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom'
 import { z } from 'zod'
@@ -24,8 +25,9 @@ import {
   approveRequest,
   getRequest,
   rejectRequest,
-} from '../../lib/mock/verificationService'
+} from '../../lib/api/managementService'
 import { useAppLanguage } from '../../theme/LanguageContext'
+import type { ArtistVerificationRequest } from '../../types/artist'
 
 type RejectFormValues = {
   reason: string
@@ -42,6 +44,8 @@ export default function VerificationDetailPage() {
   const [success, setSuccess] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [request, setRequest] = useState<ArtistVerificationRequest | null>(null)
+  const [loading, setLoading] = useState(true)
 
   const rejectSchema = useMemo(
     () =>
@@ -51,7 +55,28 @@ export default function VerificationDetailPage() {
     [copy.verification.rejectReasonRequired],
   )
 
-  const request = Number.isFinite(parsedId) ? getRequest(parsedId) : null
+  useEffect(() => {
+    let cancelled = false
+    if (!Number.isFinite(parsedId)) {
+      setLoading(false)
+      return
+    }
+    setLoading(true)
+    getRequest(parsedId)
+      .then((result) => {
+        if (!cancelled) {
+          setRequest(result)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [parsedId])
 
   const {
     register,
@@ -62,6 +87,14 @@ export default function VerificationDetailPage() {
     resolver: zodResolver(rejectSchema),
     defaultValues: { reason: '' },
   })
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
 
   if (!request) {
     return (
@@ -82,11 +115,11 @@ export default function VerificationDetailPage() {
   const currentRequest = request
   const statusLabel = copy.verification.statusLabels[request.verification_status]
 
-  function handleApprove(): void {
+  async function handleApprove(): Promise<void> {
     setError('')
     setSuccess('')
     try {
-      approveRequest(currentRequest.id)
+      await approveRequest(currentRequest.id)
       setSuccess(copy.verification.approvedSuccess)
       setConfirmOpen(false)
       setTimeout(() => {
@@ -98,11 +131,11 @@ export default function VerificationDetailPage() {
     }
   }
 
-  function onReject(values: RejectFormValues): void {
+  async function onReject(values: RejectFormValues): Promise<void> {
     setError('')
     setSuccess('')
     try {
-      rejectRequest(currentRequest.id, values.reason)
+      await rejectRequest(currentRequest.id, values.reason)
       setSuccess(copy.verification.rejectedSuccess)
       setRejectOpen(false)
       reset()

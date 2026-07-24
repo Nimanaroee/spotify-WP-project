@@ -2,6 +2,7 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
@@ -11,7 +12,7 @@ import {
   Tabs,
   Typography,
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import EditReleaseDialog from '../components/artwork/EditReleaseDialog'
 import PageHeader from '../components/common/PageHeader'
@@ -21,7 +22,10 @@ import EmptyState from '../components/common/EmptyState'
 import { getArtworkManagementPageText } from '../lib/constants/artworkManagementPageText'
 import { ROLES } from '../lib/constants/roles'
 import { ROUTES } from '../lib/constants/routes'
-import { getProfileByUserId, isVerifiedArtist } from '../lib/mock/artistProfileService'
+import {
+  getManageArtistProfileFromApi,
+  type PublicArtistProfileView,
+} from '../lib/api/profileService'
 import { deleteTrack, listArtistReleases } from '../lib/mock/musicService'
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
@@ -37,9 +41,38 @@ export default function ArtworkManagementPage() {
   const [error, setError] = useState<string | null>(null)
   const [editingTrack, setEditingTrack] = useState<Track | null>(null)
   const [deletingTrack, setDeletingTrack] = useState<Track | null>(null)
+  const [profile, setProfile] = useState<PublicArtistProfileView | null>(null)
+  const [profileLoading, setProfileLoading] = useState(true)
 
-  const profile = authUser ? getProfileByUserId(authUser.id) : null
-  const verified = authUser ? isVerifiedArtist(authUser.id) : false
+  useEffect(() => {
+    let cancelled = false
+    if (!authUser || authUser.role !== ROLES.ARTIST) {
+      setProfileLoading(false)
+      return
+    }
+    setProfileLoading(true)
+    getManageArtistProfileFromApi()
+      .then((result) => {
+        if (!cancelled) {
+          setProfile(result)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setProfile(null)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setProfileLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [authUser])
+
+  const verified = profile?.artist_profile.verification_status === 'approved'
 
   const releases = useMemo(() => {
     if (!authUser) {
@@ -54,6 +87,14 @@ export default function ArtworkManagementPage() {
 
   if (authUser.role !== ROLES.ARTIST) {
     return <Navigate to={ROUTES.HOME} replace />
+  }
+
+  if (profileLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    )
   }
 
   if (!verified) {
@@ -144,7 +185,7 @@ export default function ArtworkManagementPage() {
       ) : (
         <ReleaseForm
           artistId={authUser.id}
-          stageName={profile?.stage_name ?? authUser.display_name}
+          stageName={profile?.artist_profile.stage_name ?? authUser.display_name}
           onError={setError}
           onPublished={() => {
             refreshReleases()

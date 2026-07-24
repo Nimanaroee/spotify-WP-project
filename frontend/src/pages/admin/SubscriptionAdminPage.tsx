@@ -3,13 +3,14 @@ import {
   Alert,
   Box,
   Button,
+  CircularProgress,
   Grid,
   Paper,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { z } from 'zod'
@@ -19,14 +20,16 @@ import {
   formatAdminMonthYear,
   getAdminPageText,
 } from '../../lib/constants/adminPageText'
-import { getCurrentPeriod } from '../../lib/mock/auditService'
 import {
+  getCurrentPeriod,
   getPricing,
   getRevenueReport,
   updatePricing,
-} from '../../lib/mock/subscriptionAdminService'
+} from '../../lib/api/managementService'
 import { useAppLanguage } from '../../theme/LanguageContext'
 import type { SubscriptionTier } from '../../lib/constants/subscriptionLimits'
+import type { RevenueReport } from '../../types/admin'
+import type { SubscriptionPricing } from '../../types/subscription'
 
 type PricingFormValues = {
   silver_price: number
@@ -39,17 +42,22 @@ const TIER_COLORS: Record<SubscriptionTier, string> = {
   gold: '#ffd700',
 }
 
+const EMPTY_REPORT: RevenueReport = {
+  period_year: 0,
+  period_month: 0,
+  total_subscription_revenue: 0,
+  subscription_distribution: [],
+}
+
 export default function SubscriptionAdminPage() {
   const { language } = useAppLanguage()
   const copy = getAdminPageText(language)
   const period = getCurrentPeriod()
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
-  const [refreshKey, setRefreshKey] = useState(0)
-
-  void refreshKey
-  const pricing = getPricing()
-  const report = getRevenueReport(period.year, period.month)
+  const [loading, setLoading] = useState(true)
+  const [pricing, setPricing] = useState<SubscriptionPricing>({ silver_price: 0, gold_price: 0 })
+  const [report, setReport] = useState<RevenueReport>(EMPTY_REPORT)
 
   const pricingSchema = useMemo(
     () =>
@@ -59,6 +67,47 @@ export default function SubscriptionAdminPage() {
       }),
     [copy.subscriptions.goldPriceError, copy.subscriptions.silverPriceError],
   )
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    reset,
+  } = useForm<PricingFormValues>({
+    resolver: zodResolver(pricingSchema),
+    defaultValues: { silver_price: 0, gold_price: 0 },
+  })
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    Promise.all([getPricing(), getRevenueReport(period.year, period.month)])
+      .then(([pricingResult, reportResult]) => {
+        if (cancelled) {
+          return
+        }
+        setPricing(pricingResult)
+        setReport(reportResult)
+        reset({
+          silver_price: pricingResult.silver_price,
+          gold_price: pricingResult.gold_price,
+        })
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : copy.subscriptions.failedUpdate)
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const chartData = useMemo(
     () =>
@@ -71,30 +120,19 @@ export default function SubscriptionAdminPage() {
     [copy.subscriptions.tierLabels, report.subscription_distribution],
   )
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-    reset,
-  } = useForm<PricingFormValues>({
-    resolver: zodResolver(pricingSchema),
-    defaultValues: {
-      silver_price: pricing.silver_price,
-      gold_price: pricing.gold_price,
-    },
-  })
-
-  function onSubmit(values: PricingFormValues): void {
+  async function onSubmit(values: PricingFormValues): Promise<void> {
     setError('')
     setSuccess('')
     try {
-      const updated = updatePricing(values)
+      const updated = await updatePricing(values)
+      setPricing(updated)
       setSuccess(copy.subscriptions.updateSuccess)
       reset({
         silver_price: updated.silver_price,
         gold_price: updated.gold_price,
       })
-      setRefreshKey((k) => k + 1)
+      const refreshedReport = await getRevenueReport(period.year, period.month)
+      setReport(refreshedReport)
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.subscriptions.failedUpdate)
     }
@@ -106,6 +144,14 @@ export default function SubscriptionAdminPage() {
         formatAdminDateTime(pricing.updated_at, language),
       )
     : null
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+        <CircularProgress />
+      </Box>
+    )
+  }
 
   return (
     <Box>

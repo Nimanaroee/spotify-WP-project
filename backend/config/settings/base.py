@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'music',
     'payment',
     'management',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -113,5 +114,10 @@ SPECTACULAR_SETTINGS = {
         {'name': 'users', 'description': 'Profiles, preferences, subscription and follows.'},
         {'name': 'subscriptions', 'description': 'Public subscription tiers and monthly fees.'},
         {'name': 'payments', 'description': 'Subscription payment logs.'},
+        {'name': 'support', 'description': 'Support tickets (listener-facing and staff queue).'},
+        {'name': 'verification', 'description': 'Artist verification review queue (staff-only).'},
+        {'name': 'auditing', 'description': 'Monthly artist stream audits and payout settlement (staff-only).'},
+        {'name': 'subscription-admin', 'description': 'Subscription pricing and revenue reporting (admin-only).'},
+        {'name': 'notifications', 'description': "The authenticated user's notification inbox."},
     ],
 }
