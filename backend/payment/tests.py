@@ -1,13 +1,22 @@
+from decimal import Decimal
 from unittest.mock import patch
 
+from django.test import override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from management.models import SubscriptionPricing
 from user.models import User
 
 from .models import SubscriptionPaymentLog
-from .services import ZarinpalGatewayError, get_gateway_base_url
+from .services import (
+    ZarinpalGatewayError,
+    get_gateway_amount,
+    get_gateway_base_url,
+    request_payment,
+    verify_payment,
+)
 
 
 class SubscriptionPaymentApiTests(APITestCase):
@@ -38,6 +47,9 @@ class SubscriptionPaymentApiTests(APITestCase):
             "errors": [],
         }
         self.client.force_authenticate(self.user)
+        pricing = SubscriptionPricing.current()
+        pricing.silver_price = "12.50"
+        pricing.save(update_fields=("silver_price", "updated_at"))
 
         response = self.client.post(
             self.url,
@@ -54,6 +66,7 @@ class SubscriptionPaymentApiTests(APITestCase):
         self.assertEqual(payment_log.user, self.user)
         self.assertEqual(payment_log.status, SubscriptionPaymentLog.Status.PENDING)
         self.assertEqual(payment_log.authority, "A-test-authority")
+        self.assertEqual(str(payment_log.amount), "37.50")
         self.assertEqual(
             request_payment_mock.call_args.kwargs["amount"], payment_log.amount
         )
@@ -146,9 +159,20 @@ class SubscriptionPaymentApiTests(APITestCase):
         self.assertEqual(payment_log.status, SubscriptionPaymentLog.Status.FAILED)
 
 
-class SubscriptionFeeApiTests(APITestCase):
-    def test_subscription_fee_list_is_public_and_returns_seeded_fees(self):
-        response = self.client.get(reverse("subscription-fees"))
+class ZarinpalAmountTests(APITestCase):
+    def test_gateway_amount_converts_usd_to_rials(self):
+        self.assertEqual(get_gateway_amount(Decimal("12.50")), 23750000)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["count"], 3)
+    @override_settings(ZARINPAL_MERCHANT_ID="test-merchant")
+    @patch("payment.services._post_to_zarinpal")
+    def test_request_and_verification_send_rial_amounts(self, post_mock):
+        request_payment(
+            amount=Decimal("12.50"),
+            description="Silver subscription",
+            callback_url="https://example.com/callback",
+            metadata={},
+        )
+        verify_payment(amount=Decimal("12.50"), authority="A-test-authority")
+
+        self.assertEqual(post_mock.call_args_list[0].args[1]["amount"], 23750000)
+        self.assertEqual(post_mock.call_args_list[1].args[1]["amount"], 23750000)

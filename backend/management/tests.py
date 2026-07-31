@@ -1,5 +1,9 @@
+from decimal import Decimal
+from datetime import timedelta
+
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -330,7 +334,7 @@ class SubscriptionPricingApiTests(APITestCase):
         self.support = create_user("support@example.com", role=User.Role.SUPPORT)
         self.url = reverse("subscription-pricing")
 
-    def test_get_pricing_creates_default_singleton(self):
+    def test_get_pricing_creates_default_record(self):
         self.client.force_authenticate(self.admin)
 
         response = self.client.get(self.url)
@@ -339,6 +343,40 @@ class SubscriptionPricingApiTests(APITestCase):
         self.assertEqual(SubscriptionPricing.objects.count(), 1)
         for field in ("silver_price", "gold_price", "updated_at"):
             self.assertIn(field, response.data)
+
+    def test_public_fees_use_the_current_management_pricing(self):
+        self.client.force_authenticate(self.admin)
+        self.client.put(
+            self.url,
+            {"silver_price": "12.50", "gold_price": "24.99"},
+        )
+
+        response = self.client.get(reverse("subscription-fees"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["results"],
+            [
+                {"subscription_tier": "basic", "price_per_month": Decimal("0.00")},
+                {"subscription_tier": "silver", "price_per_month": Decimal("12.50")},
+                {"subscription_tier": "gold", "price_per_month": Decimal("24.99")},
+            ],
+        )
+
+    def test_current_pricing_uses_the_most_recently_updated_record(self):
+        old_pricing = SubscriptionPricing.objects.create(
+            silver_price="10.00",
+            gold_price="20.00",
+        )
+        SubscriptionPricing.objects.filter(pk=old_pricing.pk).update(
+            updated_at=timezone.now() - timedelta(days=1)
+        )
+        latest_pricing = SubscriptionPricing.objects.create(
+            silver_price="12.50",
+            gold_price="24.99",
+        )
+
+        self.assertEqual(SubscriptionPricing.current(), latest_pricing)
 
     def test_support_cannot_view_or_update_pricing(self):
         self.client.force_authenticate(self.support)

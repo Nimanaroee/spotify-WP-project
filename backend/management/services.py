@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
@@ -8,6 +10,38 @@ from user.models import Artist
 from .models import MonthlyArtistAudit, SubscriptionPricing, SupportTicket, TicketMessage
 
 User = get_user_model()
+
+SUBSCRIPTION_FEES = (
+    (User.SubscriptionTier.BASIC, Decimal("0.00")),
+    (User.SubscriptionTier.SILVER, "silver_price"),
+    (User.SubscriptionTier.GOLD, "gold_price"),
+)
+PAID_TIER_PRICE_FIELDS = {
+    User.SubscriptionTier.SILVER: "silver_price",
+    User.SubscriptionTier.GOLD: "gold_price",
+}
+
+
+def get_subscription_fees():
+    pricing = SubscriptionPricing.current()
+    return [
+        {
+            "subscription_tier": tier,
+            "price_per_month": (
+                default_price
+                if isinstance(default_price, Decimal)
+                else getattr(pricing, default_price)
+            ),
+        }
+        for tier, default_price in SUBSCRIPTION_FEES
+    ]
+
+
+def get_subscription_fee(subscription_tier):
+    if subscription_tier == User.SubscriptionTier.BASIC:
+        return Decimal("0.00")
+    pricing = SubscriptionPricing.current()
+    return getattr(pricing, PAID_TIER_PRICE_FIELDS[subscription_tier])
 
 
 @transaction.atomic

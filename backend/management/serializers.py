@@ -5,6 +5,15 @@ from user.models import Artist
 from .models import MonthlyArtistAudit, SubscriptionPricing, SupportTicket, TicketMessage
 
 
+class PublicSubscriptionFeeSerializer(serializers.Serializer):
+    subscription_tier = serializers.ChoiceField(choices=("basic", "silver", "gold"))
+    price_per_month = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        coerce_to_string=False,
+    )
+
+
 class TicketMessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(source="sender.display_name", read_only=True)
 

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from user.models import SubscriptionFee, User
+from management.services import get_subscription_fee
+from user.models import User
 from user.services import SUBSCRIPTION_TIER_RANK
 
 from .models import SubscriptionPaymentLog
@@ -54,16 +55,7 @@ class SubscriptionPaymentCreateSerializer(serializers.Serializer):
                 }
             )
 
-        try:
-            fee = SubscriptionFee.objects.get(subscription_tier=account_type)
-        except SubscriptionFee.DoesNotExist as exc:
-            raise serializers.ValidationError(
-                {
-                    "account_type": "No monthly fee is configured for this subscription tier."
-                }
-            ) from exc
-
-        attrs["amount"] = fee.price_per_month * attrs["duration_months"]
+        attrs["amount"] = get_subscription_fee(account_type) * attrs["duration_months"]
         if get_gateway_amount(attrs["amount"]) < 1000:
             raise serializers.ValidationError(
                 {

@@ -1,7 +1,7 @@
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema, extend_schema_view
 from rest_framework import generics, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,6 +17,7 @@ from .serializers import (
     RejectVerificationSerializer,
     ReplyToTicketSerializer,
     RevenueReportSerializer,
+    PublicSubscriptionFeeSerializer,
     SubscriptionPricingSerializer,
     SupportTicketDetailSerializer,
     SupportTicketListSerializer,
@@ -254,7 +255,7 @@ class MonthlyAuditSettleView(APIView):
     get=extend_schema(
         tags=schema.SUBSCRIPTION_ADMIN_TAG,
         summary="Get subscription pricing",
-        description="Returns the single subscription pricing record (created on first access). Admin-only.",
+        description="Returns the most recently updated subscription pricing record. Admin-only.",
         responses={200: SubscriptionPricingSerializer, 403: schema.FORBIDDEN_RESPONSE},
     ),
     put=extend_schema(
@@ -286,6 +287,23 @@ class SubscriptionPricingView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return SubscriptionPricing.current()
+
+
+@extend_schema(
+    tags=["subscriptions"],
+    summary="List current subscription monthly fees",
+    description=(
+        "Return the current Basic, Silver, and Gold monthly fees configured by "
+        "management. This endpoint is public so pricing can be shown before purchase."
+    ),
+    responses=PublicSubscriptionFeeSerializer(many=True),
+)
+class PublicSubscriptionFeeListView(generics.ListAPIView):
+    permission_classes = (AllowAny,)
+    serializer_class = PublicSubscriptionFeeSerializer
+
+    def get_queryset(self):
+        return services.get_subscription_fees()
 
 
 @extend_schema(

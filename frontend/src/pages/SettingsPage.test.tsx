@@ -184,6 +184,19 @@ describe('SettingsPage', () => {
     expect(screen.getByRole('button', { name: /upgrade!/i })).toBeInTheDocument()
   })
 
+  it('does not show an expiration for the basic subscription', async () => {
+    vi.mocked(getUserSubscriptionFromApi).mockResolvedValue({
+      subscription_tier: 'basic',
+      expires_at: '2026-08-17T10:00:00.000Z',
+    })
+    renderSettingsPage()
+
+    await screen.findByRole('combobox', { name: /subscription type/i })
+
+    expect(screen.queryByText(/expires on/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/no expiration/i)).not.toBeInTheDocument()
+  })
+
   it('allows support staff to open settings', () => {
     useAuthStore.setState({
       user: {

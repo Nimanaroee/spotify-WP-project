@@ -94,5 +94,5 @@ class SubscriptionPricing(models.Model):
 
     @classmethod
     def current(cls):
-        pricing, _ = cls.objects.get_or_create(pk=1)
-        return pricing
+        pricing = cls.objects.order_by("-updated_at", "-pk").first()
+        return pricing or cls.objects.create()

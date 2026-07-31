@@ -316,8 +316,7 @@ class SubscriptionApiTests(APITestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data["subscription_tier"], "basic")
-        self.assertIsNotNone(response.data["expires_at"])
+        self.assertEqual(response.data, {"subscription_tier": "basic"})
 
     def test_put_activates_subscription_with_matching_payment_log(self):
         self.client.force_authenticate(self.user)

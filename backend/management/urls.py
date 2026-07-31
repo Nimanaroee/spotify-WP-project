@@ -4,6 +4,7 @@ from .views import (
     CreateTicketView,
     MonthlyAuditListView,
     MonthlyAuditSettleView,
+    PublicSubscriptionFeeListView,
     RevenueReportView,
     SubscriptionPricingView,
     TicketCloseView,
@@ -17,6 +18,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("subscription/", PublicSubscriptionFeeListView.as_view(), name="subscription-fees"),
     path("tickets/", CreateTicketView.as_view(), name="create-ticket"),
     path("management/tickets/", TicketListView.as_view(), name="ticket-list"),
     path("management/tickets/<int:pk>/", TicketDetailView.as_view(), name="ticket-detail"),

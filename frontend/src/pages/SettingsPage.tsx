@@ -151,9 +151,9 @@ export default function SettingsPage() {
           setUser({
             ...user,
             subscription_tier: subscription.subscription_tier,
-            subscription_expires_at: subscription.expires_at,
+            subscription_expires_at: subscription.expires_at ?? null,
           })
-          setSubscriptionExpiresAt(subscription.expires_at)
+          setSubscriptionExpiresAt(subscription.expires_at ?? null)
           setSubscriptionFees(fees)
           if (subscription.subscription_tier === 'basic') {
             setSelectedSubscriptionTier('silver')
@@ -457,11 +457,14 @@ export default function SettingsPage() {
                     </Typography>
                     <Typography sx={{ fontWeight: 600 }}>
                       {copy.settings.tierOptions[subscriptionTier]}
-                      {subscriptionExpiresAt
-                        ? ` · ${copy.settings.expiresAt} ${new Date(
-                            subscriptionExpiresAt,
-                          ).toLocaleDateString(language === 'fa' ? 'fa-IR' : 'en-US')}`
-                        : ` · ${copy.settings.noExpiration}`}
+                      {subscriptionTier !== 'basic' &&
+                        (subscriptionExpiresAt
+                          ? ` · ${copy.settings.expiresAt} ${new Date(
+                              subscriptionExpiresAt,
+                            ).toLocaleDateString(
+                              language === 'fa' ? 'fa-IR' : 'en-US',
+                            )}`
+                          : ` · ${copy.settings.noExpiration}`)}
                     </Typography>
                   </Box>
                   {availableSubscriptionTiers.length > 0 ? (

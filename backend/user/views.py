@@ -10,7 +10,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from . import schema
-from .models import Artist, Preferences, SubscriptionFee
+from .models import Artist, Preferences
 from .serializers import (
     ArtistProfileUpdateSerializer,
     ArtistRegistrationSerializer,
@@ -25,7 +25,6 @@ from .serializers import (
     ProfileUpdateSerializer,
     PublicProfileReadSerializer,
     SubscriptionReadSerializer,
-    SubscriptionFeeSerializer,
     SubscriptionUpdateSerializer,
     TokenResponseSerializer,
 )
@@ -325,7 +324,8 @@ class SubscriptionView(generics.RetrieveUpdateAPIView):
         summary="Get own subscription",
         description=(
             "Return the authenticated user's effective subscription tier and "
-            "expiration. Expired paid subscriptions are returned as `basic`."
+            "expiration for paid subscriptions. Expired paid subscriptions are "
+            "returned as `basic` without an expiration."
         ),
         responses=SubscriptionReadSerializer,
         examples=schema.SUBSCRIPTION_EXAMPLES,
@@ -355,24 +355,6 @@ class SubscriptionView(generics.RetrieveUpdateAPIView):
                 context=self.get_serializer_context(),
             ).data
         )
-
-
-@extend_schema(tags=["subscriptions"])
-class SubscriptionFeeListView(generics.ListAPIView):
-    serializer_class = SubscriptionFeeSerializer
-    permission_classes = (AllowAny,)
-    queryset = SubscriptionFee.objects.all()
-
-    @extend_schema(
-        summary="List subscription monthly fees",
-        description=(
-            "Return the monthly fee configured for each subscription tier. "
-            "This endpoint is public so pricing can be shown before purchase."
-        ),
-        responses=SubscriptionFeeSerializer(many=True),
-    )
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
 
 
 @extend_schema(

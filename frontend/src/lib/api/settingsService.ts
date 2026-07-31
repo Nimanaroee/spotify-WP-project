@@ -26,7 +26,7 @@ interface PreferencesResponse {
 
 interface SubscriptionResponse {
   subscription_tier: SubscriptionTier
-  expires_at: string | null
+  expires_at?: string | null
 }
 
 interface SubscriptionFeeListResponse {

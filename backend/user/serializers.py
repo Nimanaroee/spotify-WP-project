@@ -8,7 +8,7 @@ from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from drf_spectacular.utils import extend_schema_field
 
-from .models import Artist, Preferences, SubscriptionFee
+from .models import Artist, Preferences
 from .services import activate_subscription, update_artist_profile, update_profile
 
 User = get_user_model()
@@ -265,6 +265,16 @@ class SubscriptionReadSerializer(serializers.ModelSerializer):
         fields = ("subscription_tier", "expires_at")
         read_only_fields = fields
 
+    def get_fields(self):
+        fields = super().get_fields()
+        if (
+            self.instance is not None
+            and self.instance.get_effective_subscription_tier()
+            == User.SubscriptionTier.BASIC
+        ):
+            fields.pop("expires_at")
+        return fields
+
     @extend_schema_field(serializers.CharField())
     def get_subscription_tier(self, user):
         return user.get_effective_subscription_tier()
@@ -298,19 +308,6 @@ class SubscriptionUpdateSerializer(serializers.Serializer):
 
     def create(self, validated_data):
         raise NotImplementedError
-
-
-class SubscriptionFeeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SubscriptionFee
-        fields = (
-            "subscription_tier",
-            "price_per_month",
-        )
-        read_only_fields = fields
-        extra_kwargs = {
-            "price_per_month": {"coerce_to_string": False},
-        }
 
 
 class PublicArtistProfileSerializer(serializers.ModelSerializer):
