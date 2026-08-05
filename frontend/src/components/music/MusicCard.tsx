@@ -113,7 +113,8 @@ export default function MusicCard({ item, onTriggerPlayer, onManagePlaylists }: 
       </Menu>
 
       <Box sx={{ p: 2 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={0.5}>
+        {/* FIX: Moved justifyContent, alignItems, and mb into the sx prop */}
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
           <Typography variant="subtitle1" noWrap sx={{ fontWeight: 700, flex: 1, cursor: 'pointer' }} onClick={handleCardClick}>
             {item.title}
           </Typography>
