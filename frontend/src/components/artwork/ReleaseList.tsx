@@ -10,8 +10,7 @@ import {
 import { Pencil, Play, Trash2 } from 'lucide-react'
 import ScrollableTableContainer from '../common/ScrollableTableContainer'
 import { getArtworkManagementPageText } from '../../lib/constants/artworkManagementPageText'
-import { getTrackStats } from '../../lib/mock/musicService'
-import { isPlayableMediaUrl } from '../../lib/mock/mediaCache'
+import { REVENUE_PER_STREAM } from '../../lib/constants/musicGenres' // <--- Updated import
 import { usePlayerStore } from '../../store/playerStore'
 import { useAppLanguage } from '../../theme/LanguageContext'
 import type { Track } from '../../types/music'
@@ -28,7 +27,6 @@ function formatRevenue(value: number): string {
 }
 
 export default function ReleaseList({
-  artistId,
   releases,
   onEdit,
   onDelete,
@@ -51,9 +49,12 @@ export default function ReleaseList({
       </TableHead>
       <TableBody>
         {releases.map((track) => {
-          const stats = getTrackStats(track.id, artistId)
           const typeLabel =
             track.release_type === 'album' ? copy.list.album : copy.list.single
+
+          const streamCount = track.stream_count ?? 0;
+          const listenerCount = track.listener_count ?? 0;
+          const revenue = streamCount * REVENUE_PER_STREAM;
 
           return (
             <TableRow key={track.id} hover>
@@ -64,15 +65,15 @@ export default function ReleaseList({
               <TableCell>
                 <Chip label={typeLabel} size="small" variant="outlined" />
               </TableCell>
-              <TableCell align="right">{stats.listener_count}</TableCell>
-              <TableCell align="right">{stats.stream_count}</TableCell>
-              <TableCell align="right">{formatRevenue(stats.revenue)}</TableCell>
+              <TableCell align="right">{listenerCount}</TableCell>
+              <TableCell align="right">{streamCount}</TableCell>
+              <TableCell align="right">{formatRevenue(revenue)}</TableCell>
               <TableCell align="right">
                 <Tooltip title={copy.list.play}>
                   <span>
                     <IconButton
                       aria-label={copy.list.play}
-                      disabled={!isPlayableMediaUrl(track.audio_url)}
+                      disabled={!track.audio_url}
                       onClick={() => playTrack(track, releases)}
                     >
                       <Play size={18} />

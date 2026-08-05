@@ -18,6 +18,7 @@ export interface User extends Timestamps {
   followers_count?: number
   following_count?: number
   daily_streams_count?: number
+  is_verified?: boolean
 }
 
 export interface UserSummary {

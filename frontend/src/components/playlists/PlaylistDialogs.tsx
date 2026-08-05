@@ -10,12 +10,12 @@ import {
   Stack,
   Divider,
 } from '@mui/material';
-import { Search, Plus, Minus, Disc3 } from 'lucide-react';
+import { Search, Disc3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useAppLanguage } from '../../theme/LanguageContext';
 import { getPlaylistsPageText } from '../../lib/constants/playlistsPageText';
-import { searchCatalog } from '../../lib/mock/musicService';
-import { toggleTrackInPlaylist } from '../../lib/mock/playlistService';
+import { searchCatalog } from '../../lib/api/catalogService';
+import { toggleTrackInPlaylist } from '../../lib/api/playlistService';
 import type { Playlist, Track } from '../../types';
 
 interface PlaylistEditDialogProps {
@@ -106,11 +106,10 @@ export function PlaylistDeleteDialog({ open, playlist, onClose, onConfirm }: Pla
 interface AddSongDialogProps {
   open: boolean;
   playlist: Playlist | null;
-  userId: number | null;
   onClose: () => void;
 }
 
-export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialogProps) {
+export function AddSongDialog({ open, playlist, onClose }: AddSongDialogProps) {
   const { language } = useAppLanguage();
   const copy = getPlaylistsPageText(language);
   const [query, setQuery] = useState('');
@@ -125,10 +124,14 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
     }
   }, [open, playlist]);
 
-  function fetchResults(searchQuery: string) {
-    const catalogData = searchCatalog(searchQuery, 'listener_count');
-    const tracksOnly = catalogData.filter((item) => item.itemType === 'track') as Track[];
-    setResults(tracksOnly);
+  async function fetchResults(searchQuery: string) {
+    try {
+      const catalogData = await searchCatalog(searchQuery, 'listener_count');
+      const tracksOnly = catalogData.filter((item: any) => item.itemType === 'track');
+      setResults(tracksOnly);
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -137,17 +140,18 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
     fetchResults(value);
   }
 
-  function handleToggleTrack(trackId: number, isCurrentlyInList: boolean) {
-    if (!playlist || !userId) return;
+  async function handleToggleTrack(trackId: number, isCurrentlyInList: boolean) {
+    if (!playlist) return;
 
     const newState = !isCurrentlyInList;
     const nextSet = new Set(inPlaylistIds);
     if (newState) nextSet.add(trackId);
     else nextSet.delete(trackId);
+    
     setInPlaylistIds(nextSet);
 
     try {
-      toggleTrackInPlaylist(userId, playlist.id, trackId, newState);
+      await toggleTrackInPlaylist(playlist.id, trackId, newState);
     } catch (err) {
       if (isCurrentlyInList) nextSet.add(trackId);
       else nextSet.delete(trackId);
@@ -170,7 +174,7 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
             slotProps={{
               input: {
                 startAdornment: <Search size={20} className="mr-2 opacity-50" />,
-                sx: { borderRadius: 3 } // Rounded search bar
+                sx: { borderRadius: 3 }
               },
             }}
           />
@@ -220,11 +224,11 @@ export function AddSongDialog({ open, playlist, userId, onClose }: AddSongDialog
                       variant={inList ? "text" : "outlined"}
                       size="small"
                       color={inList ? "error" : "primary"}
-                      onClick={() => handleToggleTrack(track.id, inList)}
+                      onClick={() => void handleToggleTrack(track.id, inList)}
                       sx={{ 
                         borderRadius: 8, 
                         fontWeight: 700,
-                        minWidth: { xs: 90, sm: 110 }, // Prevents buttons from jittering in size
+                        minWidth: { xs: 90, sm: 110 },
                         ml: language === 'fa' ? 0 : 2,
                         mr: language === 'fa' ? 2 : 0
                       }}

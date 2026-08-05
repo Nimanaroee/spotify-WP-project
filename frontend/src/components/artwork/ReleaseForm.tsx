@@ -21,9 +21,9 @@ import AudioUploadField from './AudioUploadField'
 import {
   parseCoArtists,
   readAudioDurationSeconds,
-  uploadCoverFile,
+  validateAndReturnCoverFile,
 } from '../../lib/artwork/fileUpload'
-import { publishRelease } from '../../lib/mock/musicService'
+import { publishRelease } from '../../lib/api/musicService' // <--- Updated import
 import { useAppLanguage } from '../../theme/LanguageContext'
 import type { PublishReleasePayload } from '../../types/music'
 import {
@@ -77,19 +77,18 @@ export default function ReleaseForm({
 
   const { fields, append, remove } = useFieldArray({ control, name: 'tracks' })
   const releaseType = watch('release_type')
-  const coverArtValue = watch('cover_art')
 
-  async function handleCoverUpload(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ): Promise<void> {
+  function handleCoverUpload(event: React.ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0]
-    if (!file) {
-      return
-    }
+    if (!file) return
+    
     try {
-      const dataUrl = await uploadCoverFile(file, copy.upload.errors)
-      setValue('cover_art', dataUrl)
-      setCoverPreview(dataUrl)
+      const validFile = validateAndReturnCoverFile(file, copy.upload.errors as any)
+      setValue('cover_art', validFile)
+      
+      if (coverPreview) URL.revokeObjectURL(coverPreview)
+      setCoverPreview(URL.createObjectURL(validFile))
+      
       onSuccess(copy.messages.coverReady)
     } catch (error) {
       onError(error instanceof Error ? error.message : copy.upload.errors.uploadFailed)
@@ -98,11 +97,11 @@ export default function ReleaseForm({
 
   async function handleAudioUploaded(
     index: number,
-    dataUrl: string,
+    file: File,
     fileName: string,
   ): Promise<void> {
-    setValue(`tracks.${index}.audio_file`, dataUrl, { shouldValidate: true })
-    const durationSeconds = await readAudioDurationSeconds(dataUrl)
+    setValue(`tracks.${index}.audio_file`, file, { shouldValidate: true })
+    const durationSeconds = await readAudioDurationSeconds(file)
     if (durationSeconds > 0) {
       setValue(`tracks.${index}.duration_seconds`, durationSeconds)
     }
@@ -127,17 +126,17 @@ export default function ReleaseForm({
           duration_seconds: track.duration_seconds,
         })),
       }
+      
       await publishRelease(artistId, stageName, payload)
+      
       reset(defaultValues)
+      if (coverPreview) URL.revokeObjectURL(coverPreview)
       setCoverPreview(null)
       setUploadedAudioNames({})
+      
       onSuccess(copy.messages.published)
       onPublished()
     } catch (error) {
-      if (error instanceof Error && /storage quota exceeded/i.test(error.message)) {
-        onError(copy.messages.storageQuotaExceeded)
-        return
-      }
       onError(error instanceof Error ? error.message : 'Failed to publish release.')
     }
   }
@@ -199,11 +198,11 @@ export default function ReleaseForm({
             {copy.form.uploadCover}
             <input hidden accept="image/*" type="file" onChange={handleCoverUpload} />
           </Button>
-          {coverPreview || coverArtValue ? (
+          {coverPreview ? (
             <Box
               alt={copy.form.coverArt}
               component="img"
-              src={coverPreview ?? coverArtValue}
+              src={coverPreview}
               sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1 }}
             />
           ) : null}
@@ -228,8 +227,8 @@ export default function ReleaseForm({
               errorMessage={errors.tracks?.[index]?.audio_file?.message ?? null}
               uploadedFileName={uploadedAudioNames[index] ?? null}
               onError={onError}
-              onUploaded={(dataUrl, fileName) =>
-                void handleAudioUploaded(index, dataUrl, fileName)
+              onUploaded={(file, fileName) =>
+                void handleAudioUploaded(index, file, fileName)
               }
             />
             <TextField
@@ -262,7 +261,7 @@ export default function ReleaseForm({
         ) : null}
 
         <Button disabled={isSubmitting} sx={{ width: { xs: '100%', sm: 'auto' } }} type="submit" variant="contained">
-          {copy.form.publish}
+          {isSubmitting ? copy.form.uploading : copy.form.publish}
         </Button>
       </Stack>
     </Box>

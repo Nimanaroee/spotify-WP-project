@@ -15,14 +15,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAlbumsPageText } from '../../lib/constants/albumsPageText';
 import { ROUTES, userProfilePath } from '../../lib/constants/routes';
-import { getUserById } from '../../lib/mock/userProfileService';
 import { useAuthStore } from '../../store/authStore';
 import { useAppLanguage } from '../../theme/LanguageContext';
-import type { CatalogItem } from '../../lib/mock/musicService';
 import type { Track } from '../../types';
 
 interface MusicCardProps {
-  item: CatalogItem;
+  item: any;
   onTriggerPlayer: (track: Track) => void;
   onManagePlaylists: (track: Track) => void;
 }
@@ -58,8 +56,7 @@ export default function MusicCard({ item, onTriggerPlayer, onManagePlaylists }: 
 
   const goToArtist = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const artist = getUserById(item.artist_id);
-    navigate(userProfilePath(artist?.username ?? String(item.artist_id)));
+    navigate(userProfilePath(item.artist_username ?? String(item.artist_id)));
   };
 
   const goToAlbum = (e: React.MouseEvent, targetAlbumId: number) => {
@@ -94,7 +91,6 @@ export default function MusicCard({ item, onTriggerPlayer, onManagePlaylists }: 
           </Box>
         </CardActionArea>
         
-        {/* Hover-independent Context Action - Keep pinned top right on visual */}
         {!isAlbum && (
            <IconButton
              size="small"
@@ -131,7 +127,7 @@ export default function MusicCard({ item, onTriggerPlayer, onManagePlaylists }: 
           <Chip label={isAlbum ? copy.card.album : copy.card.single} size="small" variant="outlined" />
         </Stack>
 
-        {(!isAlbum && 'album_id' in item && item.album_id) ? (
+        {(!isAlbum && item.album_id) ? (
           <Typography variant="caption" display="block" mt={1} color="text.secondary" onClick={(e) => goToAlbum(e, item.album_id as number)} sx={{ cursor: 'pointer', '&:hover': { textDecoration: 'underline' }}}>
             {item.album_name}
           </Typography>

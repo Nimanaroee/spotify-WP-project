@@ -4,7 +4,7 @@ const currentYear = new Date().getFullYear()
 
 export const releaseTrackSchema = z.object({
   title: z.string().min(1, 'Track title is required.'),
-  audio_file: z.string().min(1, 'Audio file is required.'),
+  audio_file: z.any().refine(val => val, 'Audio file is required.'), // Changed to accept File
   lyrics: z.string().optional(),
   duration_seconds: z.number().optional(),
 })
@@ -19,7 +19,7 @@ export const releaseFormSchema = z
       .min(1900, 'Enter a valid year.')
       .max(currentYear, 'Release year cannot be in the future.'),
     co_artists: z.string().optional(),
-    cover_art: z.string().optional(),
+    cover_art: z.any().optional(), // Changed to accept File
     tracks: z.array(releaseTrackSchema).min(1, 'At least one track is required.'),
   })
   .superRefine((values, ctx) => {
@@ -48,8 +48,8 @@ export const editTrackSchema = z.object({
     .max(currentYear, 'Release year cannot be in the future.'),
   co_artists: z.string().optional(),
   lyrics: z.string().optional(),
-  cover_art: z.string().optional(),
-  audio_url: z.string().optional(),
+  cover_art: z.any().optional(), // Changed to accept File
+  audio_url: z.any().optional(), // Changed to accept File
 })
 
 export type ReleaseFormValues = z.infer<typeof releaseFormSchema>

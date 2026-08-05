@@ -19,9 +19,9 @@ import AddToPlaylistDialog from '../components/music/AddToPlaylistDialog';
 import EmptyState from '../components/common/EmptyState';
 import { getAlbumsPageText } from '../lib/constants/albumsPageText';
 import { ROUTES } from '../lib/constants/routes';
-import { getAlbumById } from '../lib/mock/musicService';
+import { getAlbumById } from '../lib/api/catalogService';
 import { useAuthStore } from '../store/authStore';
-import { usePlayerStore } from '../store/playerStore'; // EXPOSE ZUSTAND ROOT HOOK
+import { usePlayerStore } from '../store/playerStore'; 
 import { useAppLanguage } from '../theme/LanguageContext';
 import type { Album, Track } from '../types';
 
@@ -35,7 +35,7 @@ function formatDuration(seconds?: number): string {
 export default function AlbumDetailPage() {
   const { albumId } = useParams();
   const user = useAuthStore((state) => state.user);
-  const playTrack = usePlayerStore((state) => state.playTrack); // RETRIEVE ZUSTAND HANDLER HOOK
+  const playTrack = usePlayerStore((state) => state.playTrack);
   
   const { language } = useAppLanguage();
   const copy = getAlbumsPageText(language);
@@ -48,14 +48,10 @@ export default function AlbumDetailPage() {
   const [managingTrack, setManagingTrack] = useState<Track | null>(null);
 
   useEffect(() => {
-    try {
-      if (albumId) {
-        setAlbumData(getAlbumById(Number(albumId)));
-      }
-    } catch (e) {
-      setError(copy.messages.errorFetching);
+    if (albumId) {
+      getAlbumById(Number(albumId)).then(setAlbumData).catch(err => setError(err.message));
     }
-  }, [albumId, copy.messages.errorFetching]);
+  }, [albumId]);
 
   if (!user) return <Navigate to={ROUTES.LOGIN} replace />;
   if (error) {
@@ -76,7 +72,6 @@ export default function AlbumDetailPage() {
   };
 
   const handlePlayerTrigger = (track: Track) => {
-     // Trigger targeted logic using actual fetched variables natively parsing inside closure memory parameters securely alongside track map context limits cleanly matching 8.2 specific criteria specs seamlessly!
      playTrack(track, tracks);
   };
 
@@ -94,7 +89,6 @@ export default function AlbumDetailPage() {
            {copy.card.album}
         </Button>
 
-        {/* Hero Section */}
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={4} mb={6} alignItems={{ xs: 'center', md: 'flex-end' }}>
            <Box
               sx={{
@@ -129,13 +123,11 @@ export default function AlbumDetailPage() {
 
         <Divider sx={{ mb: 2 }} />
 
-        {/* Listing Block */}
         <Paper elevation={0} sx={{ bgcolor: 'transparent' }}>
           {tracks.length === 0 ? (
              <EmptyState title={copy.detail.emptyAlbum} />
           ) : (
              <Stack spacing={1}>
-                {/* Headers */}
                 <Box display="flex" px={2} pb={1}>
                   <Typography variant="caption" sx={{ width: 40, color: 'text.secondary' }}>#</Typography>
                   <Typography variant="caption" sx={{ flex: 1, color: 'text.secondary' }}>{copy.detail.trackTitle}</Typography>

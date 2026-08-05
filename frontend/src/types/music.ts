@@ -12,6 +12,7 @@ export interface TrackSummary {
   title: string
   artist_id: EntityId
   artist_name: string
+  artist_username?: string
   album_id?: EntityId | null
   album_name?: string | null
   cover_art?: string | null
@@ -68,13 +69,13 @@ export interface PublishReleasePayload {
   genre?: string
   release_year?: number
   co_artists?: string[]
-  cover_art?: string
+  cover_art?: string | File
   tracks: PublishTrackPayload[]
 }
 
 export interface PublishTrackPayload {
   title: string
-  audio_file?: string
+  audio_file?: string | File
   lyrics?: string
   duration_seconds?: number
 }
@@ -92,8 +93,8 @@ export interface UpdateTrackPayload {
   genre?: string
   release_year?: number
   co_artists?: string[]
-  cover_art?: string
-  audio_url?: string
+  cover_art?: string | File
+  audio_url?: string | File
 }
 
 export interface UpdateReleasePayload extends UpdateTrackPayload {}

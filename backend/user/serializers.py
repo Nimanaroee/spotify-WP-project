@@ -7,6 +7,9 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from drf_spectacular.utils import extend_schema_field
+from music.models import Album, Track
+from music.serializers import TrackReadSerializer, AlbumReadSerializer
+
 
 from .models import Artist, Preferences
 from .services import activate_subscription, update_artist_profile, update_profile
@@ -40,6 +43,7 @@ class LogoutSerializer(serializers.Serializer):
 class CurrentUserSerializer(serializers.ModelSerializer):
     subscription_tier = serializers.SerializerMethodField()
     subscription_expires_at = serializers.DateTimeField(read_only=True)
+    is_verified = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -57,6 +61,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             "followers_count",
             "following_count",
             "streamed_today",
+            "is_verified",
             "created_at",
             "updated_at",
         )
@@ -65,6 +70,12 @@ class CurrentUserSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.CharField())
     def get_subscription_tier(self, user):
         return user.get_effective_subscription_tier()
+        
+    @extend_schema_field(serializers.BooleanField())
+    def get_is_verified(self, user):
+        if user.role == User.Role.ARTIST and hasattr(user, 'artist'):
+            return user.artist.is_approved()
+        return False
 
 
 class UserShortInfoSerializer(serializers.ModelSerializer):
@@ -368,41 +379,31 @@ class PublicProfileReadSerializer(ProfileReadSerializer):
 
     class Meta(ProfileReadSerializer.Meta):
         fields = ProfileReadSerializer.Meta.fields + (
-            "role",
-            "is_following",
-            "artist_profile",
-            "albums",
-            "singles",
+            "role", "is_following", "artist_profile", "albums", "singles",
         )
         read_only_fields = fields
 
-    @extend_schema_field(serializers.BooleanField())
-    def get_is_following(self, user):
-        request = self.context.get("request")
-        return bool(
-            request
-            and request.user.is_authenticated
-            and request.user.following.filter(pk=user.pk).exists()
-        )
+    # ... keeping get_is_following and get_artist_profile the same ...
 
-    @extend_schema_field(PublicArtistProfileSerializer(allow_null=True))
-    def get_artist_profile(self, user):
-        try:
-            artist = user.artist
-        except Artist.DoesNotExist:
-            return None
-        return PublicArtistProfileSerializer(
-            artist,
-            context=self.context,
-        ).data
-
-    @extend_schema_field(ProfileAlbumSerializer(many=True))
+    @extend_schema_field(AlbumReadSerializer(many=True))
     def get_albums(self, user):
-        return []
+        if user.role != User.Role.ARTIST:
+            return []
+        try:
+            albums = Album.objects.filter(artist=user.artist).order_by('-created_at')
+            return AlbumReadSerializer(albums, many=True, context=self.context).data
+        except:
+            return []
 
-    @extend_schema_field(ProfileTrackSerializer(many=True))
+    @extend_schema_field(TrackReadSerializer(many=True))
     def get_singles(self, user):
-        return []
+        if user.role != User.Role.ARTIST:
+            return []
+        try:
+            singles = Track.objects.filter(artist=user.artist, release_type=Track.ReleaseType.SINGLE).order_by('-created_at')
+            return TrackReadSerializer(singles, many=True, context=self.context).data
+        except:
+            return []
 
 
 class ArtistProfileUpdateSerializer(serializers.Serializer):

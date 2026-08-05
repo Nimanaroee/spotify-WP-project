@@ -12,7 +12,7 @@ import {
   Tabs,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import EditReleaseDialog from '../components/artwork/EditReleaseDialog'
 import PageHeader from '../components/common/PageHeader'
@@ -26,7 +26,7 @@ import {
   getManageArtistProfileFromApi,
   type PublicArtistProfileView,
 } from '../lib/api/profileService'
-import { deleteTrack, listArtistReleases } from '../lib/mock/musicService'
+import { deleteTrack, listArtistReleases } from '../lib/api/musicService' 
 import { useAuthStore } from '../store/authStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 import type { Track } from '../types/music'
@@ -36,60 +36,59 @@ export default function ArtworkManagementPage() {
   const { language } = useAppLanguage()
   const copy = getArtworkManagementPageText(language)
   const [tab, setTab] = useState(0)
-  const [refreshKey, setRefreshKey] = useState(0)
+  
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editingTrack, setEditingTrack] = useState<Track | null>(null)
   const [deletingTrack, setDeletingTrack] = useState<Track | null>(null)
   const [profile, setProfile] = useState<PublicArtistProfileView | null>(null)
+  
   const [profileLoading, setProfileLoading] = useState(true)
+  const [releases, setReleases] = useState<Track[]>([])
+  const [releasesLoading, setReleasesLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     if (!authUser || authUser.role !== ROLES.ARTIST) {
       setProfileLoading(false)
+      setReleasesLoading(false)
       return
     }
+    
     setProfileLoading(true)
     getManageArtistProfileFromApi()
       .then((result) => {
-        if (!cancelled) {
-          setProfile(result)
-        }
+        if (!cancelled) setProfile(result)
       })
       .catch(() => {
-        if (!cancelled) {
-          setProfile(null)
-        }
+        if (!cancelled) setProfile(null)
       })
       .finally(() => {
-        if (!cancelled) {
-          setProfileLoading(false)
-        }
+        if (!cancelled) setProfileLoading(false)
       })
-    return () => {
-      cancelled = true
-    }
+
+    return () => { cancelled = true }
+  }, [authUser])
+
+  const fetchReleases = () => {
+    if (!authUser) return;
+    setReleasesLoading(true);
+    listArtistReleases()
+      .then(res => setReleases(res))
+      .catch(err => setError(err.message))
+      .finally(() => setReleasesLoading(false))
+  };
+
+  useEffect(() => {
+    fetchReleases();
   }, [authUser])
 
   const verified = profile?.artist_profile.verification_status === 'approved'
 
-  const releases = useMemo(() => {
-    if (!authUser) {
-      return []
-    }
-    return listArtistReleases(authUser.id)
-  }, [authUser, refreshKey])
+  if (!authUser) return <Navigate to={ROUTES.LOGIN} replace />
+  if (authUser.role !== ROLES.ARTIST) return <Navigate to={ROUTES.HOME} replace />
 
-  if (!authUser) {
-    return <Navigate to={ROUTES.LOGIN} replace />
-  }
-
-  if (authUser.role !== ROLES.ARTIST) {
-    return <Navigate to={ROUTES.HOME} replace />
-  }
-
-  if (profileLoading) {
+  if (profileLoading || releasesLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
         <CircularProgress />
@@ -108,20 +107,15 @@ export default function ArtworkManagementPage() {
     )
   }
 
-  function refreshReleases(): void {
-    setRefreshKey((current) => current + 1)
-  }
-
   async function handleDeleteConfirm(): Promise<void> {
-    if (!deletingTrack || !authUser) {
-      return
-    }
+    if (!deletingTrack || !authUser) return
+    
     setError(null)
     try {
       await deleteTrack(deletingTrack.id, authUser.id)
       setMessage(copy.messages.deleted)
       setDeletingTrack(null)
-      refreshReleases()
+      fetchReleases()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete track.')
     }
@@ -188,7 +182,7 @@ export default function ArtworkManagementPage() {
           stageName={profile?.artist_profile.stage_name ?? authUser.display_name}
           onError={setError}
           onPublished={() => {
-            refreshReleases()
+            fetchReleases()
             setTab(0)
           }}
           onSuccess={setMessage}
@@ -201,7 +195,7 @@ export default function ArtworkManagementPage() {
         track={editingTrack}
         onClose={() => setEditingTrack(null)}
         onError={setError}
-        onSaved={refreshReleases}
+        onSaved={fetchReleases}
         onSuccess={setMessage}
       />
 

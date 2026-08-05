@@ -22,7 +22,7 @@ import {
   createPlaylist,
   renamePlaylist,
   deletePlaylist,
-} from '../lib/mock/playlistService';
+} from '../lib/api/playlistService';
 import { useAuthStore } from '../store/authStore';
 import { useAppLanguage } from '../theme/LanguageContext';
 import type { Playlist } from '../types';
@@ -35,16 +35,19 @@ export default function PlaylistsPage() {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [feedback, setFeedback] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
   
-  // Specific Dialogs State
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addSongDialogOpen, setAddSongDialogOpen] = useState(false);
-  
   const [activePlaylist, setActivePlaylist] = useState<Playlist | null>(null);
 
-  // Refresh mechanism
-  function loadPlaylists() {
-    if (user) setPlaylists(getUserPlaylists(user.id));
+  async function loadPlaylists() {
+    if (!user) return;
+    try {
+      const data = await getUserPlaylists();
+      setPlaylists(data);
+    } catch (err) {
+      setFeedback({ msg: err instanceof Error ? err.message : copy.messages.error, severity: 'error' });
+    }
   }
 
   useEffect(() => {
@@ -52,7 +55,6 @@ export default function PlaylistsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Derived limit checks
   const { playlistCount, limit, isLimitReached, tierName } = useMemo(() => {
     if (!user) return { playlistCount: 0, limit: Infinity, isLimitReached: false, tierName: 'basic' };
     const tier = user.subscription_tier ?? 'basic';
@@ -69,7 +71,6 @@ export default function PlaylistsPage() {
     return <Navigate to={ROUTES.LOGIN} replace />;
   }
 
-  // --- Handlers ---
   const handleOpenCreate = () => {
     setActivePlaylist(null);
     setEditDialogOpen(true);
@@ -90,29 +91,29 @@ export default function PlaylistsPage() {
     setAddSongDialogOpen(true);
   };
 
-  const handleSaveEdit = (name: string) => {
+  const handleSaveEdit = async (name: string) => {
     try {
       if (activePlaylist) {
-        renamePlaylist(user.id, activePlaylist.id, name);
+        await renamePlaylist(activePlaylist.id, name);
         setFeedback({ msg: copy.messages.renamed, severity: 'success' });
       } else {
-        createPlaylist(user, name);
+        await createPlaylist(name);
         setFeedback({ msg: copy.messages.created, severity: 'success' });
       }
       setEditDialogOpen(false);
-      loadPlaylists();
+      await loadPlaylists();
     } catch (err) {
       setFeedback({ msg: err instanceof Error ? err.message : copy.messages.error, severity: 'error' });
     }
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!activePlaylist) return;
     try {
-      deletePlaylist(user.id, activePlaylist.id);
+      await deletePlaylist(activePlaylist.id);
       setFeedback({ msg: copy.messages.deleted, severity: 'success' });
       setDeleteDialogOpen(false);
-      loadPlaylists();
+      await loadPlaylists();
     } catch (err) {
       setFeedback({ msg: err instanceof Error ? err.message : copy.messages.error, severity: 'error' });
     }
@@ -120,7 +121,6 @@ export default function PlaylistsPage() {
 
   const handleCloseAddSongs = () => {
     setAddSongDialogOpen(false);
-    // User might have added/removed songs so we rehydrate instantly upon closing
     loadPlaylists();
   };
 
@@ -148,21 +148,17 @@ export default function PlaylistsPage() {
             mb: { xs: 3, md: 5 },
           }}
         >
-          <PageHeader
-            subtitle={
-              limit !== Infinity ? copy.limits.status(playlistCount, limit) : undefined
-            }
-          >
+          <PageHeader subtitle={limit !== Infinity ? copy.limits.status(playlistCount, limit) : undefined}>
             {copy.pageTitle}
           </PageHeader>
-          <Box sx={{ width: { xs: '100%', sm: 'auto' } }}> {/* Ensures the tooltip/button wrapper takes proper width */}
-          {isLimitReached ? (
-            <Tooltip title={copy.limits.reachedTooltip(tierName, limit)} placement="bottom-end">
-              <span>{createBtn}</span>
-            </Tooltip>
-          ) : (
-            createBtn
-          )}
+          <Box sx={{ width: { xs: '100%', sm: 'auto' } }}>
+            {isLimitReached ? (
+              <Tooltip title={copy.limits.reachedTooltip(tierName, limit)} placement="bottom-end">
+                <span>{createBtn}</span>
+              </Tooltip>
+            ) : (
+              createBtn
+            )}
           </Box>
         </Stack>
 
@@ -205,12 +201,10 @@ export default function PlaylistsPage() {
           playlist={activePlaylist}
         />
         
-        {/* NEW Dedicated Dialog Context to manage tracks quickly on screen */}
         <AddSongDialog
            open={addSongDialogOpen}
            onClose={handleCloseAddSongs}
            playlist={activePlaylist}
-           userId={user.id}
         />
       </Box>
     </MainLayout>

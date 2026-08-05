@@ -5,7 +5,6 @@ import { ThemeProvider, createTheme } from '@mui/material';
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom';
 import PlayerBar from './PlayerBar';
 import { ROLES } from '../../lib/constants/roles';
-import { storage } from '../../lib/mock/storage';
 import { useAuthStore } from '../../store/authStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { LanguageContext } from '../../theme/LanguageContext';
@@ -40,18 +39,7 @@ function renderPlayerBar() {
 describe('PlayerBar', () => {
   beforeEach(() => {
     localStorage.clear();
-    storage.set('users', [
-      {
-        id: 4,
-        username: 'demo_artist',
-        email: 'artist@example.com',
-        password: 'password123',
-        display_name: 'Demo Artist',
-        role: ROLES.ARTIST,
-        created_at: '2026-01-01T00:00:00.000Z',
-        updated_at: '2026-01-01T00:00:00.000Z',
-      },
-    ]);
+    
     useAuthStore.setState({
       user: {
         id: 1,
@@ -63,17 +51,19 @@ describe('PlayerBar', () => {
         updated_at: '2026-01-01T00:00:00.000Z',
       },
     });
+    
     usePlayerStore.setState({
       currentTrack: {
         id: 1,
         title: 'Artist Single',
         artist_id: 4,
         artist_name: 'Demo Artist',
+        artist_username: 'demo_artist',
         release_type: 'single',
         duration_seconds: 180,
         created_at: '2026-01-01T00:00:00.000Z',
         updated_at: '2026-01-01T00:00:00.000Z',
-      },
+      } as any,
       queue: [],
       isPlaying: true,
       progressSeconds: 0,

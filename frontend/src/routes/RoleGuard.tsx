@@ -3,7 +3,6 @@ import { Navigate, useLocation } from 'react-router-dom'
 import type { Role } from '../lib/constants/roles'
 import { ROLES } from '../lib/constants/roles'
 import { ROUTES } from '../lib/constants/routes'
-import { isVerifiedArtist } from '../lib/mock/artistProfileService'
 import { useAuthStore } from '../store/authStore'
 import type { User } from '../types'
 
@@ -38,7 +37,7 @@ export default function RoleGuard({
   if (
     requireVerifiedArtist &&
     user.role === ROLES.ARTIST &&
-    !isVerifiedArtist(user.id)
+    !user.is_verified
   ) {
     return <Navigate to={ROUTES.HOME} replace />
   }

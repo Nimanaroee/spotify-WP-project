@@ -2,18 +2,17 @@ import {
   Alert,
   Box,
   Button,
-  LinearProgress,
   Stack,
   Typography,
 } from '@mui/material'
 import { CheckCircle2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { getArtworkManagementPageText } from '../../lib/constants/artworkManagementPageText'
-import { uploadAudioFile } from '../../lib/artwork/fileUpload'
+import { validateAndReturnAudioFile } from '../../lib/artwork/fileUpload'
 import { useAppLanguage } from '../../theme/LanguageContext'
 
 interface AudioUploadFieldProps {
-  onUploaded: (dataUrl: string, fileName: string) => void
+  onUploaded: (file: File, fileName: string) => void
   onError?: (message: string) => void
   disabled?: boolean
   uploadedFileName?: string | null
@@ -30,92 +29,54 @@ export default function AudioUploadField({
   const { language } = useAppLanguage()
   const copy = getArtworkManagementPageText(language)
   const inputRef = useRef<HTMLInputElement>(null)
-  const [progress, setProgress] = useState<number | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
   const [fileName, setFileName] = useState<string | null>(uploadedFileName)
-  const [isUploading, setIsUploading] = useState(false)
 
   useEffect(() => {
-    if (!isUploading) {
-      setFileName(uploadedFileName)
-    }
-  }, [uploadedFileName, isUploading])
+    setFileName(uploadedFileName)
+  }, [uploadedFileName])
 
   const displayError = localError ?? errorMessage
   const uploadMessages = copy.upload
 
-  async function handleFileChange(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ): Promise<void> {
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0]
     event.target.value = ''
 
-    if (!file) {
-      return
-    }
+    if (!file) return
 
     setLocalError(null)
     setFileName(null)
-    setProgress(0)
-    setIsUploading(true)
     onError?.('')
 
     try {
-      const dataUrl = await uploadAudioFile(
-        file,
-        uploadMessages.errors,
-        (readProgress) => {
-          setProgress(Math.min(99, readProgress.percent))
-        },
-      )
-      setFileName(file.name)
-      onUploaded(dataUrl, file.name)
-      onError?.('')
+      const validFile = validateAndReturnAudioFile(file, uploadMessages.errors as any)
+      setFileName(validFile.name)
+      onUploaded(validFile, validFile.name)
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : uploadMessages.errors.uploadFailed
+      const message = error instanceof Error ? error.message : uploadMessages.errors.uploadFailed
       setLocalError(message)
       onError?.(message)
-    } finally {
-      setProgress(null)
-      setIsUploading(false)
     }
   }
 
   return (
     <Stack spacing={1}>
-      <Button
-        component="label"
-        disabled={disabled || isUploading}
-        variant="outlined"
-      >
-        {isUploading ? copy.form.uploading : copy.form.uploadAudio}
+      <Button component="label" disabled={disabled} variant="outlined">
+        {copy.form.uploadAudio}
         <input
           ref={inputRef}
           hidden
           accept=".mp3,.wav,.flac,audio/mpeg,audio/wav,audio/flac"
-          disabled={disabled || isUploading}
+          disabled={disabled}
           type="file"
-          onChange={(event) => void handleFileChange(event)}
+          onChange={handleFileChange}
         />
       </Button>
 
       <Typography color="text.secondary" variant="caption">
         {copy.form.audioHint}
       </Typography>
-
-      {isUploading ? (
-        <Box>
-          <LinearProgress
-            aria-label={copy.form.uploading}
-            value={progress ?? 0}
-            variant={progress === null ? 'indeterminate' : 'determinate'}
-          />
-          <Typography className="mt-1" color="text.secondary" variant="caption">
-            {copy.form.uploading} {progress !== null ? `${progress}%` : ''}
-          </Typography>
-        </Box>
-      ) : null}
 
       {fileName ? (
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>

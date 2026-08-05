@@ -11,9 +11,8 @@ import {
   Typography,
 } from '@mui/material';
 import { useEffect, useState } from 'react';
-import { getUserPlaylists, toggleTrackInPlaylist } from '../../lib/mock/playlistService';
+import { getUserPlaylists, toggleTrackInPlaylist } from '../../lib/api/playlistService';
 import { getAlbumsPageText } from '../../lib/constants/albumsPageText';
-import { useAuthStore } from '../../store/authStore';
 import { useAppLanguage } from '../../theme/LanguageContext';
 import type { Playlist, Track } from '../../types';
 
@@ -26,36 +25,37 @@ interface AddToPlaylistDialogProps {
 export default function AddToPlaylistDialog({ open, onClose, trackToManage }: AddToPlaylistDialogProps) {
   const { language } = useAppLanguage();
   const copy = getAlbumsPageText(language);
-  const user = useAuthStore((state) => state.user);
 
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
-  // Use state to keep immediate UI snappy rather than forcing an external refetch each tick
   const [internalSelections, setInternalSelections] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
-    if (open && user && trackToManage) {
-      const data = getUserPlaylists(user.id);
-      setPlaylists(data);
-
-      const selections: Record<number, boolean> = {};
-      data.forEach(p => {
-        const contains = p.tracks?.some(t => t.id === trackToManage.id) ?? false;
-        selections[p.id] = contains;
-      });
-      setInternalSelections(selections);
+    let active = true;
+    if (open && trackToManage) {
+      getUserPlaylists().then(data => {
+        if (!active) return;
+        setPlaylists(data);
+        const selections: Record<number, boolean> = {};
+        data.forEach(p => {
+          const contains = p.tracks?.some(t => t.id === trackToManage.id) ?? false;
+          selections[p.id] = contains;
+        });
+        setInternalSelections(selections);
+      }).catch(console.error);
     }
-  }, [open, user, trackToManage]);
+    return () => { active = false; };
+  }, [open, trackToManage]);
 
-  const handleToggle = (playlistId: number, newState: boolean) => {
-    if (!user || !trackToManage) return;
+  const handleToggle = async (playlistId: number, newState: boolean) => {
+    if (!trackToManage) return;
 
-    // Fast-apply to state for immediate checkbox visual
+    // Optimistic UI update
     setInternalSelections((prev) => ({ ...prev, [playlistId]: newState }));
 
     try {
-      toggleTrackInPlaylist(user.id, playlistId, trackToManage.id, newState);
+      await toggleTrackInPlaylist(playlistId, trackToManage.id, newState);
     } catch (e) {
-      // Revert upon generic error
+      // Revert upon API error
       setInternalSelections((prev) => ({ ...prev, [playlistId]: !newState }));
     }
   };
@@ -73,7 +73,7 @@ export default function AddToPlaylistDialog({ open, onClose, trackToManage }: Ad
             {playlists.map(pl => (
               <Box key={pl.id} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: 1, borderColor: 'divider', px: 2, py: 0.5, borderRadius: 2 }}>
                 <FormControlLabel
-                  control={<Checkbox checked={internalSelections[pl.id] ?? false} onChange={(e) => handleToggle(pl.id, e.target.checked)} />}
+                  control={<Checkbox checked={internalSelections[pl.id] ?? false} onChange={(e) => void handleToggle(pl.id, e.target.checked)} />}
                   label={pl.name}
                   sx={{ width: '100%' }}
                 />

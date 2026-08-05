@@ -14,34 +14,30 @@ import MusicCard from '../components/music/MusicCard';
 import AddToPlaylistDialog from '../components/music/AddToPlaylistDialog';
 import { getAlbumsPageText } from '../lib/constants/albumsPageText';
 import { ROUTES } from '../lib/constants/routes';
-import { searchCatalog, type CatalogItem } from '../lib/mock/musicService';
+import { searchCatalog } from '../lib/api/catalogService';
 import { useAuthStore } from '../store/authStore';
-import { usePlayerStore } from '../store/playerStore'; // PLAYER CONTEXT API HOOK IMPORT
+import { usePlayerStore } from '../store/playerStore';
 import { useAppLanguage } from '../theme/LanguageContext';
-import type { Track } from '../types';
-
-type SortOption = 'release_date' | 'listener_count';
+import type { Track, MusicSortField } from '../types';
 
 export default function AlbumsPage() {
   const user = useAuthStore((state) => state.user);
-  const playTrack = usePlayerStore((state) => state.playTrack); // PULL ACTION 
+  const playTrack = usePlayerStore((state) => state.playTrack); 
   const { language } = useAppLanguage();
   const copy = getAlbumsPageText(language);
 
   const [query, setQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortOption>('release_date');
-  const [results, setResults] = useState<CatalogItem[]>([]);
+  const [sortBy, setSortBy] = useState<MusicSortField>('release_date');
+  const [results, setResults] = useState<any[]>([]);
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [managingTrack, setManagingTrack] = useState<Track | null>(null);
 
   useEffect(() => {
-    try {
-      const fetchResults = searchCatalog(query, sortBy);
-      setResults(fetchResults);
-    } catch {
-       setResults([]);
-    }
+    const timer = setTimeout(() => {
+      searchCatalog(query, sortBy).then(setResults).catch(console.error);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [query, sortBy]);
 
   if (!user) {
@@ -54,7 +50,6 @@ export default function AlbumsPage() {
   };
 
   const handlePlayerTrigger = (track: Track) => {
-     // Plays exactly this specific standalone track target correctly handling the global play action overlay trigger behavior immediately on contact.
      playTrack(track, results.filter(t => t.itemType === 'track') as Track[]);
   };
 
@@ -86,7 +81,7 @@ export default function AlbumsPage() {
               select
               size="small"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
+              onChange={(e) => setSortBy(e.target.value as MusicSortField)}
               sx={{ minWidth: 160 }}
             >
               <MenuItem value="release_date">{copy.sortLabels.releaseDate}</MenuItem>

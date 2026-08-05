@@ -8,7 +8,6 @@ import {
 } from '@mui/material';
 import { Music } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { resolveDisplayUrl } from '../../lib/mock/hydrateMedia';
 
 interface MediaCardProps {
   title: string;
@@ -29,7 +28,8 @@ export default function MediaCard({
   earlyAccessLabel = 'Early Access',
   placeholderIcon = <Music size={40} color="gray" />,
 }: MediaCardProps) {
-  const displayImageUrl = resolveDisplayUrl(imageUrl);
+  
+  const displayImageUrl = imageUrl || null;
 
   return (
     <Card

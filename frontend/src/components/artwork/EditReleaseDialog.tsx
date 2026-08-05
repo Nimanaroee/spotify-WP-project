@@ -17,10 +17,9 @@ import { MUSIC_GENRES } from '../../lib/constants/musicGenres'
 import AudioUploadField from './AudioUploadField'
 import {
   parseCoArtists,
-  uploadCoverFile,
+  validateAndReturnCoverFile,
 } from '../../lib/artwork/fileUpload'
-import { updateTrack } from '../../lib/mock/musicService'
-import { resolveMediaUrl } from '../../lib/mock/mediaCache'
+import { updateTrack } from '../../lib/api/musicService' // <--- Updated import
 import { useAppLanguage } from '../../theme/LanguageContext'
 import type { Track } from '../../types/music'
 import {
@@ -63,44 +62,42 @@ export default function EditReleaseDialog({
   })
 
   useEffect(() => {
-    if (!track) {
-      return
-    }
+    if (!track) return
     reset({
       title: track.title,
       genre: track.genre ?? '',
       release_year: track.release_year ?? new Date().getFullYear(),
       co_artists: track.co_artists?.join(', ') ?? '',
       lyrics: track.lyrics ?? '',
-      cover_art: track.cover_art ?? '',
-      audio_url: track.audio_url ?? '',
+      cover_art: '', // Reset files
+      audio_url: '',
     })
-    setCoverPreview(resolveMediaUrl(track.cover_art) ?? null)
+    setCoverPreview(track.cover_art ?? null)
     setUploadedAudioName(track.audio_url ? copy.form.existingAudioAttached : null)
   }, [track, reset, copy.form.existingAudioAttached])
 
-  async function handleCoverUpload(
-    event: React.ChangeEvent<HTMLInputElement>,
-  ): Promise<void> {
+  function handleCoverUpload(event: React.ChangeEvent<HTMLInputElement>): void {
     const file = event.target.files?.[0]
-    if (!file) {
-      return
+    if (!file) return
+    
+    try {
+      const validFile = validateAndReturnCoverFile(file, copy.upload.errors as any)
+      setValue('cover_art', validFile)
+      if (coverPreview && coverPreview.startsWith('blob:')) URL.revokeObjectURL(coverPreview)
+      setCoverPreview(URL.createObjectURL(validFile))
+    } catch (error) {
+      onError(error instanceof Error ? error.message : copy.upload.errors.uploadFailed)
     }
-    const dataUrl = await uploadCoverFile(file, copy.upload.errors)
-    setValue('cover_art', dataUrl)
-    setCoverPreview(dataUrl)
   }
 
-  function handleAudioUploaded(dataUrl: string, fileName: string): void {
-    setValue('audio_url', dataUrl)
+  function handleAudioUploaded(file: File, fileName: string): void {
+    setValue('audio_url', file)
     setUploadedAudioName(fileName)
     onSuccess(copy.form.uploadedFile(fileName))
   }
 
   async function onSubmit(values: EditTrackFormValues): Promise<void> {
-    if (!track) {
-      return
-    }
+    if (!track) return
     onError('')
     try {
       await updateTrack(track.id, artistId, {
@@ -161,14 +158,14 @@ export default function EditReleaseDialog({
               {copy.form.uploadCover}
               <input hidden accept="image/*" type="file" onChange={handleCoverUpload} />
             </Button>
-          {coverPreview ? (
-            <Box
-              alt={copy.form.coverArt}
-              component="img"
-              src={coverPreview}
-              sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1 }}
-            />
-          ) : null}
+            {coverPreview ? (
+              <Box
+                alt={copy.form.coverArt}
+                component="img"
+                src={coverPreview}
+                sx={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 1 }}
+              />
+            ) : null}
             <AudioUploadField
               uploadedFileName={uploadedAudioName}
               onError={onError}
@@ -179,7 +176,7 @@ export default function EditReleaseDialog({
         <DialogActions>
           <Button onClick={onClose}>{copy.edit.cancel}</Button>
           <Button disabled={isSubmitting} type="submit" variant="contained">
-            {copy.edit.save}
+            {isSubmitting ? copy.form.uploading : copy.edit.save}
           </Button>
         </DialogActions>
       </Box>

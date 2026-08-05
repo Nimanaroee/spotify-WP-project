@@ -1,7 +1,6 @@
 import { isAxiosError } from 'axios'
 import { ROLES } from '../constants/roles'
 import { ROUTES } from '../constants/routes'
-import { storage } from '../mock/storage'
 import type {
   ForgotPasswordPayload,
   RegisterArtistPayload,
@@ -10,7 +9,6 @@ import type {
 } from '../../types/user'
 import client, { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY } from './client'
 
-const CURRENT_USER_KEY = 'current_user'
 const UNEXPECTED_ERROR_MESSAGE = 'An unexpected error occurred.'
 
 interface AuthResponse {
@@ -65,7 +63,20 @@ export function getRoleHomePath(user: User): string {
 }
 
 export function getCurrentUser(): User | null {
-  return storage.get<User>(CURRENT_USER_KEY)
+  try {
+    const v = localStorage.getItem('current_user')
+    return v ? JSON.parse(v) : null
+  } catch {
+    return null
+  }
+}
+
+export function setCurrentUser(user: User | null): void {
+  if (user) {
+    localStorage.setItem('current_user', JSON.stringify(user))
+  } else {
+    localStorage.removeItem('current_user')
+  }
 }
 
 export async function login(email: string, password: string): Promise<LoginResult> {
@@ -109,7 +120,6 @@ export async function requestPasswordRecovery(
 
 export async function logout(): Promise<void> {
   const refresh = localStorage.getItem(REFRESH_TOKEN_KEY)
-
   try {
     if (refresh) {
       await client.post('/auth/logout/', { refresh })
@@ -121,12 +131,4 @@ export async function logout(): Promise<void> {
     localStorage.removeItem(ACCESS_TOKEN_KEY)
     localStorage.removeItem(REFRESH_TOKEN_KEY)
   }
-}
-
-export function setCurrentUser(user: User | null): void {
-  if (user) {
-    storage.set(CURRENT_USER_KEY, user)
-    return
-  }
-  storage.remove(CURRENT_USER_KEY)
 }

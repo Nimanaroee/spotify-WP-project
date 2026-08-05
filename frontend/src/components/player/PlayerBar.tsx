@@ -36,8 +36,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getPlayerText } from '../../lib/constants/playerText';
 import { userProfilePath } from '../../lib/constants/routes';
-import { getTrackStats } from '../../lib/mock/musicService';
-import { getUserById } from '../../lib/mock/userProfileService';
 import { useAuthStore } from '../../store/authStore';
 import { usePlayerStore } from '../../store/playerStore';
 import { useAppLanguage } from '../../theme/LanguageContext';
@@ -57,7 +55,6 @@ export default function PlayerBar() {
   const { language } = useAppLanguage();
   const copy = getPlayerText(language);
   const user = useAuthStore((state) => state.user);
-  const isRtlTheme = language === 'fa';
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -99,7 +96,9 @@ export default function PlayerBar() {
 
   const [goldStats, setGoldStats] = useState<{ streams: number; listeners: number } | null>(null);
 
-  const hasRealAudio = Boolean(currentTrack?.audio_url && currentTrack.audio_url.length > 5);
+  // For typing purposes, we cast currentTrack so we can safely read properties returned by the real backend
+  const activeTrack = currentTrack as any;
+  const hasRealAudio = Boolean(activeTrack?.audio_url && activeTrack.audio_url.length > 5);
 
   // Sync internal progress resetting the audio component natively when Zustand commands 0
   useEffect(() => {
@@ -119,7 +118,7 @@ export default function PlayerBar() {
         audioRef.current.pause();
       }
     }
-  }, [isPlaying, hasRealAudio, currentTrack?.id]);
+  }, [isPlaying, hasRealAudio, activeTrack?.id]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -150,20 +149,19 @@ export default function PlayerBar() {
     return () => clearInterval(interval);
   }, [isPlaying, tick, hasRealAudio]);
 
+  // Read stats directly from the active track instead of the mock service
   useEffect(() => {
-    if (user?.subscription_tier === 'gold' && currentTrack) {
-      try {
-        const stats = getTrackStats(currentTrack.id, currentTrack.artist_id);
-        setGoldStats({ streams: stats.stream_count, listeners: stats.listener_count });
-      } catch (e) {
-        setGoldStats(null);
-      }
+    if (user?.subscription_tier === 'gold' && activeTrack) {
+      setGoldStats({ 
+        streams: activeTrack.stream_count ?? 0, 
+        listeners: activeTrack.listener_count ?? 0 
+      });
     } else {
       setGoldStats(null);
     }
-  }, [currentTrack, user]);
+  }, [activeTrack, user]);
 
-  if (!currentTrack) return null;
+  if (!activeTrack) return null;
 
   const handleCloseSubPanel = () => {
     if (isQueueOpen) toggleQueue();
@@ -171,7 +169,6 @@ export default function PlayerBar() {
   };
 
   const trackInfoContent = (
-    // Added width 100% and minWidth 0 here
     <Stack direction="row" spacing={2} alignItems="center" dir="ltr" sx={{ direction: 'ltr', width: '100%', minWidth: 0 }}>
       <Box
         sx={{
@@ -186,16 +183,15 @@ export default function PlayerBar() {
           flexShrink: 0,
         }}
       >
-        {currentTrack.cover_art ? (
-          <img src={currentTrack.cover_art} alt={currentTrack.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {activeTrack.cover_art ? (
+          <img src={activeTrack.cover_art} alt={activeTrack.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <Disc3 size={32} color="gray" />
         )}
       </Box>
-      {/* Added flex: 1, overflow: 'hidden' here */}
       <Box sx={{ minWidth: 0, flex: 1, textAlign: 'left', overflow: 'hidden' }}>
         <Typography variant="subtitle2" noWrap sx={{ fontWeight: 700 }}>
-          {currentTrack.title}
+          {activeTrack.title}
         </Typography>
         <Typography
           variant="caption"
@@ -208,12 +204,12 @@ export default function PlayerBar() {
           }}
           onClick={(e) => {
             e.stopPropagation();
-            const artist = getUserById(currentTrack.artist_id);
-            navigate(userProfilePath(artist?.username ?? String(currentTrack.artist_id)));
+            // Fallback to ID if username is missing to guarantee routing doesn't break
+            navigate(userProfilePath(activeTrack.artist_username ?? String(activeTrack.artist_id)));
             if (isExpanded) toggleExpanded();
           }}
         >
-          {currentTrack.artist_name} {currentTrack.album_name && ` • ${currentTrack.album_name}`}
+          {activeTrack.artist_name} {activeTrack.album_name && ` • ${activeTrack.album_name}`}
         </Typography>
 
         {user?.subscription_tier === 'gold' && goldStats && (
@@ -274,18 +270,18 @@ export default function PlayerBar() {
 
   const subPanelDisplay = (
     <Drawer
-      anchor={isMobile ? "bottom" : "right"} // Slide up from bottom on mobile
+      anchor={isMobile ? "bottom" : "right"} 
       open={isQueueOpen || isLyricsOpen}
       onClose={handleCloseSubPanel}
       variant={isMobile ? "temporary" : "persistent"}
       sx={{
-        zIndex: 1400, // CRITICAL FIX: Forces it to render above both the Dialog (1300) and Paper (1200)
+        zIndex: 1400,
         '& .MuiDrawer-paper': {
           width: { xs: '100%', sm: 320 },
-          height: isMobile ? '85vh' : '100%', // Makes it 85% of screen height on mobile like a native app sheet
+          height: isMobile ? '85vh' : '100%', 
           mt: isMobile ? 0 : 8,
           pb: isMobile ? 4 : 12,
-          borderTopLeftRadius: isMobile ? 24 : 0, // Rounded top corners on mobile
+          borderTopLeftRadius: isMobile ? 24 : 0, 
           borderTopRightRadius: isMobile ? 24 : 0,
         }
       }}
@@ -331,7 +327,7 @@ export default function PlayerBar() {
 
         {isLyricsOpen && (
            <Typography sx={{ whiteSpace: 'pre-line', lineHeight: 2, fontSize: '0.9rem' }}>
-              {currentTrack.lyrics || copy.noLyrics}
+              {activeTrack.lyrics || copy.noLyrics}
            </Typography>
         )}
       </Box>
@@ -349,12 +345,12 @@ export default function PlayerBar() {
 
           <Box flex={1} display="flex" flexDirection="column" alignItems="center" justifyContent="center" mb={4}>
               <Box sx={{ width: '85vw', height: '85vw', maxWidth: 300, maxHeight: 300, bgcolor: 'background.default', borderRadius: 4, mb: 4, overflow: 'hidden', boxShadow: 3 }}>
-                {currentTrack.cover_art ? <img src={currentTrack.cover_art} alt={currentTrack.title} style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <Disc3 size={100} color="gray"/>}
+                {activeTrack.cover_art ? <img src={activeTrack.cover_art} alt={activeTrack.title} style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <Disc3 size={100} color="gray"/>}
               </Box>
               
               <Box textAlign="center" width="100%">
-                <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>{currentTrack.title}</Typography>
-                <Typography color="text.secondary">{currentTrack.artist_name}</Typography>
+                <Typography variant="h5" sx={{ fontWeight: 800, mb: 1 }}>{activeTrack.title}</Typography>
+                <Typography color="text.secondary">{activeTrack.artist_name}</Typography>
                 {user?.subscription_tier === 'gold' && goldStats && (
                   <Typography variant="caption" color="warning.main" mt={1} display="block">
                     {copy.stats.streams(goldStats.streams)} • {copy.stats.listeners(goldStats.listeners)}
@@ -363,7 +359,6 @@ export default function PlayerBar() {
               </Box>
           </Box>
 
-          {/* Main Controls adapted for Mobile Expanded View */}
           <Stack alignItems="center" spacing={1} sx={{ width: '100%', direction: 'ltr', px: 2, mb: 4 }}> 
             <Stack direction="row" spacing={1.5} alignItems="center">
               <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleShuffle(); }} color={shuffle ? "primary" : "default"}>
@@ -416,7 +411,6 @@ export default function PlayerBar() {
         </Box>
       </Dialog>
 
-      {/* MOVED: subPanelDisplay is now outside the Dialog so it works natively regardless of expanded state */}
       {subPanelDisplay}
 
       <Paper
@@ -441,12 +435,10 @@ export default function PlayerBar() {
         }}
         onClick={toggleExpanded}
       >
-        {/* Track Info */}
         <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, pr: 1 }}> 
           {trackInfoContent}
         </Box>
 
-        {/* Playback Controls */}
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, justifyContent: 'center' }}> 
           <IconButton size="small" onClick={(e) => { e.stopPropagation(); handlePrev(); }}>
             <SkipBack size={20} />
@@ -462,7 +454,6 @@ export default function PlayerBar() {
           </IconButton>
         </Box>
 
-        {/* Sub Menu & Progress */}
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, pl: 0.5 }}>
           <IconButton size="small" onClick={(e) => { e.stopPropagation(); toggleLyrics(); }} color={isLyricsOpen ? 'primary' : 'default'}>
             <Mic2 size={18} />
@@ -472,14 +463,12 @@ export default function PlayerBar() {
           </IconButton>
         </Box>
         
-        {/* Visual Progress Bar */}
         <Box sx={{ position: 'absolute', bottom: 0, left: 16, right: 16, height: 2, bgcolor: 'divider', borderRadius: 1, overflow: 'hidden' }}>
             <Box sx={{ width: `${(durationSeconds > 0 ? (progressSeconds / durationSeconds) * 100 : 0)}%`, height: '100%', bgcolor: 'primary.main' }} />
         </Box>
       </Paper>
     </>
   ) : (
-    // Desktop Layout (No changes here, preserving existing structure)
     <>
       <Paper
         elevation={8}
@@ -533,7 +522,7 @@ export default function PlayerBar() {
       <ThemeProvider theme={ltrTheme}>
         <audio
           ref={audioRef}
-          src={hasRealAudio ? currentTrack.audio_url : undefined}
+          src={hasRealAudio ? activeTrack.audio_url : undefined}
           autoPlay={isPlaying && hasRealAudio}
           onLoadedMetadata={(e) => {
             if (hasRealAudio && isFinite(e.currentTarget.duration)) {
