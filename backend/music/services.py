@@ -3,7 +3,8 @@ from rest_framework.exceptions import ValidationError
 from datetime import timedelta
 from django.utils import timezone
 from user.models import User
-from .models import Album, Track, Playlist, PlaylistTrack
+from .models import Album, Track, Playlist, PlaylistTrack, StreamEvent
+
 
 PLAYLIST_LIMITS = {
     User.SubscriptionTier.BASIC: 6,
@@ -154,7 +155,7 @@ def record_play(user, track):
     # 2. Early Access Gate (Gold Only)
     # Treat tracks created in the last 7 days as early access.
     is_early_access = track.created_at >= timezone.now() - timedelta(days=7)
-    if is_early_access and tier not in [User.SubscriptionTier.GOLD, User.Role.ARTIST, User.Role.ADMIN]:
+    if is_early_access and tier != User.SubscriptionTier.GOLD and user.role not in [User.Role.ARTIST, User.Role.ADMIN]:
         raise ValidationError("This track is in Early Access. Upgrade to Gold to listen.")
 
     # 3. Abuse Prevention (Debounce)

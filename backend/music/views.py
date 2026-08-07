@@ -83,10 +83,10 @@ class TrackPlayView(APIView):
         try:
             services.record_play(request.user, track)
         except Exception as e:
-            return Response({"detail": str(e)}, status=status.HTTP_403_FORBIDDEN)
+            error_msg = e.detail[0] if hasattr(e, 'detail') and isinstance(e.detail, list) else str(e)
+            return Response({"detail": error_msg}, status=status.HTTP_403_FORBIDDEN)
             
         return Response(TrackReadSerializer(track, context={"request": request}).data)
-
 
 @extend_schema(tags=["catalog"])
 class HomeDataView(APIView):
