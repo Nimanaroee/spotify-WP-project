@@ -169,3 +169,4 @@ class HomeDataSerializer(serializers.Serializer):
     top_songs = TrackReadSerializer(many=True)
     latest_releases = TrackReadSerializer(many=True)
     early_access = TrackReadSerializer(many=True)
+    recommended_tracks = TrackReadSerializer(many=True)

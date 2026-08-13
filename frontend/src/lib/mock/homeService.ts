@@ -43,3 +43,13 @@ export function getLatestReleases(): Track[] {
     .slice(0, 10)
     .map(hydrateTrack);
 }
+
+export function getRecommendedTracks(userId: number): Track[] {
+  const tracks = storage.get<Track[]>('tracks') || [];
+  // Mock recommendations by returning highly-rated tracks 
+  // (In real backend, this uses the Cosine Similarity ML algorithm)
+  return tracks
+    .sort((a, b) => (b.listener_count || 0) - (a.listener_count || 0))
+    .slice(0, 10)
+    .map(hydrateTrack);
+}

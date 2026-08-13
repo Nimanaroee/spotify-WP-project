@@ -12,3 +12,8 @@ factory-boy
 black
 isort
 flake8
+numpy
+librosa
+scikit-learn
+numpy
+scipy

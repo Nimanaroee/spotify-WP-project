@@ -7,12 +7,17 @@ import HomePage from './HomePage'
 import LoginPage from './LoginPage'
 import { ROLES } from '../lib/constants/roles'
 import { updateUserPreferencesFromApi } from '../lib/api/settingsService'
+import { getHomeData } from '../lib/api/homeService'
 import { storage } from '../lib/mock/storage'
 import { useAuthStore } from '../store/authStore'
 import { ThemeModeContext } from '../theme/ThemeModeContext'
 
 vi.mock('../lib/api/settingsService', () => ({
   updateUserPreferencesFromApi: vi.fn(),
+}))
+
+vi.mock('../lib/api/homeService', () => ({
+  getHomeData: vi.fn(),
 }))
 
 function renderHomePage() {
@@ -34,6 +39,8 @@ describe('HomePage', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.mocked(updateUserPreferencesFromApi).mockReset()
+    vi.mocked(getHomeData).mockReset()
+    
     vi.mocked(updateUserPreferencesFromApi).mockResolvedValue({
       user_id: 1,
       theme: 'dark',
@@ -44,6 +51,16 @@ describe('HomePage', () => {
       created_at: '2026-07-17T10:00:00.000Z',
       updated_at: '2026-07-17T10:00:00.000Z',
     })
+
+    vi.mocked(getHomeData).mockResolvedValue({
+      recent_playlists: [],
+      latest_albums: [],
+      top_songs: [],
+      latest_releases: [],
+      early_access: [],
+      recommended_tracks: [],
+    })
+
     storage.set('auth_user_id', 1)
     useAuthStore.setState({
       user: {
@@ -63,6 +80,10 @@ describe('HomePage', () => {
     const user = userEvent.setup()
     renderHomePage()
 
+    await waitFor(() => {
+       expect(getHomeData).toHaveBeenCalled()
+    })
+
     await user.click(screen.getByRole('button', { name: /logout/i }))
 
     expect(storage.get<unknown>('current_user')).toBeNull()
@@ -70,8 +91,9 @@ describe('HomePage', () => {
     expect(await screen.findByRole('heading', { name: /welcome/i })).toBeInTheDocument()
   })
 
-  it('shows listener settings in sidebar', () => {
+  it('shows listener settings in sidebar', async () => {
     renderHomePage()
+    await waitFor(() => expect(getHomeData).toHaveBeenCalled())
 
     expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /artist studio/i })).not.toBeInTheDocument()
@@ -80,6 +102,7 @@ describe('HomePage', () => {
   it('updates API preferences from the header language button', async () => {
     const user = userEvent.setup()
     renderHomePage()
+    await waitFor(() => expect(getHomeData).toHaveBeenCalled())
 
     await user.click(screen.getByRole('button', { name: /persian/i }))
 
@@ -90,7 +113,7 @@ describe('HomePage', () => {
     )
   })
 
-  it('shows artist studio entry points for musicians', () => {
+  it('shows artist studio entry points for musicians', async () => {
     useAuthStore.setState({
       user: {
         id: 2,
@@ -105,6 +128,7 @@ describe('HomePage', () => {
     })
 
     renderHomePage()
+    await waitFor(() => expect(getHomeData).toHaveBeenCalled())
 
     expect(screen.getAllByRole('link', { name: /artist studio/i }).length).toBeGreaterThan(0)
     expect(screen.getByRole('heading', { name: /artist studio/i })).toBeInTheDocument()

@@ -4,6 +4,7 @@ from datetime import timedelta
 from django.utils import timezone
 from user.models import User
 from .models import Album, Track, Playlist, PlaylistTrack, StreamEvent
+from .audio_features import extract_advanced_features
 
 
 PLAYLIST_LIMITS = {
@@ -50,6 +51,21 @@ def publish_release(artist, validated_data):
             lyrics=track_data.get("lyrics", ""),
             duration_seconds=track_data.get("duration_seconds"),
         )
+        
+        # Extract and save the audio DNA vector
+        # Capture optional neural flags passed in during tests
+        enable_neural = track_data.get("enable_neural", False)
+        device = track_data.get("device", "cpu")
+        
+        bundle = extract_advanced_features(
+            track.audio_file, 
+            enable_neural=enable_neural, 
+            device=device
+        )
+        if bundle:
+            track.audio_features = bundle.to_flat_dict()
+            track.save(update_fields=["audio_features", "updated_at"])
+            
         created_tracks.append(track)
 
     return created_tracks
@@ -60,10 +76,19 @@ def update_track(artist, track, validated_data):
     if track.artist_id != artist.id:
         raise ValidationError("You do not have permission to modify this track.")
 
+    audio_updated = "audio_file" in validated_data
+
     for field, value in validated_data.items():
         setattr(track, field, value)
     
     track.save()
+    
+    # Re-extract DNA if a new audio file was uploaded
+    if audio_updated:
+        bundle = extract_advanced_features(track.audio_file, enable_neural=False)
+        if bundle:
+            track.audio_features = bundle.to_flat_dict()
+            track.save(update_fields=["audio_features", "updated_at"])
 
     if track.album_id:
         album = track.album
@@ -147,19 +172,15 @@ def record_play(user, track):
     tier = user.get_effective_subscription_tier()
     
     # 1. Enforce Basic Tier Daily Limit (60)
-    # In a real app, `streamed_today` is reset via a nightly Celery task.
-    # For now, we enforce the local count.
     if tier == User.SubscriptionTier.BASIC and user.streamed_today >= 60:
         raise ValidationError("Daily stream limit reached. Upgrade to Silver or Gold to continue listening.")
 
     # 2. Early Access Gate (Gold Only)
-    # Treat tracks created in the last 7 days as early access.
     is_early_access = track.created_at >= timezone.now() - timedelta(days=7)
     if is_early_access and tier != User.SubscriptionTier.GOLD and user.role not in [User.Role.ARTIST, User.Role.ADMIN]:
         raise ValidationError("This track is in Early Access. Upgrade to Gold to listen.")
 
     # 3. Abuse Prevention (Debounce)
-    # Prevent counting if the same user played the same track in the last 30 seconds.
     recent_play = StreamEvent.objects.filter(
         user=user, 
         track=track, 

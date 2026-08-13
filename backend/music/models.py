@@ -34,13 +34,9 @@ class Track(TimeStampedModel):
         ALBUM = "album", "Album"
 
     artist = models.ForeignKey(Artist, on_delete=models.CASCADE, related_name="tracks")
-    album = models.ForeignKey(
-        Album, on_delete=models.CASCADE, related_name="tracks", null=True, blank=True
-    )
+    album = models.ForeignKey(Album, on_delete=models.CASCADE, related_name="tracks", null=True, blank=True)
     title = models.CharField(max_length=255)
-    release_type = models.CharField(
-        max_length=20, choices=ReleaseType.choices, default=ReleaseType.SINGLE
-    )
+    release_type = models.CharField(max_length=20, choices=ReleaseType.choices, default=ReleaseType.SINGLE)
     genre = models.CharField(max_length=100, blank=True)
     release_year = models.PositiveSmallIntegerField(null=True, blank=True)
     co_artists = models.JSONField(default=list, blank=True)
@@ -50,12 +46,45 @@ class Track(TimeStampedModel):
     lyrics = models.TextField(blank=True, null=True)
     listener_count = models.PositiveIntegerField(default=0)
     stream_count = models.PositiveIntegerField(default=0)
+    
+    # NEW: Store the feature bundles
+    audio_features = models.JSONField(default=dict, blank=True)
+    meta_features = models.JSONField(default=dict, blank=True)
+    behav_features = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ("-created_at",)
 
     def __str__(self):
         return f"{self.title} by {self.artist.stage_name}"
+
+    # Properties to seamlessly expose the JSON data to recommender.py
+    @property
+    def mert_embedding(self): return self.audio_features.get("mert_embedding")
+    
+    @property
+    def clap_embedding(self): return self.audio_features.get("clap_embedding")
+    
+    @property
+    def tonnetz(self): return self.audio_features.get("tonnetz")
+    
+    @property
+    def chroma_cens(self): return self.audio_features.get("chroma_cens")
+    
+    @property
+    def hpss_vectors(self): return self.audio_features.get("hpss_vectors")
+    
+    @property
+    def cyclic_tempogram(self): return self.audio_features.get("cyclic_tempogram")
+    
+    @property
+    def ssm_fingerprint(self): return self.audio_features.get("ssm_fingerprint")
+    
+    @property
+    def groove_vector(self): return self.audio_features.get("groove_vector")
+    
+    @property
+    def onset_stats(self): return self.audio_features.get("onset_stats")
 
 
 class Playlist(TimeStampedModel):

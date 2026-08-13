@@ -1,4 +1,5 @@
 from io import BytesIO
+from unittest.mock import patch
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 from rest_framework import status
@@ -36,6 +37,14 @@ class ArtistStudioApiTests(APITestCase):
             role=User.Role.LISTENER,
         )
         self.list_create_url = reverse("artist-release-list")
+
+        # Mock the heavy ML extraction during tests
+        self.extractor_patcher = patch('music.services.extract_advanced_features')
+        self.mock_extractor = self.extractor_patcher.start()
+        self.mock_extractor.return_value = [0.1] * 58
+
+    def tearDown(self):
+        self.extractor_patcher.stop()
 
     def test_only_verified_artists_can_access(self):
         self.client.force_authenticate(self.listener)
@@ -83,6 +92,10 @@ class ArtistStudioApiTests(APITestCase):
         album = Album.objects.get(title="My Great Album")
         self.assertEqual(album.track_count, 2)
         self.assertEqual(album.artist, self.verified_artist)
+        
+        # Verify the mock ran and populated the DB
+        track = album.tracks.first()
+        self.assertEqual(len(track.feature_vector), 58)
 
     def test_artist_cannot_update_or_delete_others_tracks(self):
         track = Track.objects.create(

@@ -14,6 +14,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from . import schema, services
 from .models import Track, Playlist, Album
 from .permissions import IsVerifiedArtist
+from .recommender import get_recommendations_for_user
 from .serializers import (
     PublishReleaseSerializer, 
     TrackReadSerializer, 
@@ -103,12 +104,17 @@ class HomeDataView(APIView):
         latest_releases = Track.objects.select_related("artist", "album").order_by("-created_at")[:10]
         early_access = Track.objects.select_related("artist", "album").filter(created_at__gte=early_access_threshold).order_by("-created_at")[:6]
 
+        recommendation_results = get_recommendations_for_user(request.user, limit=10)
+        recommended_tracks = [res.track for res in recommendation_results]
+        # Fetch personalized ML recommendations
+
         data = {
             "recent_playlists": recent_playlists,
             "latest_albums": latest_albums,
             "top_songs": top_songs,
             "latest_releases": latest_releases,
             "early_access": early_access,
+            "recommended_tracks": recommended_tracks,
         }
 
         serializer = HomeDataSerializer(data, context={"request": request})

@@ -11,7 +11,7 @@ import { ROLES } from '../lib/constants/roles';
 import { useAuthStore } from '../store/authStore';
 import { usePlayerStore } from '../store/playerStore';
 import { useAppLanguage } from '../theme/LanguageContext';
-import { getHomeData } from '../lib/api/homeService';
+import { getHomeData, type HomeDataResponse } from '../lib/api/homeService';
 
 export default function HomePage() {
   const user = useAuthStore((state) => state.user);
@@ -20,7 +20,7 @@ export default function HomePage() {
   const { language } = useAppLanguage();
   const copy = getHomePageText(language);
 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<HomeDataResponse | null>(null);
 
   useEffect(() => {
     getHomeData().then(setData).catch(console.error);
@@ -74,8 +74,20 @@ export default function HomePage() {
           <Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>
         ) : (
           <>
+            <MediaRow title={copy.showcase.recommendedForYou} show={data.recommended_tracks.length > 0}>
+              {data.recommended_tracks.map((track) => (
+                <MediaCard
+                  key={`rec-${track.id}`}
+                  title={track.title}
+                  subtitle={track.artist_name}
+                  imageUrl={track.cover_art}
+                  onClick={() => playTrack(track, data.recommended_tracks)}
+                />
+              ))}
+            </MediaRow>
+
             <MediaRow title={copy.showcase.recentPlaylists} show={data.recent_playlists.length > 0}>
-              {data.recent_playlists.map((playlist: any) => (
+              {data.recent_playlists.map((playlist) => (
                 <MediaCard
                   key={`pl-${playlist.id}`}
                   title={playlist.name}
@@ -88,7 +100,7 @@ export default function HomePage() {
             </MediaRow>
 
             <MediaRow title={copy.showcase.latestReleases} show={data.latest_releases.length > 0}>
-              {data.latest_releases.map((track: any) => (
+              {data.latest_releases.map((track) => (
                 <MediaCard
                   key={`latest-${track.id}`}
                   title={track.title}
@@ -100,7 +112,7 @@ export default function HomePage() {
             </MediaRow>
 
             <MediaRow title={copy.showcase.topSongs} show={data.top_songs.length > 0}>
-              {data.top_songs.map((track: any) => (
+              {data.top_songs.map((track) => (
                 <MediaCard
                   key={`trk-${track.id}`}
                   title={track.title}
@@ -112,7 +124,7 @@ export default function HomePage() {
             </MediaRow>
 
             <MediaRow title={copy.showcase.latestAlbums} show={data.latest_albums.length > 0}>
-              {data.latest_albums.map((album: any) => (
+              {data.latest_albums.map((album) => (
                 <MediaCard
                   key={`alb-${album.id}`}
                   title={album.title}
@@ -125,7 +137,7 @@ export default function HomePage() {
             </MediaRow>
 
             <MediaRow title={copy.showcase.earlyAccess} show={hasPremiumFeatures && data.early_access.length > 0}>
-              {data.early_access.map((track: any) => (
+              {data.early_access.map((track) => (
                 <MediaCard
                   key={`ea-${track.id}`}
                   title={track.title}

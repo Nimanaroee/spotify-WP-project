@@ -13,6 +13,7 @@ type HomePageCopy = {
   }
   artistStudioPrompt: string
   showcase: {
+    recommendedForYou: string
     recentPlaylists: string
     latestAlbums: string
     latestReleases: string
@@ -37,6 +38,7 @@ const COPY: Record<AppLanguage, HomePageCopy> = {
     },
     artistStudioPrompt: 'Manage your releases, upload tracks, and view performance stats.',
     showcase: {
+      recommendedForYou: 'Recommended for You',
       recentPlaylists: 'Recently Listened Playlists',
       latestAlbums: 'Latest Released Albums',
       latestReleases: 'Latest Releases',
@@ -59,6 +61,7 @@ const COPY: Record<AppLanguage, HomePageCopy> = {
     },
     artistStudioPrompt: 'انتشارات خود را مدیریت کنید، ترک بارگذاری کنید و آمار عملکرد را ببینید.',
     showcase: {
+      recommendedForYou: 'پیشنهادهای ویژه شما',
       recentPlaylists: 'پلی‌لیست‌های اخیر',
       latestAlbums: 'جدیدترین آلبوم‌ها',
       latestReleases: 'جدیدترین انتشارات',
