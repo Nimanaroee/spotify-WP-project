@@ -49,20 +49,50 @@ export default function PlaylistListCard({
           gap: 2,
         }}
       >
-        <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {playlist.name}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mt: 0.5, display: 'block' }}>
-            {playlist.track_count || playlist.tracks?.length || 0} {language === 'fa' ? 'قطعه' : 'tracks'}
-          </Typography>
+        {/* Task 2: Playlist Image & Text Alignment */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, sm: 3 }, flex: 1, minWidth: 0, width: '100%' }}>
+          {/* Cover Box */}
+          <Box
+            sx={{
+              width: { xs: 64, sm: 80 },
+              height: { xs: 64, sm: 80 },
+              flexShrink: 0,
+              bgcolor: 'action.hover',
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}
+          >
+            {playlist.cover_art ? (
+              <img
+                src={playlist.cover_art}
+                alt={playlist.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            ) : (
+              <Disc3 size={32} color="gray" />
+            )}
+          </Box>
+
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {playlist.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, mt: 0.5, display: 'block' }}>
+              {playlist.track_count || playlist.tracks?.length || 0} {language === 'fa' ? 'قطعه' : 'tracks'}
+            </Typography>
+          </Box>
         </Box>
 
         <Stack 
           direction="row" 
           spacing={1.5} 
           alignItems="center" 
-          sx={{ alignSelf: { xs: 'flex-end', sm: 'center' } }}
+          sx={{ alignSelf: { xs: 'flex-start', sm: 'center' } }}
         >
           <Button
             variant="contained"
@@ -116,8 +146,9 @@ export default function PlaylistListCard({
 
       <CardContent sx={{ p: 0, '&:last-child': { pb: 0 }, bgcolor: 'action.hover' }}>
         {(!playlist.tracks || playlist.tracks.length === 0) ? (
-          <Box py={5} px={3} textAlign="center">
-            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', py: 5, px: 3, width: '100%' }}>
+            {/* Task 3: Text Alignment for Empty Playlists */}
+            <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, textAlign: 'center' }}>
               {copy.list.emptyPlaylist}
             </Typography>
           </Box>

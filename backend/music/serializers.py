@@ -2,7 +2,7 @@ import re
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from .models import Album, Track, Playlist
-
+from .validators import validate_audio_file, validate_image_size
 
 class TrackReadSerializer(serializers.ModelSerializer):
     artist_name = serializers.CharField(source="artist.stage_name", read_only=True)
@@ -23,7 +23,7 @@ class TrackReadSerializer(serializers.ModelSerializer):
 
 class PublishTrackItemSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    audio_file = serializers.FileField(allow_empty_file=False)
+    audio_file = serializers.FileField(allow_empty_file=False, validators=[validate_audio_file])
     lyrics = serializers.CharField(required=False, allow_blank=True)
     duration_seconds = serializers.IntegerField(required=False, allow_null=True)
 
@@ -36,7 +36,7 @@ class PublishReleaseSerializer(serializers.Serializer):
     co_artists = serializers.ListField(
         child=serializers.CharField(max_length=255), required=False, default=list
     )
-    cover_art = serializers.ImageField(required=False, allow_null=True)
+    cover_art = serializers.ImageField(required=False, allow_null=True, validators=[validate_image_size])
     tracks = PublishTrackItemSerializer(many=True)
 
     def to_internal_value(self, data):
@@ -76,7 +76,8 @@ class PublishReleaseSerializer(serializers.Serializer):
 
 
 class TrackUpdateSerializer(serializers.ModelSerializer):
-    audio_url = serializers.FileField(source="audio_file", required=False)
+    audio_url = serializers.FileField(source="audio_file", required=False, validators=[validate_audio_file])
+    cover_art = serializers.ImageField(required=False, allow_null=True, validators=[validate_image_size])
 
     class Meta:
         model = Track
@@ -110,9 +111,11 @@ class PlaylistReadSerializer(serializers.ModelSerializer):
 
 
 class PlaylistCreateUpdateSerializer(serializers.ModelSerializer):
+    cover_art = serializers.ImageField(required=False, allow_null=True, validators=[validate_image_size])
+
     class Meta:
         model = Playlist
-        fields = ("name",)
+        fields = ("name", "cover_art")
         
     def validate_name(self, value):
         if not value.strip():

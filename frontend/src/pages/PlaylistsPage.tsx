@@ -20,7 +20,7 @@ import { ROUTES } from '../lib/constants/routes';
 import {
   getUserPlaylists,
   createPlaylist,
-  renamePlaylist,
+  updatePlaylist,
   deletePlaylist,
 } from '../lib/api/playlistService';
 import { useAuthStore } from '../store/authStore';
@@ -91,13 +91,13 @@ export default function PlaylistsPage() {
     setAddSongDialogOpen(true);
   };
 
-  const handleSaveEdit = async (name: string) => {
+  const handleSaveEdit = async (name: string, coverArt: File | null) => {
     try {
       if (activePlaylist) {
-        await renamePlaylist(activePlaylist.id, name);
+        await updatePlaylist(activePlaylist.id, name, coverArt);
         setFeedback({ msg: copy.messages.renamed, severity: 'success' });
       } else {
-        await createPlaylist(name);
+        await createPlaylist(name, coverArt);
         setFeedback({ msg: copy.messages.created, severity: 'success' });
       }
       setEditDialogOpen(false);

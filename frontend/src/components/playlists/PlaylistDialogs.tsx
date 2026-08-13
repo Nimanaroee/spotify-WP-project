@@ -10,8 +10,8 @@ import {
   Stack,
   Divider,
 } from '@mui/material';
-import { Search, Disc3 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Search, Disc3, ImagePlus } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppLanguage } from '../../theme/LanguageContext';
 import { getPlaylistsPageText } from '../../lib/constants/playlistsPageText';
 import { searchCatalog } from '../../lib/api/catalogService';
@@ -21,7 +21,7 @@ import type { Playlist, Track } from '../../types';
 interface PlaylistEditDialogProps {
   open: boolean;
   onClose: () => void;
-  onSave: (name: string) => void;
+  onSave: (name: string, coverArt: File | null) => void;
   playlist?: Playlist | null;
 }
 
@@ -30,11 +30,17 @@ export function PlaylistEditDialog({ open, onClose, onSave, playlist }: Playlist
   const copy = getPlaylistsPageText(language);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setName(playlist?.name ?? '');
       setError('');
+      setCoverFile(null);
+      setCoverPreview(playlist?.cover_art ?? null);
     }
   }, [open, playlist]);
 
@@ -44,23 +50,98 @@ export function PlaylistEditDialog({ open, onClose, onSave, playlist }: Playlist
       setError(copy.dialogs.nameRequired);
       return;
     }
-    onSave(trimmed);
+    onSave(trimmed, coverFile);
+  }
+
+  function handleCoverUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError(copy.dialogs.imageTooLarge);
+      return;
+    }
+
+    setCoverFile(file);
+    if (coverPreview && coverPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(coverPreview);
+    }
+    setCoverPreview(URL.createObjectURL(file));
+    setError('');
   }
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" dir={language === 'fa' ? 'rtl' : 'ltr'}>
       <DialogTitle>{playlist ? copy.dialogs.renameTitle : copy.dialogs.createTitle}</DialogTitle>
       <DialogContent>
-        <TextField
-          autoFocus
-          fullWidth
-          margin="dense"
-          label={copy.dialogs.nameLabel}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          error={!!error}
-          helperText={error}
-        />
+        <Stack spacing={3} mt={1}>
+          {/* Task 1: Centered Upload Box */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+            <Box
+              onClick={() => fileInputRef.current?.click()}
+              sx={{
+                width: 160,
+                height: 160,
+                bgcolor: 'action.hover',
+                border: '2px dashed',
+                borderColor: 'divider',
+                borderRadius: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                overflow: 'hidden',
+                position: 'relative',
+                mx: 'auto', // Center horizontally
+                '&:hover .overlay': { opacity: 1 },
+              }}
+            >
+              {coverPreview ? (
+                <>
+                  <img src={coverPreview} alt="Cover Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Box
+                    className="overlay"
+                    sx={{
+                      position: 'absolute',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      bgcolor: 'rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: 0,
+                      transition: 'opacity 0.2s',
+                    }}
+                  >
+                    <ImagePlus color="white" size={32} />
+                  </Box>
+                </>
+              ) : (
+                <Stack alignItems="center" spacing={1} color="text.secondary">
+                  <ImagePlus size={32} />
+                  <Typography variant="caption">{copy.dialogs.uploadCover}</Typography>
+                </Stack>
+              )}
+            </Box>
+            <input
+              type="file"
+              accept="image/jpeg, image/png, image/webp"
+              hidden
+              ref={fileInputRef}
+              onChange={handleCoverUpload}
+            />
+          </Box>
+
+          <TextField
+            autoFocus
+            fullWidth
+            label={copy.dialogs.nameLabel}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            error={!!error}
+            helperText={error}
+          />
+        </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
         <Button onClick={onClose} color="inherit">

@@ -169,9 +169,9 @@ class PlaylistViewSet(viewsets.ModelViewSet):
     CRUD endpoints for User Playlists.
     """
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser] # اضافه شد
     
     def get_queryset(self):
-        # Strict ownership: Users only see their own playlists.
         return Playlist.objects.filter(user=self.request.user).prefetch_related(
             "playlist_tracks__track",
             "playlist_tracks__track__artist",
@@ -185,11 +185,12 @@ class PlaylistViewSet(viewsets.ModelViewSet):
             return ToggleTrackSerializer
         return PlaylistReadSerializer
 
-    @extend_schema(summary="Create a new playlist", responses={201: PlaylistReadSerializer})
+    @extend_schema(summary="Create a new playlist", request=PlaylistCreateUpdateSerializer, responses={201: PlaylistReadSerializer})
     def perform_create(self, serializer):
         playlist = services.create_playlist(
             self.request.user, 
-            serializer.validated_data["name"]
+            serializer.validated_data.get("name"),
+            serializer.validated_data.get("cover_art")
         )
         serializer.instance = playlist
 
@@ -202,12 +203,13 @@ class PlaylistViewSet(viewsets.ModelViewSet):
         read_serializer = PlaylistReadSerializer(serializer.instance, context=self.get_serializer_context())
         return Response(read_serializer.data, status=status.HTTP_201_CREATED)
 
-    @extend_schema(summary="Update playlist name", responses={200: PlaylistReadSerializer})
+    @extend_schema(summary="Update playlist name and cover", request=PlaylistCreateUpdateSerializer, responses={200: PlaylistReadSerializer})
     def perform_update(self, serializer):
-        playlist = services.rename_playlist(
+        playlist = services.update_playlist(
             self.request.user, 
             self.get_object(), 
-            serializer.validated_data["name"]
+            serializer.validated_data.get("name"),
+            serializer.validated_data.get("cover_art") 
         )
         serializer.instance = playlist
 

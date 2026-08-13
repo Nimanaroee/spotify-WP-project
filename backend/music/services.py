@@ -122,23 +122,32 @@ def delete_track(artist, track):
 
 
 @transaction.atomic
-def create_playlist(user, name):
+def create_playlist(user, name, cover_art=None):
     tier = user.get_effective_subscription_tier()
     limit = PLAYLIST_LIMITS.get(tier, 6)
     
     if Playlist.objects.filter(user=user).count() >= limit:
         raise ValidationError(f"Playlist limit reached for your {tier} subscription.")
         
-    return Playlist.objects.create(user=user, name=name)
+    return Playlist.objects.create(user=user, name=name, cover_art=cover_art)
 
 
 @transaction.atomic
-def rename_playlist(user, playlist, name):
+def update_playlist(user, playlist, name=None, cover_art=None):
     if playlist.user_id != user.id:
-        raise ValidationError("You do not have permission to rename this playlist.")
+        raise ValidationError("You do not have permission to modify this playlist.")
     
-    playlist.name = name
-    playlist.save(update_fields=["name", "updated_at"])
+    update_fields = ["updated_at"]
+    
+    if name is not None:
+        playlist.name = name
+        update_fields.append("name")
+        
+    if cover_art is not None:
+        playlist.cover_art = cover_art
+        update_fields.append("cover_art")
+        
+    playlist.save(update_fields=update_fields)
     return playlist
 
 

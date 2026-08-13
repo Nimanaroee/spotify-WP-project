@@ -35,22 +35,44 @@ export async function getUserPlaylists(): Promise<Playlist[]> {
   }
 }
 
-export async function createPlaylist(name: string): Promise<Playlist> {
+export async function createPlaylist(name: string, coverArt?: File | null): Promise<Playlist> {
+  const formData = new FormData()
+  formData.append('name', name)
+  if (coverArt) {
+    formData.append('cover_art', coverArt)
+  }
+
   try {
-    const response = await client.post<Playlist>('/music/playlists/', { name })
+    const response = await client.post<Playlist>('/music/playlists/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return response.data
   } catch (error) {
     throw new Error(getApiErrorMessage(error, 'Failed to create playlist.'))
   }
 }
 
-export async function renamePlaylist(playlistId: number, name: string): Promise<Playlist> {
+export async function updatePlaylist(playlistId: number, name?: string, coverArt?: File | null): Promise<Playlist> {
+  const formData = new FormData()
+  if (name) {
+    formData.append('name', name)
+  }
+  if (coverArt) {
+    formData.append('cover_art', coverArt)
+  }
+
   try {
-    const response = await client.patch<Playlist>(`/music/playlists/${playlistId}/`, { name })
+    const response = await client.patch<Playlist>(`/music/playlists/${playlistId}/`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
     return response.data
   } catch (error) {
-    throw new Error(getApiErrorMessage(error, 'Failed to rename playlist.'))
+    throw new Error(getApiErrorMessage(error, 'Failed to update playlist.'))
   }
+}
+
+export async function renamePlaylist(playlistId: number, name: string): Promise<Playlist> {
+  return updatePlaylist(playlistId, name);
 }
 
 export async function deletePlaylist(playlistId: number): Promise<void> {

@@ -9,6 +9,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from drf_spectacular.utils import extend_schema_field
 from music.models import Album, Track
 from music.serializers import TrackReadSerializer, AlbumReadSerializer
+from .validators import validate_image_size
 
 
 from .models import Artist, Preferences
@@ -154,6 +155,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         source="profile_picture",
         required=False,
         allow_null=True,
+        validators=[validate_image_size],
         help_text="Send as multipart form-data.",
     )
 
@@ -411,6 +413,8 @@ class ArtistProfileUpdateSerializer(serializers.Serializer):
     bio = serializers.CharField(required=False, allow_blank=True)
     profile_photo = serializers.ImageField(
         required=False,
+        allow_null=True,
+        validators=[validate_image_size],
         help_text="Send as multipart form-data.",
     )
 

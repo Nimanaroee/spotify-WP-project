@@ -31,6 +31,8 @@ type PlaylistsPageCopy = {
     nameLabel: string
     nameRequired: string
     noResults: string
+    uploadCover: string
+    imageTooLarge: string
   }
   list: {
     emptyPlaylist: string
@@ -75,6 +77,8 @@ const COPY: Record<AppLanguage, PlaylistsPageCopy> = {
       nameLabel: 'Playlist Name',
       nameRequired: 'Name is required.',
       noResults: 'No songs found matching your search.',
+      uploadCover: 'Upload Cover',
+      imageTooLarge: 'Image must be under 5MB',
     },
     list: {
       emptyPlaylist: 'This playlist is empty.',
@@ -117,6 +121,8 @@ const COPY: Record<AppLanguage, PlaylistsPageCopy> = {
       nameLabel: 'نام پلی‌لیست',
       nameRequired: 'نام پلی‌لیست الزامی است.',
       noResults: 'آهنگی مطابق جستجوی شما یافت نشد.',
+      uploadCover: 'آپلود کاور',
+      imageTooLarge: 'حجم تصویر باید کمتر از ۵ مگابایت باشد',
     },
     list: {
       emptyPlaylist: 'این پلی‌لیست خالی است.',

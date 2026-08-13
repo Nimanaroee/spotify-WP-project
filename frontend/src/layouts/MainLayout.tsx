@@ -13,7 +13,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
-import { Menu } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import NotificationPanel from '../components/notifications/NotificationPanel';
@@ -89,9 +89,19 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
   const drawerContent = (
     <Box sx={{ pt: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Typography className="px-4 pb-4" variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
-        Spotify WP
-      </Typography>
+      {/* هدر سایدبار شامل لوگو و دکمه بستن */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 3, pb: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main' }}>
+          Spotify WP
+        </Typography>
+        {/* دکمه بستن فقط در حالت موبایل/تبلت نمایش داده می‌شود */}
+        {isMobile && (
+          <IconButton onClick={() => setSidebarOpen(false)} aria-label={homeCopy.nav.closeSidebar}>
+            <X size={24} />
+          </IconButton>
+        )}
+      </Box>
+
       <List sx={{ flexGrow: 1, px: 1 }}>
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
@@ -112,13 +122,11 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           );
         })}
       </List>
+      
       {user && (
          <Box sx={{ p: 2, pb: 4 }}>
-           <Button fullWidth variant="outlined" color="inherit" onClick={() => void handleLogout()} sx={{ mb: 1.5 }}>
+           <Button fullWidth variant="outlined" color="inherit" onClick={() => void handleLogout()}>
              {appCopy.auth.logout}
-           </Button>
-           <Button fullWidth variant="text" color="inherit" onClick={() => setSidebarOpen(false)}>
-             {homeCopy.nav.closeSidebar}
            </Button>
          </Box>
       )}
