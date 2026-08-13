@@ -385,7 +385,14 @@ class PublicProfileReadSerializer(ProfileReadSerializer):
         )
         read_only_fields = fields
 
-    # ... keeping get_is_following and get_artist_profile the same ...
+    def get_is_following(self, user):
+        request = self.context["request"]
+        return request.user.following.filter(pk=user.pk).exists()
+
+    def get_artist_profile(self, user):
+        if user.role != User.Role.ARTIST:
+            return None
+        return PublicArtistProfileSerializer(user.artist).data
 
     @extend_schema_field(AlbumReadSerializer(many=True))
     def get_albums(self, user):
@@ -413,7 +420,6 @@ class ArtistProfileUpdateSerializer(serializers.Serializer):
     bio = serializers.CharField(required=False, allow_blank=True)
     profile_photo = serializers.ImageField(
         required=False,
-        allow_null=True,
         validators=[validate_image_size],
         help_text="Send as multipart form-data.",
     )
