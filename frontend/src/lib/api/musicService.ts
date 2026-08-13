@@ -2,6 +2,13 @@ import { isAxiosError } from 'axios'
 import type { PublishReleasePayload, Track, UpdateTrackPayload } from '../../types/music'
 import client from './client'
 
+interface PaginatedResponse<T> {
+  count: number
+  next: string | null
+  previous: string | null
+  results: T[]
+}
+
 function getApiErrorMessage(error: unknown, fallback: string): string {
   if (isAxiosError(error)) {
     const detail = error.response?.data?.detail
@@ -20,8 +27,8 @@ function getApiErrorMessage(error: unknown, fallback: string): string {
 
 export async function listArtistReleases(artistId?: number): Promise<Track[]> {
   try {
-    const response = await client.get<Track[]>('/music/artist/releases/')
-    return response.data
+    const response = await client.get<PaginatedResponse<Track>>('/music/artist/releases/')
+    return response.data.results
   } catch (error) {
     throw new Error(getApiErrorMessage(error, 'Unable to load releases.'))
   }
