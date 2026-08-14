@@ -1,3 +1,5 @@
+# backend/music/recommender.py
+
 import logging
 from dataclasses import dataclass
 
@@ -127,9 +129,24 @@ def _flatten_audio_bundle(bundle_dict: dict) -> np.ndarray:
 def get_fallback_recommendations(limit: int | None = None, exclude_ids=None) -> list:
     limit = limit or settings.MUSIC_RECOMMENDATION_DEFAULT_LIMIT
     qs = Track.objects.select_related("artist", "album").all()
+    
+    results = []
     if exclude_ids:
-        qs = qs.exclude(id__in=exclude_ids)
-    return list(qs.order_by("-listener_count", "-stream_count", "-created_at")[:limit])
+        # Try to pull unplayed tracks first
+        results = list(qs.exclude(id__in=exclude_ids).order_by("-listener_count", "-stream_count", "-created_at")[:limit])
+    else:
+        results = list(qs.order_by("-listener_count", "-stream_count", "-created_at")[:limit])
+        
+    # FIX: Pad with the most popular tracks if we haven't reached the limit.
+    # This prevents the recommendations row from disappearing if a user has played most/all tracks.
+    if len(results) < limit:
+        needed = limit - len(results)
+        # We must not duplicate what we already fetched in 'results'
+        current_ids = {t.id for t in results}
+        pad_qs = qs.exclude(id__in=current_ids).order_by("-listener_count", "-stream_count", "-created_at")
+        results.extend(list(pad_qs[:needed]))
+        
+    return results
 
 
 def _wrap_fallback(tracks: list) -> list[RecommendationResult]:
@@ -162,22 +179,36 @@ def get_recommendations_for_user(
             .values_list("track_id", flat=True)
         )
 
-        last_stream = (
+        recent_streams = (
             StreamEvent.objects
             .filter(user=user)
             .select_related("track")
-            .order_by("-created_at")
-            .first()
+            .order_by("-created_at")[:5] # Analyze the last 5 listened tracks
         )
 
-        if not last_stream:
+        if not recent_streams:
             return _wrap_fallback(get_fallback_recommendations(limit, played_track_ids))
 
-        seed_track = last_stream.track
-        seed_vector = _flatten_audio_bundle(seed_track.audio_features)
+        # FEATURE ADDITION: Average Taste Profile (Mean Pooling)
+        # Instead of just the last track, build a composite vector mapping the user's current vibe
+        seed_vectors = []
+        total_streams = getattr(recent_streams[0].track, "stream_count", 0) or 0
         
-        if seed_vector.shape[0] <= 1:
+        for stream in recent_streams:
+            vec = _flatten_audio_bundle(stream.track.audio_features)
+            if vec.shape[0] > 1:
+                seed_vectors.append(vec)
+                
+        if not seed_vectors:
             return _wrap_fallback(get_fallback_recommendations(limit, played_track_ids))
+
+        # Assure feature shapes match and average them
+        target_dim = seed_vectors[0].shape[0]
+        valid_seeds = [v for v in seed_vectors if v.shape[0] == target_dim]
+        if not valid_seeds:
+            return _wrap_fallback(get_fallback_recommendations(limit, played_track_ids))
+            
+        seed_vector = np.mean(valid_seeds, axis=0)
 
         # Build candidate pool
         candidates = list(
@@ -185,12 +216,6 @@ def get_recommendations_for_user(
             .exclude(id__in=played_track_ids)
             .select_related("artist", "album")
         )
-
-        if (
-            len(candidates)
-            < settings.MUSIC_RECOMMENDATION_MIN_SIMILARITY_CANDIDATES
-        ):
-            return _wrap_fallback(get_fallback_recommendations(limit, played_track_ids))
 
         candidate_ids = []
         candidate_vectors = []
@@ -203,7 +228,8 @@ def get_recommendations_for_user(
                 candidate_vectors.append(vec)
                 valid_candidates.append(track)
                 
-        if not candidate_vectors:
+        # Guard: Check candidate_vectors, not just candidates, to ensure ML has valid scaling shape
+        if len(candidate_vectors) < settings.MUSIC_RECOMMENDATION_MIN_SIMILARITY_CANDIDATES:
             return _wrap_fallback(get_fallback_recommendations(limit, played_track_ids))
 
         # Standardize the feature space before computing distance
@@ -218,8 +244,7 @@ def get_recommendations_for_user(
         similarities = cosine_similarity(scaled_seed, scaled_candidates)[0]
         
         # Determine weighting gates
-        stream_count = getattr(seed_track, "stream_count", 0) or 0
-        alpha, beta, gamma = _gating_mlp(stream_count, 2.0, query_intent)
+        alpha, beta, gamma = _gating_mlp(total_streams, 2.0, query_intent)
 
         # Sort and rerank
         top_indices = np.argsort(similarities)[::-1][:limit]
@@ -236,10 +261,11 @@ def get_recommendations_for_user(
                     audio_similarity=sim_score,
                     meta_similarity=0.0,
                     behav_similarity=0.0,
-                    explanation_label="Similar sound",
+                    explanation_label="Based on your recent listening",
                 )
             )
 
+        # Pad with the new fallback logic if ML didn't find enough unique tracks
         if len(results) < limit:
             recommended_ids = {r.track.id for r in results}
             exclude = played_track_ids | recommended_ids
