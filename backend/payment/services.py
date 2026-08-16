@@ -8,8 +8,6 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
-USD_TO_IRR_RATE = Decimal("1900000")
-
 ZARINPAL_ERROR_MESSAGES = {
     -9: "The payment request is invalid. Please review the submitted information.",
     -10: "The payment terminal is invalid. Please contact support.",
@@ -43,13 +41,17 @@ class ZarinpalGatewayError(Exception):
 
 def get_gateway_base_url():
     if settings.ZARINPAL_SANDBOX:
-        return "https://sandbox.zarinpal.com"
-    return "https://payment.zarinpal.com"
+        return settings.ZARINPAL_SANDBOX_BASE_URL
+    return settings.ZARINPAL_PRODUCTION_BASE_URL
 
 
 def get_gateway_amount(amount: Decimal) -> int:
+    exchange_rate = Decimal(str(settings.ZARINPAL_USD_TO_IRR_RATE))
     return int(
-        (amount * USD_TO_IRR_RATE).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+        (amount * exchange_rate).quantize(
+            Decimal("1"),
+            rounding=ROUND_HALF_UP,
+        )
     )
 
 

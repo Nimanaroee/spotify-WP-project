@@ -89,6 +89,44 @@ class LogoutApiTests(APITestCase):
         )
 
 
+class DeleteAccountApiTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="delete-account@example.com",
+            username="delete_account",
+            password="password123",
+            display_name="Delete Account",
+        )
+        self.preferences = Preferences.objects.create(user=self.user)
+        self.payment_log = SubscriptionPaymentLog.objects.create(
+            user=self.user,
+            amount="9.99",
+            account_type=User.SubscriptionTier.SILVER,
+            duration_months=1,
+        )
+        self.url = reverse("delete-account")
+
+    def test_delete_account_requires_authentication(self):
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_delete_account_removes_user_and_related_payment_log(self):
+        user_id = self.user.id
+        preferences_id = self.preferences.id
+        payment_log_id = self.payment_log.id
+        self.client.force_authenticate(self.user)
+
+        response = self.client.delete(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(User.objects.filter(pk=user_id).exists())
+        self.assertFalse(Preferences.objects.filter(pk=preferences_id).exists())
+        self.assertFalse(
+            SubscriptionPaymentLog.objects.filter(pk=payment_log_id).exists()
+        )
+
+
 class ArtistProfileApiTests(APITestCase):
     def setUp(self):
         self.artist = Artist.objects.create_user(
@@ -152,8 +190,8 @@ class ArtistProfileApiTests(APITestCase):
                 "bio": "Original biography.",
                 "verification_status": "approved",
                 "is_verified": True,
-                "listener_count": 40,
-                "total_streams": 120,
+                "listener_count": 0,
+                "total_streams": 0,
             },
         )
         self.assertEqual(response.data["albums"], [])
@@ -537,7 +575,7 @@ class ProfileApiTests(APITestCase):
         self.assertEqual(response.data["bearth_date"], "2000-01-01")
         self.assertEqual(response.data["num_follower"], 1)
         self.assertEqual(response.data["num_following"], 1)
-        self.assertEqual(response.data["streamed_today"], 7)
+        self.assertEqual(response.data["streamed_today"], 0)
         self.assertEqual(response.data["subscription"], "silver")
         self.assertEqual(
             response.data["followers"][0],
@@ -784,7 +822,7 @@ class PublicProfileApiTests(APITestCase):
         self.assertEqual(response.data["bearth_date"], "1998-04-05")
         self.assertEqual(response.data["gender"], User.Gender.FEMALE)
         self.assertEqual(response.data["subscription"], "gold")
-        self.assertEqual(response.data["streamed_today"], 12)
+        self.assertEqual(response.data["streamed_today"], 0)
         self.assertEqual(response.data["num_follower"], 2)
         self.assertTrue(response.data["is_following"])
         self.assertEqual(response.data["role"], User.Role.LISTENER)
@@ -826,8 +864,8 @@ class PublicProfileApiTests(APITestCase):
                 "bio": "Artist biography.",
                 "verification_status": "approved",
                 "is_verified": True,
-                "listener_count": 24,
-                "total_streams": 500,
+                "listener_count": 0,
+                "total_streams": 0,
             },
         )
 

@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 from pathlib import Path
 import environ
 
@@ -8,6 +9,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 SECRET_KEY = env('SECRET_KEY', default='change-me')
 DEBUG = env.bool('DEBUG', default=False)
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -68,14 +70,14 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = []
 
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = env('LANGUAGE_CODE', default='en-us')
+TIME_ZONE = env('TIME_ZONE', default='UTC')
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = '/static/'
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+STATIC_URL = env('STATIC_URL', default='/static/')
+MEDIA_URL = env('MEDIA_URL', default='/media/')
+MEDIA_ROOT = env('MEDIA_ROOT', default=str(BASE_DIR / 'media'))
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -87,7 +89,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'EXCEPTION_HANDLER': 'user.exceptions.custom_exception_handler',
-    'PAGE_SIZE': 20,
+    'PAGE_SIZE': env.int('API_PAGE_SIZE', default=20),
 }
 
 CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=['http://localhost:5173'])
@@ -96,6 +98,56 @@ FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173').rstrip('/')
 ZARINPAL_MERCHANT_ID = env('ZARINPAL_MERCHANT_ID', default='')
 ZARINPAL_SANDBOX = env.bool('ZARINPAL_SANDBOX', default=False)
 ZARINPAL_REQUEST_TIMEOUT = env.int('ZARINPAL_REQUEST_TIMEOUT', default=15)
+ZARINPAL_SANDBOX_BASE_URL = env(
+    'ZARINPAL_SANDBOX_BASE_URL',
+    default='https://sandbox.zarinpal.com',
+)
+ZARINPAL_PRODUCTION_BASE_URL = env(
+    'ZARINPAL_PRODUCTION_BASE_URL',
+    default='https://payment.zarinpal.com',
+)
+ZARINPAL_USD_TO_IRR_RATE = env(
+    'ZARINPAL_USD_TO_IRR_RATE',
+    cast=Decimal,
+    default='1900000',
+)
+
+USER_MAX_IMAGE_SIZE_MB = env.int('USER_MAX_IMAGE_SIZE_MB', default=5)
+MUSIC_MAX_AUDIO_SIZE_MB = env.int('MUSIC_MAX_AUDIO_SIZE_MB', default=10)
+MUSIC_MAX_IMAGE_SIZE_MB = env.int('MUSIC_MAX_IMAGE_SIZE_MB', default=5)
+MUSIC_ALLOWED_AUDIO_EXTENSIONS = env.list(
+    'MUSIC_ALLOWED_AUDIO_EXTENSIONS',
+    default=['.mp3', '.wav', '.flac'],
+)
+MUSIC_CATALOG_RESULT_LIMIT = env.int('MUSIC_CATALOG_RESULT_LIMIT', default=50)
+MUSIC_EARLY_ACCESS_DAYS = env.int('MUSIC_EARLY_ACCESS_DAYS', default=7)
+MUSIC_HOME_RECENT_PLAYLISTS_LIMIT = env.int('MUSIC_HOME_RECENT_PLAYLISTS_LIMIT', default=10)
+MUSIC_HOME_LATEST_ALBUMS_LIMIT = env.int('MUSIC_HOME_LATEST_ALBUMS_LIMIT', default=10)
+MUSIC_HOME_TOP_SONGS_LIMIT = env.int('MUSIC_HOME_TOP_SONGS_LIMIT', default=10)
+MUSIC_HOME_LATEST_RELEASES_LIMIT = env.int('MUSIC_HOME_LATEST_RELEASES_LIMIT', default=10)
+MUSIC_HOME_EARLY_ACCESS_LIMIT = env.int('MUSIC_HOME_EARLY_ACCESS_LIMIT', default=6)
+MUSIC_HOME_RECOMMENDATIONS_LIMIT = env.int('MUSIC_HOME_RECOMMENDATIONS_LIMIT', default=10)
+MUSIC_BASIC_DAILY_STREAM_LIMIT = env.int('MUSIC_BASIC_DAILY_STREAM_LIMIT', default=60)
+MUSIC_STREAM_DEBOUNCE_SECONDS = env.int('MUSIC_STREAM_DEBOUNCE_SECONDS', default=30)
+MUSIC_PLAYLIST_LIMIT_BASIC = env.int('MUSIC_PLAYLIST_LIMIT_BASIC', default=6)
+MUSIC_PLAYLIST_LIMIT_SILVER = env.int('MUSIC_PLAYLIST_LIMIT_SILVER', default=100)
+MUSIC_RECOMMENDATION_DEFAULT_LIMIT = env.int('MUSIC_RECOMMENDATION_DEFAULT_LIMIT', default=20)
+MUSIC_RECOMMENDATION_MIN_SIMILARITY_CANDIDATES = env.int(
+    'MUSIC_RECOMMENDATION_MIN_SIMILARITY_CANDIDATES',
+    default=5,
+)
+MUSIC_RECOMMENDATION_CHROMA_ROTATIONS = env.int(
+    'MUSIC_RECOMMENDATION_CHROMA_ROTATIONS',
+    default=12,
+)
+MUSIC_AUDIO_FEATURE_ANALYSIS_DURATION_SECONDS = env.float(
+    'MUSIC_AUDIO_FEATURE_ANALYSIS_DURATION_SECONDS',
+    default=30.0,
+)
+MUSIC_AUDIO_FEATURE_ONSET_PEAK_DISTANCE = env.int(
+    'MUSIC_AUDIO_FEATURE_ONSET_PEAK_DISTANCE',
+    default=10,
+)
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Spotify-WP API',

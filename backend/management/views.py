@@ -162,7 +162,7 @@ class VerificationRequestDetailView(generics.RetrieveAPIView):
     tags=schema.VERIFICATION_TAG,
     summary="Approve an artist verification request",
     description=(
-        "Sets verification_status to `approved`, activates the artist account, and "
+        "Sets verification_status to `approved`, grants Artist Studio access, and "
         "notifies the artist. Fails with 400 if the request was already processed."
     ),
     request=None,

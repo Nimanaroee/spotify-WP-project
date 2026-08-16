@@ -66,6 +66,15 @@ def unfollow_user(user, target):
     _sync_follow_counts({user.id, target.id})
 
 
+@transaction.atomic
+def delete_account(user):
+    from payment.models import SubscriptionPaymentLog
+
+    locked_user = UserModel.objects.select_for_update().get(pk=user.pk)
+    SubscriptionPaymentLog.objects.filter(user=locked_user).delete()
+    locked_user.delete()
+
+
 def add_months(value: datetime, months: int) -> datetime:
     month_index = value.month - 1 + months
     year = value.year + month_index // 12

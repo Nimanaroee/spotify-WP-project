@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import client from './client'
 import {
   createSubscriptionPaymentFromApi,
+  deleteAccountFromApi,
   getSubscriptionFeesFromApi,
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
@@ -17,6 +18,7 @@ vi.mock('./client', () => ({
     patch: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    delete: vi.fn(),
   },
 }))
 
@@ -37,6 +39,7 @@ describe('settingsService', () => {
     vi.mocked(client.patch).mockReset()
     vi.mocked(client.post).mockReset()
     vi.mocked(client.put).mockReset()
+    vi.mocked(client.delete).mockReset()
   })
 
   it('loads and maps current user preferences', async () => {
@@ -134,5 +137,13 @@ describe('settingsService', () => {
     })
     expect(paymentLog.id).toBe(42)
     expect(paymentLog.redirect_url).toContain('payment.zarinpal.com')
+  })
+
+  it('deletes the authenticated account', async () => {
+    vi.mocked(client.delete).mockResolvedValue({ data: undefined })
+
+    await deleteAccountFromApi()
+
+    expect(client.delete).toHaveBeenCalledWith('/users/account/')
   })
 })

@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 from . import schema
 from .models import Notification
 from .serializers import NotificationSerializer
+from user.models import Preferences
 
 
 @extend_schema(
@@ -21,7 +22,10 @@ class NotificationListView(generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        return Notification.objects.filter(recipient=self.request.user)
+        preferences, _ = Preferences.objects.get_or_create(user=self.request.user)
+        return Notification.objects.filter(
+            recipient=self.request.user
+        ).order_by("-created_at")[: preferences.notification_limit]
 
 
 @extend_schema(

@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     ArtistProfileView,
+    DeleteAccountView,
     FollowView,
     PreferencesView,
     ProfileView,
@@ -10,6 +11,7 @@ from .views import (
 )
 
 urlpatterns = [
+    path("account/", DeleteAccountView.as_view(), name="delete-account"),
     path("profile/listener/", ProfileView.as_view(), name="profile"),
     path("profile/artist/", ArtistProfileView.as_view(), name="artist-profile"),
     path("preferences/", PreferencesView.as_view(), name="preferences"),

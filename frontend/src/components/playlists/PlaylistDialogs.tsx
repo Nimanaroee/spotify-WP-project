@@ -16,6 +16,7 @@ import { useAppLanguage } from '../../theme/LanguageContext';
 import { getPlaylistsPageText } from '../../lib/constants/playlistsPageText';
 import { searchCatalog } from '../../lib/api/catalogService';
 import { toggleTrackInPlaylist } from '../../lib/api/playlistService';
+import { MAX_COVER_FILE_BYTES } from '../../lib/artwork/fileUpload';
 import type { Playlist, Track } from '../../types';
 
 interface PlaylistEditDialogProps {
@@ -57,7 +58,7 @@ export function PlaylistEditDialog({ open, onClose, onSave, playlist }: Playlist
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_COVER_FILE_BYTES) {
       setError(copy.dialogs.imageTooLarge);
       return;
     }

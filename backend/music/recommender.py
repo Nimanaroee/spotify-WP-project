@@ -2,6 +2,7 @@ import logging
 from dataclasses import dataclass
 
 import numpy as np
+from django.conf import settings
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
 from django.db import models
@@ -14,11 +15,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
-
-DEFAULT_LIMIT = 20
-MIN_SIMILARITY_CANDIDATES = 5
-CHROMA_ROTATIONS = 12
-
 
 @dataclass
 class RecommendationResult:
@@ -83,7 +79,7 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> float:
 
 def _key_invariant_cosine(query_cens: np.ndarray, cand_cens: np.ndarray) -> float:
     best = -1.0
-    for shift in range(CHROMA_ROTATIONS):
+    for shift in range(settings.MUSIC_RECOMMENDATION_CHROMA_ROTATIONS):
         rotated = np.roll(cand_cens, shift)
         sim = _cosine(query_cens, rotated)
         if sim > best:
@@ -128,7 +124,8 @@ def _flatten_audio_bundle(bundle_dict: dict) -> np.ndarray:
     return np.array(flat, dtype=np.float32)
 
 
-def get_fallback_recommendations(limit: int = DEFAULT_LIMIT, exclude_ids=None) -> list:
+def get_fallback_recommendations(limit: int | None = None, exclude_ids=None) -> list:
+    limit = limit or settings.MUSIC_RECOMMENDATION_DEFAULT_LIMIT
     qs = Track.objects.select_related("artist", "album").all()
     if exclude_ids:
         qs = qs.exclude(id__in=exclude_ids)
@@ -149,13 +146,15 @@ def _wrap_fallback(tracks: list) -> list[RecommendationResult]:
 
 def get_recommendations_for_user(
     user,
-    limit: int = DEFAULT_LIMIT,
+    limit: int | None = None,
     query_intent: str = "discovery",
 ) -> list[RecommendationResult]:
     """
     Generate track recommendations for a user utilizing the Standardized
     Multi-Tower similarity engine.
     """
+    limit = limit or settings.MUSIC_RECOMMENDATION_DEFAULT_LIMIT
+
     try:
         played_track_ids = set(
             StreamEvent.objects
@@ -187,7 +186,10 @@ def get_recommendations_for_user(
             .select_related("artist", "album")
         )
 
-        if len(candidates) < MIN_SIMILARITY_CANDIDATES:
+        if (
+            len(candidates)
+            < settings.MUSIC_RECOMMENDATION_MIN_SIMILARITY_CANDIDATES
+        ):
             return _wrap_fallback(get_fallback_recommendations(limit, played_track_ids))
 
         candidate_ids = []

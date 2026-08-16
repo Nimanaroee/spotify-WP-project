@@ -201,8 +201,8 @@ class VerificationApiTests(APITestCase):
         self.assertEqual(response.data["user_id"], self.pending_artist.pk)
         self.assertEqual(response.data["stage_name"], "Pending Artist")
 
-    def test_approve_activates_artist_and_notifies(self):
-        self.assertFalse(self.pending_artist.is_active)
+    def test_approve_grants_artist_studio_access_and_notifies(self):
+        self.assertTrue(self.pending_artist.is_active)
         self.client.force_authenticate(self.support)
 
         response = self.client.post(

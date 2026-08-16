@@ -187,7 +187,7 @@ class ArtistOnboardingToPayoutE2ETests(APITestCase):
 
         artist.refresh_from_db()
         self.assertEqual(artist.verification_status, Artist.VerificationStatus.REJECTED)
-        self.assertFalse(artist.is_active)
+        self.assertTrue(artist.is_active)
 
         full_history = self.client.get(reverse("verification-request-list"))
         emails = [row["email"] for row in full_history.data["results"]]

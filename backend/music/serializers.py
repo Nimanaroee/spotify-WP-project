@@ -131,6 +131,7 @@ class ToggleTrackSerializer(serializers.Serializer):
 class AlbumReadSerializer(serializers.ModelSerializer):
     artist_name = serializers.CharField(source="artist.stage_name", read_only=True)
     artist_username = serializers.CharField(source="artist.username", read_only=True)
+    release_type = serializers.SerializerMethodField()
     tracks = TrackReadSerializer(many=True, read_only=True)
 
     class Meta:
@@ -142,6 +143,10 @@ class AlbumReadSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
+    @extend_schema_field(serializers.ChoiceField(choices=Track.ReleaseType.choices))
+    def get_release_type(self, obj):
+        return Track.ReleaseType.ALBUM
+
 
 class CatalogItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
@@ -150,20 +155,43 @@ class CatalogItemSerializer(serializers.Serializer):
     artist_name = serializers.CharField(source="artist.stage_name")
     artist_username = serializers.CharField(source="artist.username")
     cover_art = serializers.ImageField(allow_null=True)
-    release_type = serializers.CharField()
+    release_type = serializers.SerializerMethodField()
     release_year = serializers.IntegerField(allow_null=True)
     itemType = serializers.SerializerMethodField()
-    
-    album_id = serializers.IntegerField(allow_null=True, required=False)
-    album_name = serializers.CharField(source="album.title", allow_null=True, required=False)
-    duration_seconds = serializers.IntegerField(allow_null=True, required=False)
-    audio_url = serializers.FileField(source="audio_file", allow_null=True, required=False)
-    lyrics = serializers.CharField(allow_null=True, required=False)
+    album_id = serializers.SerializerMethodField()
+    album_name = serializers.SerializerMethodField()
+    duration_seconds = serializers.SerializerMethodField()
+    audio_url = serializers.SerializerMethodField()
+    lyrics = serializers.SerializerMethodField()
     listener_count = serializers.IntegerField(default=0)
     stream_count = serializers.IntegerField(default=0)
 
     def get_itemType(self, obj):
         return "album" if isinstance(obj, Album) else "track"
+
+    def get_release_type(self, obj):
+        return Track.ReleaseType.ALBUM if isinstance(obj, Album) else obj.release_type
+
+    def get_album_id(self, obj):
+        return obj.album_id if isinstance(obj, Track) else None
+
+    def get_album_name(self, obj):
+        if isinstance(obj, Track) and obj.album_id:
+            return obj.album.title
+        return None
+
+    def get_duration_seconds(self, obj):
+        return obj.duration_seconds if isinstance(obj, Track) else None
+
+    def get_audio_url(self, obj):
+        if not isinstance(obj, Track) or not obj.audio_file:
+            return None
+        request = self.context.get("request")
+        url = obj.audio_file.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_lyrics(self, obj):
+        return obj.lyrics if isinstance(obj, Track) else None
 
 
 class HomeDataSerializer(serializers.Serializer):

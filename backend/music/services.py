@@ -1,4 +1,6 @@
 from django.db import transaction, models
+from django.conf import settings
+import logging
 from rest_framework.exceptions import ValidationError
 from datetime import timedelta
 from django.utils import timezone
@@ -6,14 +8,14 @@ from user.models import User
 from .models import Album, Track, Playlist, PlaylistTrack, StreamEvent
 from .audio_features import extract_advanced_features
 
+logger = logging.getLogger(__name__)
 
 PLAYLIST_LIMITS = {
-    User.SubscriptionTier.BASIC: 6,
-    User.SubscriptionTier.SILVER: 100,
+    User.SubscriptionTier.BASIC: settings.MUSIC_PLAYLIST_LIMIT_BASIC,
+    User.SubscriptionTier.SILVER: settings.MUSIC_PLAYLIST_LIMIT_SILVER,
     User.SubscriptionTier.GOLD: float('inf'),
 }
 
-@transaction.atomic
 def publish_release(artist, validated_data):
     release_type = validated_data.get("release_type")
     title = validated_data.get("title")
@@ -23,50 +25,56 @@ def publish_release(artist, validated_data):
     cover_art = validated_data.get("cover_art")
     tracks_data = validated_data.get("tracks", [])
 
-    album = None
-    if release_type == Track.ReleaseType.ALBUM:
-        album = Album.objects.create(
-            artist=artist,
-            title=title,
-            release_year=release_year,
-            genre=genre,
-            cover_art=cover_art,
-            track_count=len(tracks_data),
-        )
+    with transaction.atomic():
+        album = None
+        if release_type == Track.ReleaseType.ALBUM:
+            album = Album.objects.create(
+                artist=artist,
+                title=title,
+                release_year=release_year,
+                genre=genre,
+                cover_art=cover_art,
+                track_count=len(tracks_data),
+            )
 
-    created_tracks = []
-    for track_data in tracks_data:
-        track_title = track_data.get("title") if release_type == Track.ReleaseType.ALBUM else title
-        
-        track = Track.objects.create(
-            artist=artist,
-            album=album,
-            title=track_title,
-            release_type=release_type,
-            genre=genre,
-            release_year=release_year,
-            co_artists=co_artists,
-            cover_art=cover_art,
-            audio_file=track_data.get("audio_file"),
-            lyrics=track_data.get("lyrics", ""),
-            duration_seconds=track_data.get("duration_seconds"),
-        )
-        
-        # Extract and save the audio DNA vector
-        # Capture optional neural flags passed in during tests
-        enable_neural = track_data.get("enable_neural", False)
-        device = track_data.get("device", "cpu")
-        
-        bundle = extract_advanced_features(
-            track.audio_file, 
-            enable_neural=enable_neural, 
-            device=device
-        )
-        if bundle:
-            track.audio_features = bundle.to_flat_dict()
-            track.save(update_fields=["audio_features", "updated_at"])
-            
-        created_tracks.append(track)
+        created_tracks = []
+        for track_data in tracks_data:
+            track_title = (
+                track_data.get("title")
+                if release_type == Track.ReleaseType.ALBUM
+                else title
+            )
+            created_tracks.append(
+                Track.objects.create(
+                    artist=artist,
+                    album=album,
+                    title=track_title,
+                    release_type=release_type,
+                    genre=genre,
+                    release_year=release_year,
+                    co_artists=co_artists,
+                    cover_art=cover_art,
+                    audio_file=track_data.get("audio_file"),
+                    lyrics=track_data.get("lyrics", ""),
+                    duration_seconds=track_data.get("duration_seconds"),
+                )
+            )
+
+    for track, track_data in zip(created_tracks, tracks_data):
+        try:
+            bundle = extract_advanced_features(
+                track.audio_file,
+                enable_neural=track_data.get("enable_neural", False),
+                device=track_data.get("device", "cpu"),
+            )
+            if bundle and hasattr(bundle, "to_flat_dict"):
+                track.audio_features = bundle.to_flat_dict()
+                track.save(update_fields=["audio_features", "updated_at"])
+        except Exception:
+            logger.exception(
+                "Audio feature extraction failed while publishing track_id=%s.",
+                track.pk,
+            )
 
     return created_tracks
 
@@ -85,10 +93,16 @@ def update_track(artist, track, validated_data):
     
     # Re-extract DNA if a new audio file was uploaded
     if audio_updated:
-        bundle = extract_advanced_features(track.audio_file, enable_neural=False)
-        if bundle:
-            track.audio_features = bundle.to_flat_dict()
-            track.save(update_fields=["audio_features", "updated_at"])
+        try:
+            bundle = extract_advanced_features(track.audio_file, enable_neural=False)
+            if bundle and hasattr(bundle, "to_flat_dict"):
+                track.audio_features = bundle.to_flat_dict()
+                track.save(update_fields=["audio_features", "updated_at"])
+        except Exception:
+            logger.exception(
+                "Audio feature extraction failed while updating track_id=%s.",
+                track.pk,
+            )
 
     if track.album_id:
         album = track.album
@@ -124,7 +138,7 @@ def delete_track(artist, track):
 @transaction.atomic
 def create_playlist(user, name, cover_art=None):
     tier = user.get_effective_subscription_tier()
-    limit = PLAYLIST_LIMITS.get(tier, 6)
+    limit = PLAYLIST_LIMITS.get(tier, settings.MUSIC_PLAYLIST_LIMIT_BASIC)
     
     if Playlist.objects.filter(user=user).count() >= limit:
         raise ValidationError(f"Playlist limit reached for your {tier} subscription.")
@@ -179,13 +193,22 @@ def toggle_track_in_playlist(user, playlist, track, state):
 @transaction.atomic
 def record_play(user, track):
     tier = user.get_effective_subscription_tier()
+    today_stream_count = StreamEvent.objects.filter(
+        user=user,
+        created_at__date=timezone.localdate(),
+    ).count()
     
-    # 1. Enforce Basic Tier Daily Limit (60)
-    if tier == User.SubscriptionTier.BASIC and user.streamed_today >= 60:
+    # 1. Enforce the configured Basic tier daily limit.
+    if (
+        tier == User.SubscriptionTier.BASIC
+        and today_stream_count >= settings.MUSIC_BASIC_DAILY_STREAM_LIMIT
+    ):
         raise ValidationError("Daily stream limit reached. Upgrade to Silver or Gold to continue listening.")
 
     # 2. Early Access Gate (Gold Only)
-    is_early_access = track.created_at >= timezone.now() - timedelta(days=7)
+    is_early_access = track.created_at >= timezone.now() - timedelta(
+        days=settings.MUSIC_EARLY_ACCESS_DAYS
+    )
     if is_early_access and tier != User.SubscriptionTier.GOLD and user.role not in [User.Role.ARTIST, User.Role.ADMIN]:
         raise ValidationError("This track is in Early Access. Upgrade to Gold to listen.")
 
@@ -193,36 +216,45 @@ def record_play(user, track):
     recent_play = StreamEvent.objects.filter(
         user=user, 
         track=track, 
-        created_at__gte=timezone.now() - timedelta(seconds=30)
+        created_at__gte=timezone.now()
+        - timedelta(seconds=settings.MUSIC_STREAM_DEBOUNCE_SECONDS)
     ).exists()
 
     if not recent_play:
         StreamEvent.objects.create(user=user, track=track)
 
         # Update User Daily Streams
-        user.streamed_today += 1
+        user.streamed_today = today_stream_count + 1
         user.save(update_fields=['streamed_today', 'updated_at'])
 
         # Update Track Streams & Listeners
-        is_first_listen = not StreamEvent.objects.filter(user=user, track=track).exclude(id=StreamEvent.objects.last().id).exists()
-        track.stream_count += 1
-        if is_first_listen:
-            track.listener_count += 1
+        track_stats = StreamEvent.objects.filter(track=track).aggregate(
+            stream_count=models.Count("id"),
+            listener_count=models.Count("user", distinct=True),
+        )
+        track.stream_count = track_stats["stream_count"]
+        track.listener_count = track_stats["listener_count"]
         track.save(update_fields=['stream_count', 'listener_count', 'updated_at'])
 
         # Update Album Streams & Listeners
         if track.album_id:
             album = track.album
-            album.stream_count += 1
-            if is_first_listen:
-                album.listener_count += 1
+            album_stats = StreamEvent.objects.filter(track__album=album).aggregate(
+                stream_count=models.Count("id"),
+                listener_count=models.Count("user", distinct=True),
+            )
+            album.stream_count = album_stats["stream_count"]
+            album.listener_count = album_stats["listener_count"]
             album.save(update_fields=['stream_count', 'listener_count', 'updated_at'])
             
         # Update Artist Listeners & Streams
         artist = track.artist
-        artist.total_streams += 1
-        if is_first_listen:
-            artist.listener_count += 1
+        artist_stats = StreamEvent.objects.filter(track__artist=artist).aggregate(
+            total_streams=models.Count("id"),
+            listener_count=models.Count("user", distinct=True),
+        )
+        artist.total_streams = artist_stats["total_streams"]
+        artist.listener_count = artist_stats["listener_count"]
         artist.save(update_fields=['total_streams', 'listener_count', 'updated_at'])
 
     return track

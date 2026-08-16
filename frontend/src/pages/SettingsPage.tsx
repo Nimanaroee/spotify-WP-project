@@ -12,14 +12,14 @@ import {
   Box,
   Button,
   Divider,
-  FormControlLabel,
   MenuItem,
   Paper,
+  Slider,
   Stack,
-  Switch,
   TextField,
   Typography,
 } from '@mui/material'
+import { Volume2 } from 'lucide-react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 
 import PageHeader from '../components/common/PageHeader'
@@ -30,13 +30,16 @@ import { ROUTES } from '../lib/constants/routes'
 import type { SubscriptionTier } from '../lib/constants/subscriptionLimits'
 import {
   createSubscriptionPaymentFromApi,
+  deleteAccountFromApi,
   getSubscriptionFeesFromApi,
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
   updateUserPreferencesFromApi,
 } from '../lib/api/settingsService'
+import { clearAuthSession } from '../lib/api/client'
 import { redirectToPayment } from '../lib/payment/redirectToPayment'
 import { useAuthStore } from '../store/authStore'
+import { usePlayerStore } from '../store/playerStore'
 import { useAppLanguage } from '../theme/LanguageContext'
 import { useThemeMode } from '../theme/ThemeModeContext'
 import type {
@@ -72,9 +75,12 @@ export default function SettingsPage() {
   const { language, setLanguage } = useAppLanguage()
   const { setThemeMode } = useThemeMode()
   const copy = getAppText(language)
+  const volume = usePlayerStore((state) => state.volume)
+  const setVolume = usePlayerStore((state) => state.setVolume)
   const [preferences, setPreferences] = useState<UserPreferences | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSubscriptionSaving, setIsSubscriptionSaving] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [subscriptionFees, setSubscriptionFees] = useState<SubscriptionFee[]>([])
   const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(
     user?.subscription_expires_at ?? null,
@@ -205,7 +211,6 @@ export default function SettingsPage() {
     payload: Partial<
       Pick<
         UserPreferences,
-        | 'app_sound_enabled'
         | 'language'
         | 'notification_limit'
         | 'system_voice'
@@ -311,14 +316,27 @@ export default function SettingsPage() {
     }
   }
 
-  function handleDeleteAccount(): void {
+  async function handleDeleteAccount(): Promise<void> {
     if (!window.confirm(copy.settings.deleteConfirmation)) {
       return
     }
 
-    setUser(null)
-    setMessage({ severity: 'info', text: copy.settings.accountDeleted })
-    navigate(ROUTES.LOGIN)
+    setIsDeletingAccount(true)
+    setMessage(null)
+    try {
+      await deleteAccountFromApi()
+      clearAuthSession()
+      setUser(null)
+      navigate(ROUTES.LOGIN, { replace: true })
+    } catch (error) {
+      setMessage({
+        severity: 'error',
+        text:
+          error instanceof Error ? error.message : 'Unable to delete account.',
+      })
+    } finally {
+      setIsDeletingAccount(false)
+    }
   }
 
   return (
@@ -362,19 +380,21 @@ export default function SettingsPage() {
                 type="number"
                 value={currentPreferences.notification_limit}
               />
-              <FormControlLabel
-                control={
-                  <Switch
-                    checked={currentPreferences.app_sound_enabled}
-                    onChange={(event) =>
-                      void handlePreferenceChange({
-                        app_sound_enabled: event.target.checked,
-                      })
-                    }
-                  />
-                }
-                label={copy.settings.appSoundEnabled}
-              />
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ px: 1 }}
+              >
+                <Volume2 size={20} aria-hidden="true" />
+                <Slider
+                  aria-label="Playback volume"
+                  min={0}
+                  max={100}
+                  value={volume}
+                  onChange={(_, value) => setVolume(value as number)}
+                />
+              </Stack>
             </Box>
 
             <Divider />
@@ -544,7 +564,12 @@ export default function SettingsPage() {
               <Typography color="text.secondary" sx={{ mt: 0.5, mb: 2 }}>
                 {copy.settings.accountDescription}
               </Typography>
-              <Button color="error" onClick={handleDeleteAccount} variant="outlined">
+              <Button
+                color="error"
+                disabled={isDeletingAccount}
+                onClick={() => void handleDeleteAccount()}
+                variant="outlined"
+              >
                 {copy.settings.deleteAccount}
               </Button>
             </Box>

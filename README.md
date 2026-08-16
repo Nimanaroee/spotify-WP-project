@@ -146,6 +146,19 @@ Run backend tests:
 pytest
 ```
 
+### Docker development
+
+Run the frontend and backend development servers together:
+
+```bash
+docker compose up --build
+```
+
+The frontend is available at `http://localhost:5173` and the API at
+`http://localhost:8000`. The named `sqlite_data` Docker volume persists the
+development SQLite database between container restarts. To remove it along with
+the containers, run `docker compose down -v`.
+
 ## Demo Data
 
 The frontend seeds demo data on first load through `frontend/src/lib/mock/seed.ts`.

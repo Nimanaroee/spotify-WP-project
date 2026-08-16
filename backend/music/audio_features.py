@@ -25,6 +25,7 @@ from typing import Optional
 
 import librosa
 import numpy as np
+from django.conf import settings
 from scipy import stats
 from scipy.signal import find_peaks
 from sklearn.decomposition import TruncatedSVD
@@ -84,11 +85,12 @@ def _safe_float(x) -> float:
     return float(x)
 
 
-def _load_audio(audio_file, duration: float = 30.0):
+def _load_audio(audio_file, duration: float | None = None):
     """
     Load up to `duration` seconds from a Django File object.
     Returns (y, sr) or raises on failure.
     """
+    duration = duration or settings.MUSIC_AUDIO_FEATURE_ANALYSIS_DURATION_SECONDS
     _, ext = os.path.splitext(audio_file.name)
     ext = ext.lower() if ext else ".mp3"
     with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
@@ -288,7 +290,11 @@ def extract_onset_stats(y: np.ndarray, sr: int) -> np.ndarray:
     skewness = float(stats.skew(oenv))
     kurt = float(stats.kurtosis(oenv))
 
-    peaks, props = find_peaks(oenv, height=oenv.mean(), distance=10)
+    peaks, props = find_peaks(
+        oenv,
+        height=oenv.mean(),
+        distance=settings.MUSIC_AUDIO_FEATURE_ONSET_PEAK_DISTANCE,
+    )
     peak_count = float(len(peaks))
 
     # Regularity: 1 - (std of inter-peak intervals / mean interval), clamped to [0,1]
@@ -570,7 +576,7 @@ def extract_advanced_features(
 
     # --- Load audio (30s cap) ---
     try:
-        y, sr = _load_audio(audio_file, duration=30.0)
+        y, sr = _load_audio(audio_file)
     except Exception as e:
         logger.error(f"Audio load failed for {getattr(audio_file, 'name', '?')}: {e}")
         return bundle

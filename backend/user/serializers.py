@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth import authenticate
+from django.utils import timezone
 from django.utils.text import slugify
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework import serializers
@@ -7,7 +8,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from drf_spectacular.utils import extend_schema_field
-from music.models import Album, Track
+from music.models import Album, StreamEvent, Track
 from music.serializers import TrackReadSerializer, AlbumReadSerializer
 from .validators import validate_image_size
 
@@ -45,6 +46,7 @@ class CurrentUserSerializer(serializers.ModelSerializer):
     subscription_tier = serializers.SerializerMethodField()
     subscription_expires_at = serializers.DateTimeField(read_only=True)
     is_verified = serializers.SerializerMethodField()
+    streamed_today = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -78,6 +80,13 @@ class CurrentUserSerializer(serializers.ModelSerializer):
             return user.artist.is_approved()
         return False
 
+    @extend_schema_field(serializers.IntegerField())
+    def get_streamed_today(self, user):
+        return StreamEvent.objects.filter(
+            user=user,
+            created_at__date=timezone.localdate(),
+        ).count()
+
 
 class UserShortInfoSerializer(serializers.ModelSerializer):
     avatar = serializers.ImageField(source="profile_picture", read_only=True)
@@ -102,6 +111,7 @@ class ProfileReadSerializer(serializers.ModelSerializer):
     profile_photo = serializers.ImageField(source="profile_picture", read_only=True)
     followers = serializers.SerializerMethodField()
     followings = serializers.SerializerMethodField()
+    streamed_today = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -124,6 +134,13 @@ class ProfileReadSerializer(serializers.ModelSerializer):
     @extend_schema_field(serializers.CharField())
     def get_subscription(self, user):
         return user.get_effective_subscription_tier()
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_streamed_today(self, user):
+        return StreamEvent.objects.filter(
+            user=user,
+            created_at__date=timezone.localdate(),
+        ).count()
 
     @extend_schema_field(UserShortInfoSerializer(many=True))
     def get_followers(self, user):
@@ -325,6 +342,8 @@ class SubscriptionUpdateSerializer(serializers.Serializer):
 
 class PublicArtistProfileSerializer(serializers.ModelSerializer):
     is_verified = serializers.BooleanField(source="is_approved", read_only=True)
+    listener_count = serializers.SerializerMethodField()
+    total_streams = serializers.SerializerMethodField()
 
     class Meta:
         model = Artist
@@ -337,6 +356,19 @@ class PublicArtistProfileSerializer(serializers.ModelSerializer):
             "total_streams",
         )
         read_only_fields = fields
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_listener_count(self, artist):
+        return (
+            StreamEvent.objects.filter(track__artist=artist)
+            .values("user_id")
+            .distinct()
+            .count()
+        )
+
+    @extend_schema_field(serializers.IntegerField())
+    def get_total_streams(self, artist):
+        return StreamEvent.objects.filter(track__artist=artist).count()
 
 
 class ProfileAlbumSerializer(serializers.Serializer):

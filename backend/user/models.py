@@ -141,10 +141,6 @@ class Artist(User):
         self.role = self.Role.ARTIST
         if self.stage_name:
             self.display_name = self.stage_name
-        if self.is_approved():
-            self.is_active = True
-        else:
-            self.is_active = False
         super().save(*args, **kwargs)
 
     def is_approved(self):
