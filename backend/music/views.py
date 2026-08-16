@@ -1,9 +1,10 @@
 from datetime import timedelta
 from itertools import chain
 
+from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from rest_framework import viewsets, status
+from rest_framework import mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -59,12 +60,16 @@ class CatalogSearchView(APIView):
         else:
             results.sort(key=lambda x: (getattr(x, "release_year", 0) or 0, x.created_at), reverse=True)
 
-        serializer = CatalogItemSerializer(results[:50], many=True, context={"request": request})
+        serializer = CatalogItemSerializer(
+            results[:settings.MUSIC_CATALOG_RESULT_LIMIT],
+            many=True,
+            context={"request": request},
+        )
         return Response(serializer.data)
 
 
 @extend_schema(tags=["catalog"])
-class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
+class AlbumViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = AlbumReadSerializer
     queryset = Album.objects.select_related("artist").prefetch_related("tracks")
@@ -73,6 +78,7 @@ class AlbumViewSet(viewsets.ReadOnlyModelViewSet):
 @extend_schema(tags=["catalog"])
 class TrackPlayView(APIView):
     permission_classes = [IsAuthenticated]
+    serializer_class = TrackReadSerializer
 
     @extend_schema(
         summary="Record a track play",
@@ -96,15 +102,28 @@ class HomeDataView(APIView):
     @extend_schema(summary="Get home page showcasing data", responses=HomeDataSerializer)
     def get(self, request):
         now = timezone.now()
-        early_access_threshold = now - timedelta(days=7)
+        early_access_threshold = now - timedelta(days=settings.MUSIC_EARLY_ACCESS_DAYS)
 
-        recent_playlists = Playlist.objects.filter(user=request.user).order_by("-updated_at")[:10]
-        latest_albums = Album.objects.select_related("artist").order_by("-created_at")[:10]
-        top_songs = Track.objects.select_related("artist", "album").order_by("-stream_count")[:10]
-        latest_releases = Track.objects.select_related("artist", "album").order_by("-created_at")[:10]
-        early_access = Track.objects.select_related("artist", "album").filter(created_at__gte=early_access_threshold).order_by("-created_at")[:6]
+        recent_playlists = Playlist.objects.filter(user=request.user).order_by(
+            "-updated_at"
+        )[:settings.MUSIC_HOME_RECENT_PLAYLISTS_LIMIT]
+        latest_albums = Album.objects.select_related("artist").order_by(
+            "-created_at"
+        )[:settings.MUSIC_HOME_LATEST_ALBUMS_LIMIT]
+        top_songs = Track.objects.select_related("artist", "album").order_by(
+            "-stream_count"
+        )[:settings.MUSIC_HOME_TOP_SONGS_LIMIT]
+        latest_releases = Track.objects.select_related("artist", "album").order_by(
+            "-created_at"
+        )[:settings.MUSIC_HOME_LATEST_RELEASES_LIMIT]
+        early_access = Track.objects.select_related("artist", "album").filter(
+            created_at__gte=early_access_threshold
+        ).order_by("-created_at")[:settings.MUSIC_HOME_EARLY_ACCESS_LIMIT]
 
-        recommendation_results = get_recommendations_for_user(request.user, limit=10)
+        recommendation_results = get_recommendations_for_user(
+            request.user,
+            limit=settings.MUSIC_HOME_RECOMMENDATIONS_LIMIT,
+        )
         recommended_tracks = [res.track for res in recommendation_results]
         # Fetch personalized ML recommendations
 
@@ -124,6 +143,7 @@ class HomeDataView(APIView):
 class ArtistReleaseViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated, IsVerifiedArtist]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
+    serializer_class = TrackReadSerializer
 
     def get_queryset(self):
         return Track.objects.filter(artist=self.request.user.artist).select_related("album", "artist").order_by("-created_at")

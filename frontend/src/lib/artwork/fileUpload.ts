@@ -1,9 +1,27 @@
 import { ACCEPTED_AUDIO_EXTENSIONS } from '../../lib/constants/musicGenres'
 
-export const MAX_AUDIO_FILE_BYTES = 10 * 1024 * 1024
-export const MAX_COVER_FILE_BYTES = 5 * 1024 * 1024
+function megabytesToBytes(value: string | undefined, defaultMegabytes: number): number {
+  const megabytes = Number(value)
+  return (Number.isFinite(megabytes) && megabytes > 0 ? megabytes : defaultMegabytes)
+    * 1024
+    * 1024
+}
 
-const ACCEPTED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp'] as const
+export const MAX_AUDIO_FILE_BYTES = megabytesToBytes(
+  import.meta.env.VITE_MAX_AUDIO_FILE_SIZE_MB,
+  10,
+)
+export const MAX_COVER_FILE_BYTES = megabytesToBytes(
+  import.meta.env.VITE_MAX_COVER_FILE_SIZE_MB,
+  5,
+)
+
+const ACCEPTED_IMAGE_EXTENSIONS = (
+  import.meta.env.VITE_ACCEPTED_IMAGE_EXTENSIONS || '.jpg,.jpeg,.png,.webp'
+)
+  .split(',')
+  .map((extension) => extension.trim().toLowerCase())
+  .filter(Boolean)
 
 export type AudioUploadErrorCode =
   | 'empty_file'

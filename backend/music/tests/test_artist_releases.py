@@ -59,6 +59,29 @@ class ArtistStudioApiTests(APITestCase):
         response3 = self.client.get(self.list_create_url)
         self.assertEqual(response3.status_code, status.HTTP_200_OK)
 
+    def test_pending_artist_can_use_non_studio_apis_with_jwt(self):
+        login_response = self.client.post(
+            reverse("login"),
+            {
+                "email": self.unverified_artist.email,
+                "password": "password",
+            },
+            format="json",
+        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=f"Bearer {login_response.data['access']}"
+        )
+        self.assertEqual(
+            self.client.get(reverse("artist-profile")).status_code,
+            status.HTTP_200_OK,
+        )
+        self.assertEqual(
+            self.client.get(self.list_create_url).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+
     def test_publish_single_validation(self):
         self.client.force_authenticate(self.verified_artist)
         
@@ -70,6 +93,25 @@ class ArtistStudioApiTests(APITestCase):
         }, format="json")
         self.assertEqual(res1.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("A single must contain exactly one track.", str(res1.data))
+
+    def test_publish_succeeds_when_audio_feature_extraction_fails(self):
+        self.mock_extractor.side_effect = RuntimeError("Feature extraction failed")
+        self.client.force_authenticate(self.verified_artist)
+
+        response = self.client.post(
+            self.list_create_url,
+            {
+                "release_type": "single",
+                "title": "Release Without Features",
+                "tracks[0][title]": "Release Without Features",
+                "tracks[0][audio_file]": create_audio_file(),
+            },
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        track = Track.objects.get(title="Release Without Features")
+        self.assertEqual(track.audio_features, {})
 
     def test_publish_album_creates_multiple_tracks(self):
         self.client.force_authenticate(self.verified_artist)
@@ -93,9 +135,9 @@ class ArtistStudioApiTests(APITestCase):
         self.assertEqual(album.track_count, 2)
         self.assertEqual(album.artist, self.verified_artist)
         
-        # Verify the mock ran and populated the DB
+        # Feature extraction is optional and must not block album publishing.
         track = album.tracks.first()
-        self.assertEqual(len(track.feature_vector), 58)
+        self.assertEqual(track.audio_features, {})
 
     def test_artist_cannot_update_or_delete_others_tracks(self):
         track = Track.objects.create(

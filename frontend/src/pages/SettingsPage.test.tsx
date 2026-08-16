@@ -12,6 +12,7 @@ import { ROUTES } from '../lib/constants/routes'
 import { storage } from '../lib/mock/storage'
 import { useAuthStore } from '../store/authStore'
 import {
+  deleteAccountFromApi,
   getSubscriptionFeesFromApi,
   getUserPreferencesFromApi,
   getUserSubscriptionFromApi,
@@ -25,6 +26,7 @@ import { ThemeModeContext } from '../theme/ThemeModeContext'
 
 vi.mock('../lib/api/settingsService', () => ({
   createSubscriptionPaymentFromApi: vi.fn(),
+  deleteAccountFromApi: vi.fn(),
   getSubscriptionFeesFromApi: vi.fn(),
   getUserPreferencesFromApi: vi.fn(),
   getUserSubscriptionFromApi: vi.fn(),
@@ -84,6 +86,8 @@ function renderSettingsPage() {
 describe('SettingsPage', () => {
   beforeEach(() => {
     localStorage.clear()
+    vi.mocked(deleteAccountFromApi).mockReset()
+    vi.mocked(deleteAccountFromApi).mockResolvedValue()
     vi.mocked(getUserPreferencesFromApi).mockResolvedValue({
       user_id: 1,
       theme: 'dark',

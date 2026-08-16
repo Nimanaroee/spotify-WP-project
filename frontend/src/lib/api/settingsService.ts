@@ -129,3 +129,11 @@ export async function createSubscriptionPaymentFromApi(payload: {
     throw new Error(getApiErrorMessage(error))
   }
 }
+
+export async function deleteAccountFromApi(): Promise<void> {
+  try {
+    await client.delete('/users/account/')
+  } catch (error) {
+    throw new Error(getApiErrorMessage(error))
+  }
+}

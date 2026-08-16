@@ -14,7 +14,6 @@ from .models import Artist, Preferences
 from .serializers import (
     ArtistProfileUpdateSerializer,
     ArtistRegistrationSerializer,
-    CurrentUserSerializer,
     FollowStatusSerializer,
     ListenerRegistrationSerializer,
     LoginSerializer,
@@ -28,7 +27,7 @@ from .serializers import (
     SubscriptionUpdateSerializer,
     TokenResponseSerializer,
 )
-from .services import follow_user, unfollow_user
+from .services import delete_account, follow_user, unfollow_user
 
 User = get_user_model()
 
@@ -43,7 +42,7 @@ class LoginView(TokenObtainPairView):
         description=(
             "Authenticate with email and password. Returns a JWT refresh/access "
             "pair plus the authenticated user. Artists pending verification may "
-            "log in but stay inactive until approved."
+            "use the API, but Artist Studio remains unavailable until approved."
         ),
         auth=schema.PUBLIC,
         responses={200: TokenResponseSerializer},
@@ -99,9 +98,9 @@ class ListenerRegistrationView(generics.CreateAPIView):
     summary="Register an artist",
     description=(
         "Create an artist account. The artist starts with "
-        "`verification_status = pending` and becomes fully active once an admin "
-        "approves the portfolio. The response contains a JWT pair plus the "
-        "created user."
+        "`verification_status = pending`. The response contains a JWT pair plus "
+        "the created user; Artist Studio becomes available once an admin "
+        "approves the portfolio."
     ),
     auth=schema.PUBLIC,
     responses={201: TokenResponseSerializer},
@@ -110,20 +109,6 @@ class ListenerRegistrationView(generics.CreateAPIView):
 class ArtistRegistrationView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = ArtistRegistrationSerializer
-
-
-@extend_schema(tags=schema.AUTH_TAG)
-class CurrentUserView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    @extend_schema(
-        summary="Get the authenticated user",
-        description="Return the profile of the user owning the access token.",
-        responses=CurrentUserSerializer,
-        examples=schema.CURRENT_USER_EXAMPLES,
-    )
-    def get(self, request):
-        return Response(CurrentUserSerializer(request.user).data)
 
 
 @extend_schema(tags=schema.USERS_TAG)
@@ -255,6 +240,24 @@ class ArtistProfileView(generics.RetrieveUpdateAPIView):
                 context=self.get_serializer_context(),
             ).data
         )
+
+
+@extend_schema(tags=schema.USERS_TAG)
+class DeleteAccountView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    @extend_schema(
+        summary="Delete own account",
+        description=(
+            "Permanently delete the authenticated user's account and all "
+            "associated account data. Subscription payment logs are removed "
+            "as part of the deletion."
+        ),
+        responses={204: None},
+    )
+    def delete(self, request):
+        delete_account(request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @extend_schema(tags=schema.USERS_TAG)

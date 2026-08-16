@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 import {
   createSubscriptionPaymentFromApi,
+  deleteAccountFromApi,
   getSubscriptionFeesFromApi,
   getUserSubscriptionFromApi,
   getUserPreferencesFromApi,
@@ -29,6 +30,7 @@ vi.mock('../lib/api/settingsService', () => ({
   getUserSubscriptionFromApi: vi.fn(),
   getSubscriptionFeesFromApi: vi.fn(),
   createSubscriptionPaymentFromApi: vi.fn(),
+  deleteAccountFromApi: vi.fn(),
   getUserPreferencesFromApi: vi.fn(),
   updateUserSubscriptionFromApi: vi.fn(),
   updateUserPreferencesFromApi: vi.fn(),
@@ -97,6 +99,7 @@ describe('SettingsPage API integration', () => {
     vi.mocked(getUserSubscriptionFromApi).mockReset()
     vi.mocked(getSubscriptionFeesFromApi).mockReset()
     vi.mocked(createSubscriptionPaymentFromApi).mockReset()
+    vi.mocked(deleteAccountFromApi).mockReset()
     vi.mocked(updateUserPreferencesFromApi).mockReset()
     vi.mocked(updateUserSubscriptionFromApi).mockReset()
     vi.mocked(redirectToPayment).mockReset()
@@ -124,6 +127,7 @@ describe('SettingsPage API integration', () => {
       id: 42,
       redirect_url: 'https://payment.zarinpal.com/pg/StartPay/A-test-authority',
     })
+    vi.mocked(deleteAccountFromApi).mockResolvedValue()
     vi.mocked(updateUserSubscriptionFromApi).mockResolvedValue({
       subscription_tier: 'gold',
       expires_at: '2026-08-23T10:00:00.000Z',
@@ -178,7 +182,6 @@ describe('SettingsPage API integration', () => {
       name: /notification limit/i,
     })
     fireEvent.change(limitInput, { target: { value: '42' } })
-    await user.click(screen.getByRole('switch', { name: /notification sounds/i }))
     await user.click(screen.getByRole('combobox', { name: /system voice/i }))
     await user.click(screen.getByRole('option', { name: /calm/i }))
     await user.click(screen.getByRole('button', { name: /switch to light theme/i }))
@@ -188,9 +191,6 @@ describe('SettingsPage API integration', () => {
     await waitFor(() => {
       expect(updateUserPreferencesFromApi).toHaveBeenCalledWith(1, {
         notification_limit: 42,
-      })
-      expect(updateUserPreferencesFromApi).toHaveBeenCalledWith(1, {
-        app_sound_enabled: false,
       })
       expect(updateUserPreferencesFromApi).toHaveBeenCalledWith(1, {
         system_voice: 'calm',
@@ -227,5 +227,22 @@ describe('SettingsPage API integration', () => {
       'https://payment.zarinpal.com/pg/StartPay/A-test-authority',
     )
     expect(useAuthStore.getState().user?.subscription_tier).toBe('silver')
+  })
+
+  it('deletes the account through the API before clearing the local session', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    localStorage.setItem('auth_access_token', 'access')
+    localStorage.setItem('auth_refresh_token', 'refresh')
+    renderSettingsPage()
+
+    await user.click(
+      await screen.findByRole('button', { name: /delete account/i }),
+    )
+
+    await waitFor(() => expect(deleteAccountFromApi).toHaveBeenCalledOnce())
+    expect(useAuthStore.getState().user).toBeNull()
+    expect(localStorage.getItem('auth_access_token')).toBeNull()
+    expect(localStorage.getItem('auth_refresh_token')).toBeNull()
   })
 })

@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from user.models import User, Artist
-from music.models import Track, StreamEvent
+from music.models import Album, Track, StreamEvent
 from django.utils import timezone
 from datetime import timedelta
 
@@ -49,6 +49,48 @@ class CatalogAndStreamApiTests(APITestCase):
         self.track.refresh_from_db()
         self.assertEqual(self.track.stream_count, 1)
         self.assertEqual(self.track.listener_count, 1)
+        self.assertEqual(
+            self.client.get(reverse("profile")).data["streamed_today"],
+            1,
+        )
+
+    def test_catalog_search_returns_tracks_and_albums(self):
+        album = Album.objects.create(
+            artist=self.artist,
+            title="Album Result",
+            track_count=1,
+        )
+        Track.objects.create(
+            artist=self.artist,
+            album=album,
+            title="Album Track",
+            audio_file="album-track.mp3",
+        )
+        self.client.force_authenticate(self.basic_user)
+
+        response = self.client.get(reverse("catalog-search"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        album_result = next(
+            item for item in response.data if item["itemType"] == "album"
+        )
+        self.assertEqual(album_result["title"], "Album Result")
+        self.assertIsNone(album_result["album_id"])
+        self.assertIsNone(album_result["audio_url"])
+
+    def test_artist_stats_count_distinct_listeners_across_all_tracks(self):
+        self.client.force_authenticate(self.gold_user)
+        self.client.post(reverse("track-play", kwargs={"pk": self.track.id}))
+        self.client.post(reverse("track-play", kwargs={"pk": self.early_track.id}))
+
+        self.artist.refresh_from_db()
+        self.assertEqual(self.artist.listener_count, 1)
+        self.assertEqual(self.artist.total_streams, 2)
+
+        self.client.force_authenticate(self.artist)
+        response = self.client.get(reverse("artist-profile"))
+        self.assertEqual(response.data["artist_profile"]["listener_count"], 1)
+        self.assertEqual(response.data["artist_profile"]["total_streams"], 2)
 
     def test_basic_user_cannot_play_early_access(self):
         self.client.force_authenticate(self.basic_user)
@@ -69,8 +111,9 @@ class CatalogAndStreamApiTests(APITestCase):
         self.assertEqual(self.early_track.stream_count, 1)
 
     def test_daily_limit_enforced_for_basic_user(self):
-        self.basic_user.streamed_today = 60
-        self.basic_user.save()
+        StreamEvent.objects.bulk_create(
+            [StreamEvent(user=self.basic_user, track=self.track) for _ in range(60)]
+        )
         
         self.client.force_authenticate(self.basic_user)
         url = reverse("track-play", kwargs={"pk": self.track.id})

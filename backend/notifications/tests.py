@@ -5,6 +5,7 @@ from rest_framework.test import APITestCase
 
 from .models import Notification
 from .services import notify_staff, notify_user
+from user.models import Preferences
 
 User = get_user_model()
 
@@ -45,6 +46,18 @@ class NotificationApiTests(APITestCase):
             self.assertIn(field, item)
         self.assertEqual(item["title"], "Mine")
         self.assertFalse(item["is_read"])
+
+    def test_list_respects_the_users_notification_preference_limit(self):
+        Preferences.objects.create(user=self.user, notification_limit=2)
+        for title in ("First", "Second", "Third"):
+            notify_user(self.user, category="new_ticket", title=title, message="")
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
+        self.assertEqual([item["title"] for item in response.data], ["Third", "Second"])
 
     def test_notify_staff_only_reaches_support_and_admin_roles(self):
         support = User.objects.create_user(

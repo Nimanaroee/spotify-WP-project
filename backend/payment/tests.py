@@ -163,6 +163,10 @@ class ZarinpalAmountTests(APITestCase):
     def test_gateway_amount_converts_usd_to_rials(self):
         self.assertEqual(get_gateway_amount(Decimal("12.50")), 23750000)
 
+    @override_settings(ZARINPAL_USD_TO_IRR_RATE="1900000")
+    def test_gateway_amount_accepts_an_environment_string(self):
+        self.assertEqual(get_gateway_amount(Decimal("12.50")), 23750000)
+
     @override_settings(ZARINPAL_MERCHANT_ID="test-merchant")
     @patch("payment.services._post_to_zarinpal")
     def test_request_and_verification_send_rial_amounts(self, post_mock):

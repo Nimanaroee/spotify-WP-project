@@ -4,7 +4,7 @@ export const ACCESS_TOKEN_KEY = 'auth_access_token'
 export const REFRESH_TOKEN_KEY = 'auth_refresh_token'
 
 const client = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',
+  baseURL: import.meta.env.VITE_API_BASE_URL,
 })
 
 client.interceptors.request.use((config) => {
@@ -17,7 +17,7 @@ client.interceptors.request.use((config) => {
 
 let refreshPromise: Promise<string> | null = null
 
-function clearSession(): void {
+export function clearAuthSession(): void {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
   localStorage.removeItem('current_user')
@@ -65,7 +65,7 @@ client.interceptors.response.use(
       }
       return client(originalRequest)
     } catch (refreshError) {
-      clearSession()
+      clearAuthSession()
       return Promise.reject(refreshError)
     }
   },
